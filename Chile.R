@@ -2,11 +2,12 @@
 # Started 5/5/2023
 # Import and explore data from Chile schools 2021
 
-setwd("C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation/04_Data")
-
 library(janitor)
+library(psych)
 library(Hmisc)
 library(tidyverse)
+
+setwd("C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation/04_Data")
 
 chile_raw <- read.csv("School Census Chile.csv") %>%
   clean_names() 
@@ -32,7 +33,7 @@ chile <- chile_raw %>%
          teaching_code3 = cod_ense3, # age based coding, 1-7
          grade_code1 = cod_grado, # grade of schooling, 1-10, 21-25, 31-34, nests in teaching_code1
          grade_code2 = cod_grado2, # equivalent grade of schooling for adult special education, 1-8, 99
-         course_letter = let_cur, # not sure, Lucy asking her chilean
+         grade_letter = let_cur, # refers to the class within the grade, close to start of alphabet is higher aptitude
          course_timing = cod_jor, # time of day, morning, afternoon, both, night, no info
          course_type = cod_tip_cur, # 0 = simple course, 1-4 = combined course, 99 = no info
          course_descr = cod_des_cur, # Description of course (TP secondary education only). 0: Does not apply, 1: Only High School, 2: Dual, 3: Other
@@ -50,9 +51,6 @@ chile <- chile_raw %>%
          economic_branch_code = cod_rama,
          economic_profspec_code = cod_men,
          teaching_code_new = ens) 
-  
-
-# Need to make lots of the columns into factors because they are categorical not numeric variables
 
 # Explore data
 describe(chile)
@@ -91,3 +89,42 @@ ggplot(chile, aes(age_june30)) + geom_bar()
 table(chile$teaching_code1, chile$ens)
 table(chile$teaching_code2, chile$ens)
 table(chile$teaching_code3, chile$ens)
+
+################################################################################
+
+
+chile_slim <- chile %>%
+  select(school_code,
+         school_region_code,
+         school_rurality_code,
+         #teaching_code1,
+         grade_code1,
+         #grade_letter, # Isn't numeric so leave it out for now so cor() works
+         student_id,
+         sex,
+         age_june30,
+         special_needs_status,
+         special_needs_code,
+         student_region_code,
+         economic_sector_code,
+         teaching_code_new) %>%
+   filter(age_june30 >= 6 & age_june30 <= 18) #%>% 
+  # mutate(school_code = factor(school_code), # maybe don't need to make into factors because cor() needs numeric
+  #        school_region_code = factor(school_region_code),
+  #        school_rurality_code = factor(school_rurality_code),
+  #        grade_code1 = factor(grade_code1),
+  #        #grade_letter = factor(grade_letter),
+  #        sex = factor(sex),
+  #        special_needs_status = factor(special_needs_status),
+  #        special_needs_code = factor(special_needs_code),
+  #        student_region_code = factor(student_region_code),
+  #        economic_sector_code = factor(economic_sector_code),
+  #        teaching_code_new = factor(teaching_code_new))
+
+Hmisc::describe(chile_slim)
+
+################################################################################
+
+slim_cor <- cor(chile_slim, use = "pairwise")
+slim_eigen <- eigen(slim_cor)
+slim_eigen$values
