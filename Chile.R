@@ -5,6 +5,9 @@
 library(janitor)
 library(psych)
 library(Hmisc)
+library(corrplot)
+#library(caret)
+library(mltools)
 library(tidyverse)
 
 setwd("C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation/04_Data")
@@ -94,21 +97,22 @@ table(chile$teaching_code3, chile$ens)
 
 
 chile_slim <- chile %>%
+  filter(age_june30 >= 6 & age_june30 <= 18,
+        special_needs_status == 1) %>%
   select(school_code,
          school_region_code,
          school_rurality_code,
          #teaching_code1,
          grade_code1,
          #grade_letter, # Isn't numeric so leave it out for now so cor() works
-         student_id,
+         #student_id,
          sex,
-         age_june30,
-         special_needs_status,
+         #age_june30,
+         #special_needs_status,
          special_needs_code,
          student_region_code,
          economic_sector_code,
-         teaching_code_new) %>%
-   filter(age_june30 >= 6 & age_june30 <= 18) #%>% 
+         teaching_code_new)
   # mutate(school_code = factor(school_code), # maybe don't need to make into factors because cor() needs numeric
   #        school_region_code = factor(school_region_code),
   #        school_rurality_code = factor(school_rurality_code),
@@ -119,12 +123,24 @@ chile_slim <- chile %>%
   #        special_needs_code = factor(special_needs_code),
   #        student_region_code = factor(student_region_code),
   #        economic_sector_code = factor(economic_sector_code),
-  #        teaching_code_new = factor(teaching_code_new))
+  #        teaching_code_new = factor(teaching_code_new)) %>%
+         
+#chile_slim <- dummyVars("~ special_needs_code", chile_slim)
+# Need to get the special_needs_codes into separate columns
+
 
 Hmisc::describe(chile_slim)
 
 ################################################################################
 
 slim_cor <- cor(chile_slim, use = "pairwise")
+slim_cor
+corrplot(slim_cor)
 slim_eigen <- eigen(slim_cor)
 slim_eigen$values
+scree(slim_cor) # , factors = FALSE) # PC is principle components, FA is factors
+# Only keep the factors that have eigenvalue above 1. Will use PC results for now https://www.researchgate.net/post/Both-PC-and-FA-in-scree-plot-which-to-use-in-an-EFA
+# There are 4 such factors.
+
+slim_efa <- fa(chile_slim, nfactors = 4)
+slim_efa
