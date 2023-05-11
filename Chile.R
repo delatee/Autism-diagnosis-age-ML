@@ -6,7 +6,7 @@ library(janitor)
 library(psych)
 library(Hmisc)
 library(corrplot)
-#library(caret)
+library(caret)
 library(mltools)
 library(tidyverse)
 
@@ -98,7 +98,8 @@ table(chile$teaching_code3, chile$ens)
 
 chile_slim <- chile %>%
   filter(age_june30 >= 6 & age_june30 <= 18,
-        special_needs_status == 1) %>%
+        special_needs_status == 1,
+        sex != 0) %>%
   select(school_code,
          school_region_code,
          school_rurality_code,
@@ -111,29 +112,39 @@ chile_slim <- chile %>%
          #special_needs_status,
          special_needs_code,
          student_region_code,
-         economic_sector_code,
-         teaching_code_new)
-  # mutate(school_code = factor(school_code), # maybe don't need to make into factors because cor() needs numeric
+         #economic_sector_code,
+         teaching_code_new) %>%
+   mutate(#school_code = factor(school_code), # maybe don't need to make into factors because cor() needs numeric
   #        school_region_code = factor(school_region_code),
   #        school_rurality_code = factor(school_rurality_code),
   #        grade_code1 = factor(grade_code1),
   #        #grade_letter = factor(grade_letter),
   #        sex = factor(sex),
   #        special_needs_status = factor(special_needs_status),
-  #        special_needs_code = factor(special_needs_code),
+          special_needs_code = factor(special_needs_code),
   #        student_region_code = factor(student_region_code),
   #        economic_sector_code = factor(economic_sector_code),
-  #        teaching_code_new = factor(teaching_code_new)) %>%
+  #        teaching_code_new = factor(teaching_code_new)
+     )
          
 #chile_slim <- dummyVars("~ special_needs_code", chile_slim)
+special_needs_code_dummy <- dummyVars(" ~ special_needs_code", data = chile_slim)
+chile_slim_sn <- data.frame(cbind(chile_slim, predict(special_needs_code_dummy, newdata = chile_slim))) %>%
+  rename(sn_autism = special_needs_code.105) %>%
+  select(-special_needs_code)
+#chile_slim <- pivot_wider(chile_slim, names_from = special_needs_code, values_from = special_needs_status)
 # Need to get the special_needs_codes into separate columns
 
+Hmisc::describe(chile_slim_sn)
 
-Hmisc::describe(chile_slim)
+chile_slim_autism <- chile_slim %>% 
+  filter(special_needs_code == 105) %>%
+  select(-special_needs_code)
 
 ################################################################################
 
-slim_cor <- cor(chile_slim, use = "pairwise")
+# Using all sn categories together isn't really legit
+slim_cor <- cor(chile_slim_sn, use = "pairwise")
 slim_cor
 corrplot(slim_cor)
 slim_eigen <- eigen(slim_cor)
@@ -142,5 +153,68 @@ scree(slim_cor) # , factors = FALSE) # PC is principle components, FA is factors
 # Only keep the factors that have eigenvalue above 1. Will use PC results for now https://www.researchgate.net/post/Both-PC-and-FA-in-scree-plot-which-to-use-in-an-EFA
 # There are 4 such factors.
 
-slim_efa <- fa(chile_slim, nfactors = 4)
+slim_efa <- fa(chile_slim_sn, nfactors = 10)
 slim_efa
+
+
+# Just autism is more legit
+slim_cor_autism <- cor(chile_slim_autism, use = "pairwise")
+slim_cor_autism
+corrplot(slim_cor_autism)
+slim_eigen_autism <- eigen(slim_cor_autism)
+slim_eigen_autism$values
+scree(slim_cor_autism) # , factors = FALSE) # PC is principle components, FA is factors
+# Only keep the factors that have eigenvalue above 1. Will use PC results for now https://www.researchgate.net/post/Both-PC-and-FA-in-scree-plot-which-to-use-in-an-EFA
+# There are 4 such factors.
+
+slim_efa_autism <- fa(chile_slim_autism, nfactors = 4)
+slim_efa_autism
+
+# Need to compare factors for autism to factors for no autism
+
+# Could do same for ADHD
+
+
+
+################################################################################
+
+chile_slim_log <- chile %>%
+  filter(age_june30 >= 6 & age_june30 <= 18) %>% #,
+         #special_needs_status == 1,
+         #sex != 0) %>%
+  select(#school_code,
+         school_region_code,
+         school_rurality_code,
+         teaching_code1,
+         grade_code1,
+         grade_letter, 
+         #student_id,
+         sex,
+         age_june30,
+         #special_needs_status,
+         special_needs_code,
+         student_region_code,
+         #economic_sector_code,
+         #teaching_code_new
+         ) %>%
+  mutate(#school_code = factor(school_code), # maybe don't need to make into factors because cor() needs numeric
+            school_region_code = factor(school_region_code),
+            school_rurality_code = factor(school_rurality_code),
+            grade_code1 = factor(grade_code1),
+            teaching_code1 = factor(teaching_code1),
+            #grade_letter = factor(grade_letter),
+            sex = factor(sex),
+            #special_needs_status = factor(special_needs_status),
+            #special_needs_code = factor(special_needs_code),
+            student_region_code = factor(student_region_code),
+    #        economic_sector_code = factor(economic_sector_code),
+            #teaching_code_new = factor(teaching_code_new)
+            autism = ifelse(special_needs_code == 105, 1, 0)
+  ) %>%
+  select(-special_needs_code)
+
+log_fit <- glm(autism ~ ., data = chile_slim_log)
+summary(log_fit)
+# School region code matters more than student region code, both have significant values
+# Sex is not significant
+# Probably need to do something different with age, add a random effect on age?
