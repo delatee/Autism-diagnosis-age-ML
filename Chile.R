@@ -8,11 +8,17 @@ library(Hmisc)
 library(corrplot)
 library(caret)
 library(mltools)
+library(ggrepel)
+library(rjags)
+library(rstan)
+library(posterior)
+library(tidybayes)
+library(bayesplot)
 library(tidyverse)
 
-setwd("C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation/04_Data")
+setwd("C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation")
 
-chile_raw <- read.csv("School Census Chile.csv") %>%
+chile_raw <- read.csv("04_Data/School Census Chile.csv") %>%
   clean_names() 
 
 chile <- chile_raw %>%
@@ -218,3 +224,35 @@ summary(log_fit)
 # School region code matters more than student region code, both have significant values
 # Sex is not significant
 # Probably need to do something different with age, add a random effect on age?
+
+################################################################################
+
+# Try Bayesian analysis of autism prevalence and specificity and sensitivity of school assessment
+# "Bayesian Estimation of Disease Prevalence and the Parameters of Diagnostic Tests in the Absence of a Gold Standard"
+# Lawrence Joseph, Theresa W. Gyorkos, Louis Coupal
+# https://www.cambridge.org/core/journals/epidemiology-and-psychiatric-sciences/article/bayesian-approach-to-estimating-the-population-prevalence-of-mood-and-anxiety-disorders-using-multiple-measures/DB1D2CA6C27C7E8C85C60B62B969BB72
+
+# Use sensitivity and specificity of Social Attention and Communication Surveillance–Revised (SACS-R) tool
+# "Diagnostic Accuracy of the Social Attention and Communication Surveillance–Revised With Preschool Tool for Early Autism Detection in Very Young Children"
+# Josephine Barbaro, Nancy Sadka, Melissa Gilbert, et al
+# https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2789926
+
+
+
+# Set priors for prevalence, sensitivity and specificity of school-based autism assessment
+# Assume sensitivity and specificity are normally distributed
+aut_prev <- list(y_sample = count(filter(chile_slim, special_needs_code == "105")),
+                 n_sample = nrow(chile_slim), 
+                 spec_mu = 0.996, # from Barbaro et al
+                 spec_sd = (1.00-0.99) / (2*1.96), # from Barbaro et al, CI for spec is 0.99-1.00 (Joseph et al used 0.067 for survey and 0.004 for admin)
+                 sens_mu = 0.620, # from Barbaro et al, for SACS-R (excluding SACS-PR)
+                 sens_sd = (0.66-0.57) / (2*1.96), # from Barbaro et al, CI for sens is 0.57-0.66 (Joseph et al used 0.020 for survey and 0.020 for admin)
+                 p_mu = 0.5, # parameters of beta-proportion distribution, from Joseph et al
+                 p_kappa = 2 # ditto, kappa must be strictly positive
+                 #p_a = 0.5 * 2, # a = mu * kappa
+                 #p_b = (1-0.5) * 2 # b = (1-mu) * kappa
+)
+
+model <- stan_model("Autism-diagnosis-age-ML/single_test.stan")
+
+
