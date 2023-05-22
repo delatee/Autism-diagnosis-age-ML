@@ -338,7 +338,9 @@ summary(as_draws(common_sam))
 
 # Is prevalence the same across geographic regions?
 aut_prev_by_school_region <- chile_bayes %>%
-  group_by(school_region_code, sex, autism) %>%
+  group_by(school_region_code, 
+           #sex, 
+           autism) %>%
   summarise(count = n()) %>%
   pivot_wider(names_from = autism, values_from = count) %>%
   mutate(prevalence = `1` / (`0` + `1`)) %>%
