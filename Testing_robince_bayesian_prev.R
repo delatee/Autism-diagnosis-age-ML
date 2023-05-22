@@ -1,16 +1,9 @@
-  # Copied method and bayesprev.R from https://github.com/robince/bayesian-prevalence/blob/master/R/example_csv.R
-  
-library(nleqslv)
-library(rjags)
-library(posterior)
-library(tidybayes)
-library(bayesplot)
-library(tidyverse)
+# Copied method and bayesprev.R from https://github.com/robince/bayesian-prevalence/blob/master/R/example_csv.R
 
-setwd("C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation")
+#setwd("C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation")
 
 # Load the required functions
-source("Autism-diagnosiss-age-ML/robince_bayesian_prev/bayesprev.R")
+source("Autism-diagnosis-age-ML/robince_bayesian_prev/bayesprev.R")
 
 # Load the data
 # Define prevalence of autism as binary value for each student in right age range 
@@ -94,7 +87,7 @@ plot(xvals, pdf, type ="l", xlab = expression(gamma), ylab ="Posterior density",
   
 ###############################
   
-# See if my way get the same results on their data as their way
+# See if my way gets the same results on their data as their way
   
 nObs <- nrow(sigdat)
 nIter <- 1000
