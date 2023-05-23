@@ -232,8 +232,12 @@ plot(density(extract_variable(rand_region_sam, "theta[2]")), xlim = c(0, 0.02))
 abline(v = 617/178136, col = "red")
 # etc
 
-# See Bayesian stats assignemnt for tidyverse extraction of theta distributions
+# See Bayesian stats assignment for tidyverse extraction of theta distributions
 rand_region_theta <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration")
+# Will come back to this
+
+
+### Also need to try random effect on sex and on age, and maybe sex and region together or with age
 
 
 ################################################################################
