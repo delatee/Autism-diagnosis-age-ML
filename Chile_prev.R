@@ -69,14 +69,20 @@ nObs <- nrow(chile_bayes)
 nIter <- 1000
 nBurn <- 1000
 
+# Start with uniform prior
+theta_a <- 1
+theta_b <- 1
+# This corresponds to a mean of 0.5
+
 common_model <- "model {
-  theta ~ dbeta(theta_a, theta_b)
-  aut_sample ~ dbin(theta, nObs)
+  theta ~ dbeta(theta_a, theta_b) # Prior
+  aut_sample ~ dbin(theta, nObs) # Prevalence in sample data
+  
+  aut_pred ~ dbin(theta, nObs) # Predicted prevalence in new sample of same size
+  
   
   #spec ~ dnorm(spec_mu, 1/spec_sd) # dnorm requires prevalence not sd or var
   #sens ~ dnorm(sens_mu, 1/sens_sd)
-  
-  aut_pred ~ dbin(theta, nObs)
   #aut_post <- aut_sample/nObs * sens + (1 - aut_sample/nObs) * spec
 }"
 
@@ -166,15 +172,79 @@ plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
 
 ### Try bayesian prevalence with random effect on school region
 
+chile_rand_region <- chile_bayes %>%
+  group_by(school_region_name_abr) %>%
+  summarise(nObs = n(),
+            aut_sample = sum(autism)) %>%
+  arrange(school_region_name_abr)
+
+# Try informative prior
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+nRegion <- length(unique(chile_bayes$school_region_name_abr))
+
+rand_region_model <- "model {
+  for(i in 1:nRegion) { # For each region
+    theta[i] ~ dbeta(theta_a, theta_b)
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
+
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+rand_region_data <- list(theta_a = theta_a, 
+                    theta_b = theta_b,
+                    #nObs = rep(3056300, 16),
+                    #nObs = c(113208, 178136, 57116, 44648, 19858, 270637, 146522, 154827, 165436, 27275, 188430, 83353, 68635, 1165047, 67945, 305227),
+                    nObs = chile_rand_region$nObs,
+                    #nObs = matrix(c(chile_rand_region$nObs), nrow = nRegion),
+                    #aut_sample = rep(sum(chile_bayes$autism), 16),
+                    aut_sample = chile_rand_region$aut_sample,
+                    #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
+                    nRegion = nRegion)
+
+#rand_region_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
+#                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
+
+rand_region_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
+
+# Run JAGS model and discard burn-in samples
+rand_region_jag <- jags.model(textConnection(rand_region_model),
+                         data = rand_region_data,
+                         #inits = rand_region_ini,
+                         n.chains = 2,
+                         quiet = TRUE)
+update(rand_region_jag, n.iter = nBurn)
+rand_region_sam <- coda.samples(model = rand_region_jag,
+                           variable.names = rand_region_pars,
+                           n.iter = nIter)
+
+# Check for convergence in parameters of interest
+mcmc_trace(rand_region_sam, rand_region_pars) # Convergence looks fine and rhats <= 1.1
+summary(as_draws(rand_region_sam)) %>% print(n = Inf)
+plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0,0.01))
+
+# Plot each predicted prevalence distribution (theta[x]) and sample prevalence.
+plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0, 0.02))
+abline(v = 974/113208, col = "red")
+plot(density(extract_variable(rand_region_sam, "theta[2]")), xlim = c(0, 0.02))
+abline(v = 617/178136, col = "red")
+# etc
+
+# See Bayesian stats assignemnt for tidyverse extraction of theta distributions
+rand_region_theta <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration")
+
 
 ################################################################################
 
 # Dumping ground
 
 
-#b1 <- seq(0, 1, by = 0.01)    
-#by1 <- dbeta(b1, shape1 = 33.5, shape2 = 1083) 
-#plot(by1)
+b1 <- seq(0, 1, by = 0.001)    
+by1 <- dbeta(b1, shape1 = 33.5, shape2 = 1083) 
+by1 <- dbeta(b1, shape1 = 9.2, shape2 = 13.8) 
+plot(by1)
 
 
 # Set priors for prevalence, sensitivity and specificity of school-based autism assessment
