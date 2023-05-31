@@ -4,8 +4,10 @@
 
 library(nleqslv) # Only needed for robince bayesian prevalence
 library(janitor)
+library(readxl)
 library(psych)
 library(Hmisc)
+library(epitools)
 library(corrplot)
 library(caret)
 library(mltools)

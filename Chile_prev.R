@@ -5,6 +5,9 @@
 # Load the data and environment setup
 source("Autism-diagnosis-age-ML/Chile.R")
 
+chile_stdpop_raw <- read_excel("04_Data/pop_chile_2021.xlsx") %>%
+  clean_names() 
+chile_stdpop <- chile_stdpop_raw %>% select(-age, -country, -pop) %>% rename("pop" = "pop_2021")
 
 # Try Bayesian analysis of autism prevalence and specificity and sensitivity of school assessment
 # "Bayesian Estimation of Disease Prevalence and the Parameters of Diagnostic Tests in the Absence of a Gold Standard"
@@ -21,7 +24,7 @@ chile_bayes <- chile %>%
          #special_needs_status == 1,
          sex != 0) %>%
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         age_group = ifelse(age_june30 <= 8, 1, ifelse(age_june30 <= 11, 2, ifelse(age_june30 <= 14, 3, 4)))) %>% 
+         age_cat = ifelse(age_june30 <= 8, 1, ifelse(age_june30 <= 11, 2, ifelse(age_june30 <= 14, 3, 4)))) %>% 
           # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
   select(#school_code,
     school_region_name_abr,
@@ -38,7 +41,7 @@ chile_bayes <- chile %>%
     #economic_sector_code,
     #teaching_code_new,
     autism,
-    age_group
+    age_cat
   ) 
 
 # Prevalence of autism in Chile dataset
@@ -47,19 +50,27 @@ sum(chile_bayes$autism) / nrow(chile_bayes) # 0.00476 = 0.476%, very low
 # Is prevalence the same across geographic regions, age, sex?
 aut_prev_by_school_region <- chile_bayes %>%
   group_by(school_region_name_abr, 
-           age_group, 
+           age_cat, 
            sex,
            autism) %>%
   summarise(count = n()) %>%
   pivot_wider(names_from = autism, values_from = count) %>%
-  mutate(prevalence = `1` / (`0` + `1`)) %>%
-  arrange(prevalence) 
+  rename("n_noautism" = "0", "n_autism" = "1") %>%
+  mutate(sample_pop_size = n_noautism + n_autism,
+         sample_prevalence = n_autism / sample_pop_size) %>%
+  arrange(sample_prevalence) 
 aut_prev_by_school_region
 
 ggplot(data = aut_prev_by_school_region) +
-  geom_col(aes(x = school_region_name_abr, y = prevalence, group = age_group, fill = as.factor(age_group)), position = "dodge")
+  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat, fill = as.factor(age_cat)), position = "dodge")
   #geom_col(aes(x = school_region_name_abr, y = prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
     # 1 is male, 2 is female
+
+################################################################################
+
+# Standardise prevalence by Chile's age and sex based population sizes
+aut_prev_all <- left_join(aut_prev_by_school_region, chile_stdpop, by = c("age_cat", "sex"))
+aut_prev_std <- ageadjust.direct()
 
 ################################################################################
 
