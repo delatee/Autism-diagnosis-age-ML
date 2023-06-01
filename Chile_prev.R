@@ -7,7 +7,11 @@ source("Autism-diagnosis-age-ML/Chile.R")
 
 chile_stdpop_raw <- read_excel("04_Data/pop_chile_2021.xlsx") %>%
   clean_names() 
-chile_stdpop <- chile_stdpop_raw %>% select(-age, -country, -pop) %>% rename("pop" = "pop_2021")
+
+chile_stdpop <- chile_stdpop_raw %>%
+  select(-age, -country, -pop) %>%
+  rename("std_pop" = "pop_2021") %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
 
 # Try Bayesian analysis of autism prevalence and specificity and sensitivity of school assessment
 # "Bayesian Estimation of Disease Prevalence and the Parameters of Diagnostic Tests in the Absence of a Gold Standard"
@@ -57,7 +61,7 @@ aut_prev_by_school_region <- chile_bayes %>%
   pivot_wider(names_from = autism, values_from = count) %>%
   rename("n_noautism" = "0", "n_autism" = "1") %>%
   mutate(sample_pop_size = n_noautism + n_autism,
-         sample_prevalence = n_autism / sample_pop_size) %>%
+         sample_prevalence = n_autism / sample_pop_size * 100) %>%
   arrange(sample_prevalence) 
 aut_prev_by_school_region
 
@@ -69,8 +73,26 @@ ggplot(data = aut_prev_by_school_region) +
 ################################################################################
 
 # Standardise prevalence by Chile's age and sex based population sizes
-aut_prev_all <- left_join(aut_prev_by_school_region, chile_stdpop, by = c("age_cat", "sex"))
-aut_prev_std <- ageadjust.direct()
+aut_prev_all <- left_join(aut_prev_by_school_region, chile_stdpop, by = c("age_cat", "sex")) %>% mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop)
+aut_prev_all_f <- aut_prev_all %>% filter(sex == 2) %>% select(-pop_prop, -aut_prev_std)
+aut_prev_all_m <- aut_prev_all %>% filter(sex == 1)
+
+n_std_f <- chile_stdpop %>% filter(sex == 2) %>% select(std_pop) %>% sum
+n_std_m <- chile_stdpop %>% filter(sex == 1) %>% select(std_pop) %>% sum
+
+aut_prev_all_f <- aut_prev_all_f %>%
+  mutate(std_pop_prop = std_pop / n_std_f,
+         aut_prev_std_100 = n_autism / sample_pop_size * 100 * std_pop_prop)
+
+
+#aut_prev_std_f <- ageadjust.direct(count = aut_prev_all_f$n_autism,
+#                                   pop = aut_prev_all_f$sample_pop_size,
+#                                   stdpop = aut_prev_all_f$std_pop,
+#                                   conf.level = 0.95)
+
+aut_prev_all <- aut_prev_all %>%
+  mutate(aut_expected = n_autism * std_pop / sample_pop_size,
+         aut_prev_std = aut_expected / std_pop)
 
 ################################################################################
 
