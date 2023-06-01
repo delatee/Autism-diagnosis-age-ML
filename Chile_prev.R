@@ -52,18 +52,21 @@ chile_bayes <- chile %>%
 sum(chile_bayes$autism) / nrow(chile_bayes) # 0.00476 = 0.476%, very low
 
 # Is prevalence the same across geographic regions, age, sex?
-aut_prev_by_school_region <- chile_bayes %>%
-  group_by(school_region_name_abr, 
-           age_cat, 
-           sex,
-           autism) %>%
+n_std_pop <- sum(chile_stdpop$std_pop)
+aut_prev_all<- chile_bayes %>%
+  group_by(school_region_name_abr, age_cat, sex, autism) %>%
   summarise(count = n()) %>%
   pivot_wider(names_from = autism, values_from = count) %>%
   rename("n_noautism" = "0", "n_autism" = "1") %>%
-  mutate(sample_pop_size = n_noautism + n_autism,
-         sample_prevalence = n_autism / sample_pop_size * 100) %>%
-  arrange(sample_prevalence) 
-aut_prev_by_school_region
+  mutate(n_autism = ifelse(is.na(n_autism), 0, n_autism),
+         sample_pop_size = n_noautism + n_autism,
+         sample_prevalence = n_autism / sample_pop_size) %>%
+  left_join(chile_stdpop, by = c("age_cat", "sex")) %>%
+  mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop,
+         w = std_pop / (sample_pop_size * n_std_pop),
+         w2 = pop_prop / sample_pop_size,
+         sum_std_pop = sum(std_pop)) %>%
+  ungroup()
 
 ggplot(data = aut_prev_by_school_region) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat, fill = as.factor(age_cat)), position = "dodge")
@@ -73,16 +76,23 @@ ggplot(data = aut_prev_by_school_region) +
 ################################################################################
 
 # Standardise prevalence by Chile's age and sex based population sizes
-aut_prev_all <- left_join(aut_prev_by_school_region, chile_stdpop, by = c("age_cat", "sex")) %>% mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop)
-aut_prev_all_f <- aut_prev_all %>% filter(sex == 2) %>% select(-pop_prop, -aut_prev_std)
-aut_prev_all_m <- aut_prev_all %>% filter(sex == 1)
+# using https://seer.cancer.gov/seerstat/WebHelp/Rate_Algorithms.htm 
+# and https://wonder.cdc.gov/wonder/help/cancer/fayfeuerconfidenceintervals.pdf 
+aut_prev_adjrate <- aut_prev_all %>%
+  group_by(school_region_name_abr) %>%
+  summarise(crude_rate = sum(n_autism) / sum(sample_pop_size),
+            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
 
-n_std_f <- chile_stdpop %>% filter(sex == 2) %>% select(std_pop) %>% sum
-n_std_m <- chile_stdpop %>% filter(sex == 1) %>% select(std_pop) %>% sum
-
-aut_prev_all_f <- aut_prev_all_f %>%
-  mutate(std_pop_prop = std_pop / n_std_f,
-         aut_prev_std_100 = n_autism / sample_pop_size * 100 * std_pop_prop)
+qchisq(0.3, 2.6)
+aut_prev_adjrate$var / (2*aut_prev_adjrate$adjusted_rate)
+(aut_prev_adjrate$var + aut_prev_adjrate$w_M^2) / 2*(aut_prev_adjrate$adjusted_rate + aut_prev_adjrate$w_M)
+qchisq(p = 0.05/2, df = 2*aut_prev_adjrate$adjusted_rate^2 / aut_prev_adjrate$var)
+qchisq(p = 1-0.05/2, df = 2*(aut_prev_adjrate$adjusted_rate+aut_prev_adjrate$w_M)^2 / (aut_prev_adjrate$var+aut_prev_adjrate$w_M^2))
 
 
 #aut_prev_std_f <- ageadjust.direct(count = aut_prev_all_f$n_autism,
