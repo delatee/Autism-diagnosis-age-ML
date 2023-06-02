@@ -5,13 +5,17 @@
 # Load the data and environment setup
 source("Autism-diagnosis-age-ML/Chile.R")
 
-chile_stdpop_raw <- read_excel("04_Data/pop_chile_2021.xlsx") %>%
+chile_stdpop_raw <- read_excel("04_Data/pop_chile_2021_single_age.xlsx") %>%
   clean_names() 
 
 chile_stdpop <- chile_stdpop_raw %>%
-  select(-age, -country, -pop) %>%
+  filter(sex != 9) %>%
   rename("std_pop" = "pop_2021") %>%
   mutate(pop_prop = std_pop / sum(std_pop))
+
+
+
+################################################################################
 
 # Try Bayesian analysis of autism prevalence and specificity and sensitivity of school assessment
 # "Bayesian Estimation of Disease Prevalence and the Parameters of Diagnostic Tests in the Absence of a Gold Standard"
@@ -53,23 +57,24 @@ sum(chile_bayes$autism) / nrow(chile_bayes) # 0.00476 = 0.476%, very low
 
 # Is prevalence the same across geographic regions, age, sex?
 n_std_pop <- sum(chile_stdpop$std_pop)
+
 aut_prev_all<- chile_bayes %>%
-  group_by(school_region_name_abr, age_cat, sex, autism) %>%
+  group_by(school_region_name_abr, age_june30, sex, autism) %>%
   summarise(count = n()) %>%
   pivot_wider(names_from = autism, values_from = count) %>%
-  rename("n_noautism" = "0", "n_autism" = "1") %>%
+  rename("n_noautism" = "0", "n_autism" = "1", "age" = "age_june30") %>%
   mutate(n_autism = ifelse(is.na(n_autism), 0, n_autism),
          sample_pop_size = n_noautism + n_autism,
          sample_prevalence = n_autism / sample_pop_size) %>%
-  left_join(chile_stdpop, by = c("age_cat", "sex")) %>%
+  left_join(chile_stdpop, by = c("age", "sex")) %>%
   mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop,
          w = std_pop / (sample_pop_size * n_std_pop),
          w2 = pop_prop / sample_pop_size,
          sum_std_pop = sum(std_pop)) %>%
   ungroup()
 
-ggplot(data = aut_prev_by_school_region) +
-  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat, fill = as.factor(age_cat)), position = "dodge")
+ggplot(data = aut_prev_all) +
+  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
   #geom_col(aes(x = school_region_name_abr, y = prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
     # 1 is male, 2 is female
 
@@ -80,33 +85,28 @@ ggplot(data = aut_prev_by_school_region) +
 # and https://wonder.cdc.gov/wonder/help/cancer/fayfeuerconfidenceintervals.pdf 
 aut_prev_adjrate <- aut_prev_all %>%
   group_by(school_region_name_abr) %>%
-  summarise(crude_rate = sum(n_autism) / sum(sample_pop_size),
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_autism) / sum(sample_pop_size),
+            crude_count = sum(n_autism),
             adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            #adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0),
+            adjusted_count = adjusted_rate * sum_sample_pop_size,
             var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
             #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
             ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
             ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
 
-qchisq(0.3, 2.6)
-aut_prev_adjrate$var / (2*aut_prev_adjrate$adjusted_rate)
-(aut_prev_adjrate$var + aut_prev_adjrate$w_M^2) / 2*(aut_prev_adjrate$adjusted_rate + aut_prev_adjrate$w_M)
-qchisq(p = 0.05/2, df = 2*aut_prev_adjrate$adjusted_rate^2 / aut_prev_adjrate$var)
-qchisq(p = 1-0.05/2, df = 2*(aut_prev_adjrate$adjusted_rate+aut_prev_adjrate$w_M)^2 / (aut_prev_adjrate$var+aut_prev_adjrate$w_M^2))
+#qchisq(0.3, 2.6)
+#aut_prev_adjrate$var / (2*aut_prev_adjrate$adjusted_rate)
+#(aut_prev_adjrate$var + aut_prev_adjrate$w_M^2) / 2*(aut_prev_adjrate$adjusted_rate + aut_prev_adjrate$w_M)
+#qchisq(p = 0.05/2, df = 2*aut_prev_adjrate$adjusted_rate^2 / aut_prev_adjrate$var)
+#qchisq(p = 1-0.05/2, df = 2*(aut_prev_adjrate$adjusted_rate+aut_prev_adjrate$w_M)^2 / (aut_prev_adjrate$var+aut_prev_adjrate$w_M^2))
 
-
-#aut_prev_std_f <- ageadjust.direct(count = aut_prev_all_f$n_autism,
-#                                   pop = aut_prev_all_f$sample_pop_size,
-#                                   stdpop = aut_prev_all_f$std_pop,
-#                                   conf.level = 0.95)
-
-aut_prev_all <- aut_prev_all %>%
-  mutate(aut_expected = n_autism * std_pop / sample_pop_size,
-         aut_prev_std = aut_expected / std_pop)
 
 ################################################################################
 
-# Bayesian prevalence analysis
+# Bayesian prevalence analysis - common effects model with sample prevalence
 
 nObs <- nrow(chile_bayes)
 nIter <- 1000
@@ -212,13 +212,14 @@ plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
 
 # Informative prior made no difference to posterior distribution
 
+################################################################################
 
-### Try bayesian prevalence with random effect on school region
+### Bayesian prevalence analysis - random effect on school region with sample prevalences
 
-chile_rand_region <- chile_bayes %>%
+chile_rand_region <- aut_prev_all %>%
   group_by(school_region_name_abr) %>%
-  summarise(nObs = n(),
-            aut_sample = sum(autism)) %>%
+  summarise(nObs = sum(sample_pop_size),
+            aut_sample = sum(n_autism)) %>%
   arrange(school_region_name_abr)
 
 # Try informative prior
@@ -230,9 +231,9 @@ nRegion <- length(unique(chile_bayes$school_region_name_abr))
 rand_region_model <- "model {
   for(i in 1:nRegion) { # For each region
     theta[i] ~ dbeta(theta_a, theta_b)
-    aut_sample[i] ~ dbin(theta[i], nObs[i])
+    aut_sample[i] ~ dbinom(theta[i], nObs[i])
 
-    aut_pred[i] ~ dbin(theta[i], nObs[i])
+    aut_pred[i] ~ dbinom(theta[i], nObs[i])
   }
 }"
 
@@ -278,9 +279,64 @@ abline(v = 617/178136, col = "red")
 # See Bayesian stats assignment for tidyverse extraction of theta distributions
 rand_region_theta <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration")
 # Will come back to this
-
-
 ### Also need to try random effect on sex and on age, and maybe sex and region together or with age
+
+################################################################################
+
+### Bayesian prevalence analysis - try with prevalence model instead of count model
+
+# Try informative prior
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+nRegion <- length(unique(chile_bayes$school_region_name_abr))
+
+rand_region_model <- "model {
+  for(i in 1:nRegion) { # For each region
+    theta[i] ~ dbeta(theta_a, theta_b)
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
+
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+rand_region_data <- list(theta_a = theta_a, 
+                         theta_b = theta_b,
+                         #nObs = rep(3056300, 16),
+                         #nObs = c(113208, 178136, 57116, 44648, 19858, 270637, 146522, 154827, 165436, 27275, 188430, 83353, 68635, 1165047, 67945, 305227),
+                         nObs = aut_prev_adjrate$sum_sample_pop_size,
+                         #nObs = matrix(c(chile_rand_region$nObs), nrow = nRegion),
+                         #aut_sample = rep(sum(chile_bayes$autism), 16),
+                         aut_sample = aut_prev_adjrate$adjusted_count,
+                         #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
+                         nRegion = nRegion)
+
+#rand_region_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
+#                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
+
+rand_region_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
+
+# Run JAGS model and discard burn-in samples
+rand_region_jag <- jags.model(textConnection(rand_region_model),
+                              data = rand_region_data,
+                              #inits = rand_region_ini,
+                              n.chains = 2,
+                              quiet = TRUE)
+update(rand_region_jag, n.iter = nBurn)
+rand_region_sam <- coda.samples(model = rand_region_jag,
+                                variable.names = rand_region_pars,
+                                n.iter = nIter)
+
+# Check for convergence in parameters of interest
+mcmc_trace(rand_region_sam, rand_region_pars) # Convergence looks fine and rhats <= 1.1
+summary(as_draws(rand_region_sam)) %>% print(n = Inf)
+plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0,0.01))
+
+# Plot each predicted prevalence distribution (theta[x]) and sample prevalence.
+plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0, 0.02))
+abline(v = 974/113208, col = "red")
+plot(density(extract_variable(rand_region_sam, "theta[2]")), xlim = c(0, 0.02))
+abline(v = 617/178136, col = "red")
 
 
 ################################################################################

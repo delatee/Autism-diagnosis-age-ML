@@ -64,3 +64,9 @@ chile <- chile_raw %>%
          economic_branch_code = cod_rama,
          economic_profspec_code = cod_men,
          teaching_code_new = ens) 
+
+
+chile_merged_raw <- read.csv("04_Data/Data_Chile_Merge.csv")
+
+
+
