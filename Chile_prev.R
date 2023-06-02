@@ -89,13 +89,14 @@ aut_prev_adjrate <- aut_prev_all %>%
             crude_rate = sum(n_autism) / sum(sample_pop_size),
             crude_count = sum(n_autism),
             adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
-            #adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0),
-            adjusted_count = adjusted_rate * sum_sample_pop_size,
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
             var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
             #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
             ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
-            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  arrange(school_region_name_abr)
 
 #qchisq(0.3, 2.6)
 #aut_prev_adjrate$var / (2*aut_prev_adjrate$adjusted_rate)
@@ -328,8 +329,34 @@ rand_region_sam <- coda.samples(model = rand_region_jag,
                                 n.iter = nIter)
 
 # Check for convergence in parameters of interest
-mcmc_trace(rand_region_sam, rand_region_pars) # Convergence looks fine and rhats <= 1.1
+#mcmc_trace(rand_region_sam, rand_region_pars) 
+mcmc_trace(rand_region_sam, paste0("theta[", 1:nRegion, "]")) # Convergence looks fine and rhats <= 1.1
+mcmc_trace(rand_region_sam, paste0("aut_pred[", 1:nRegion, "]"))# Convergence looks fine and rhats <= 1.1
 summary(as_draws(rand_region_sam)) %>% print(n = Inf)
+rand_region_summ <- summary(subset_draws(as_draws(rand_region_sam), common_pars),
+                       ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                       ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                       "rhat") %>%
+  arrange(desc(mcse_q50))
+rand_region_summ
+
+prev_density_plots <- list()
+ 
+for(i in 1:nRegion) {
+  prevs <- data.frame(prev = extract_variable(rand_region_sam, paste0("theta[", i, "]")))
+  density_plot <- ggplot(prevs, aes(x = prev)) + 
+    geom_density() +
+    geom_vline(xintercept = aut_prev_adjrate$ci_lower[i], color = "red", linetype = "dashed") +
+    geom_vline(xintercept = aut_prev_adjrate$ci_upper[i], color = "red", linetype = "dashed") +
+    labs(title = aut_prev_adjrate$school_region_name_abr[i])
+  prev_density_plots[[i]] <- density_plot
+}
+do.call(grid.arrange, prev_density_plots)
+
+sam1 <- data.frame(prev = extract_variable(rand_region_sam, paste0("theta[", 1, "]")))
+ggplot(sam1, aes(x = prev)) + geom_density() + 
+
+
 plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0,0.01))
 
 # Plot each predicted prevalence distribution (theta[x]) and sample prevalence.
@@ -337,6 +364,7 @@ plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0, 0.02))
 abline(v = 974/113208, col = "red")
 plot(density(extract_variable(rand_region_sam, "theta[2]")), xlim = c(0, 0.02))
 abline(v = 617/178136, col = "red")
+
 
 
 ################################################################################
