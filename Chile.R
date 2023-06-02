@@ -4,6 +4,7 @@
 
 library(nleqslv) # Only needed for robince bayesian prevalence
 library(janitor)
+library(gridExtra)
 library(readxl)
 library(psych)
 library(Hmisc)
@@ -55,7 +56,7 @@ chile <- chile_raw %>%
          dob = fec_nac_alu,
          age_june30 = edad_alu, # age at 30th June 2021
          special_needs_status = int_alu, # integrated student indicator, 0 = no, 1 = yes. Mostly no
-         special_needs_code = cod_int_alu, # ADHD, blindness, etc. 0 = none
+         special_needs_code = cod_int_alu, # ADHD, blindness, etc. 0 = none. 105 = autism, 203 = ADHD. See ER_Matricula_por_alumno_PUBL_MRUN annex 7
          student_region_code = cod_reg_alu,
          student_commune_code = cod_com_alu,
          student_commune_name = nom_com_alu,

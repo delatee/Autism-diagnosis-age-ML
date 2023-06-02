@@ -27,7 +27,7 @@ chile_stdpop <- chile_stdpop_raw %>%
 # Josephine Barbaro, Nancy Sadka, Melissa Gilbert, et al
 # https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2789926
 
-chile_bayes <- chile %>%
+chile_bayes_aut <- chile %>%
   filter(age_june30 >= 6 & age_june30 <= 18,
          #special_needs_status == 1,
          sex != 0) %>%
@@ -53,12 +53,12 @@ chile_bayes <- chile %>%
   ) 
 
 # Prevalence of autism in Chile dataset
-sum(chile_bayes$autism) / nrow(chile_bayes) # 0.00476 = 0.476%, very low
+sum(chile_bayes_aut$autism) / nrow(chile_bayes_aut) # 0.00476 = 0.476%, very low
 
 # Is prevalence the same across geographic regions, age, sex?
 n_std_pop <- sum(chile_stdpop$std_pop)
 
-aut_prev_all<- chile_bayes %>%
+aut_prev_all<- chile_bayes_aut %>%
   group_by(school_region_name_abr, age_june30, sex, autism) %>%
   summarise(count = n()) %>%
   pivot_wider(names_from = autism, values_from = count) %>%
@@ -109,7 +109,7 @@ aut_prev_adjrate <- aut_prev_all %>%
 
 # Bayesian prevalence analysis - common effects model with sample prevalence
 
-nObs <- nrow(chile_bayes)
+nObs <- nrow(chile_bayes_aut)
 nIter <- 1000
 nBurn <- 1000
 
@@ -133,7 +133,7 @@ common_model <- "model {
 common_data <- list(theta_a = theta_a, 
                     theta_b = theta_b,
                     nObs = nObs,
-                    aut_sample = sum(chile_bayes$autism) #,
+                    aut_sample = sum(chile_bayes_aut$autism) #,
                     #spec_mu = 0.996,
                     #pec_sd = (1.00-0.99) / (2*1.96),
                     #sens_mu = 0.62,
@@ -180,7 +180,7 @@ theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 common_data <- list(theta_a = theta_a, 
                     theta_b = theta_b,
                     nObs = nObs,
-                    aut_sample = sum(chile_bayes$autism) #,
+                    aut_sample = sum(chile_bayes_aut$autism) #,
                     #spec_mu = 0.996,
                     #pec_sd = (1.00-0.99) / (2*1.96),
                     #sens_mu = 0.62,
@@ -214,83 +214,85 @@ plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
 # Informative prior made no difference to posterior distribution
 
 ################################################################################
-
-### Bayesian prevalence analysis - random effect on school region with sample prevalences
-
-chile_rand_region <- aut_prev_all %>%
-  group_by(school_region_name_abr) %>%
-  summarise(nObs = sum(sample_pop_size),
-            aut_sample = sum(n_autism)) %>%
-  arrange(school_region_name_abr)
-
-# Try informative prior
-theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-
-nRegion <- length(unique(chile_bayes$school_region_name_abr))
-
-rand_region_model <- "model {
-  for(i in 1:nRegion) { # For each region
-    theta[i] ~ dbeta(theta_a, theta_b)
-    aut_sample[i] ~ dbinom(theta[i], nObs[i])
-
-    aut_pred[i] ~ dbinom(theta[i], nObs[i])
-  }
-}"
-
-rand_region_data <- list(theta_a = theta_a, 
-                    theta_b = theta_b,
-                    #nObs = rep(3056300, 16),
-                    #nObs = c(113208, 178136, 57116, 44648, 19858, 270637, 146522, 154827, 165436, 27275, 188430, 83353, 68635, 1165047, 67945, 305227),
-                    nObs = chile_rand_region$nObs,
-                    #nObs = matrix(c(chile_rand_region$nObs), nrow = nRegion),
-                    #aut_sample = rep(sum(chile_bayes$autism), 16),
-                    aut_sample = chile_rand_region$aut_sample,
-                    #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
-                    nRegion = nRegion)
-
-#rand_region_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
-#                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
-
-rand_region_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
-
-# Run JAGS model and discard burn-in samples
-rand_region_jag <- jags.model(textConnection(rand_region_model),
-                         data = rand_region_data,
-                         #inits = rand_region_ini,
-                         n.chains = 2,
-                         quiet = TRUE)
-update(rand_region_jag, n.iter = nBurn)
-rand_region_sam <- coda.samples(model = rand_region_jag,
-                           variable.names = rand_region_pars,
-                           n.iter = nIter)
-
-# Check for convergence in parameters of interest
-mcmc_trace(rand_region_sam, rand_region_pars) # Convergence looks fine and rhats <= 1.1
-summary(as_draws(rand_region_sam)) %>% print(n = Inf)
-plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0,0.01))
-
-# Plot each predicted prevalence distribution (theta[x]) and sample prevalence.
-plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0, 0.02))
-abline(v = 974/113208, col = "red")
-plot(density(extract_variable(rand_region_sam, "theta[2]")), xlim = c(0, 0.02))
-abline(v = 617/178136, col = "red")
-# etc
-
-# See Bayesian stats assignment for tidyverse extraction of theta distributions
-rand_region_theta <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration")
-# Will come back to this
-### Also need to try random effect on sex and on age, and maybe sex and region together or with age
+# 
+# ### Bayesian prevalence analysis - random effect on school region with sample prevalences
+# 
+# chile_rand_region <- aut_prev_all %>%
+#   group_by(school_region_name_abr) %>%
+#   summarise(nObs = sum(sample_pop_size),
+#             aut_sample = sum(n_autism)) %>%
+#   arrange(school_region_name_abr)
+# 
+# # Try informative prior
+# theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+# theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+# 
+# nRegion <- length(unique(chile_bayes_aut$school_region_name_abr))
+# 
+# rand_region_model <- "model {
+#   for(i in 1:nRegion) { # For each region
+#     theta[i] ~ dbeta(theta_a, theta_b)
+#     aut_sample[i] ~ dbinom(theta[i], nObs[i])
+# 
+#     aut_pred[i] ~ dbinom(theta[i], nObs[i])
+#   }
+# }"
+# 
+# rand_region_data <- list(theta_a = theta_a, 
+#                     theta_b = theta_b,
+#                     #nObs = rep(3056300, 16),
+#                     #nObs = c(113208, 178136, 57116, 44648, 19858, 270637, 146522, 154827, 165436, 27275, 188430, 83353, 68635, 1165047, 67945, 305227),
+#                     nObs = chile_rand_region$nObs,
+#                     #nObs = matrix(c(chile_rand_region$nObs), nrow = nRegion),
+#                     #aut_sample = rep(sum(chile_bayes_aut$autism), 16),
+#                     aut_sample = chile_rand_region$aut_sample,
+#                     #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
+#                     nRegion = nRegion)
+# 
+# #rand_region_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
+# #                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
+# 
+# rand_region_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
+# 
+# # Run JAGS model and discard burn-in samples
+# rand_region_jag <- jags.model(textConnection(rand_region_model),
+#                          data = rand_region_data,
+#                          #inits = rand_region_ini,
+#                          n.chains = 2,
+#                          quiet = TRUE)
+# update(rand_region_jag, n.iter = nBurn)
+# rand_region_sam <- coda.samples(model = rand_region_jag,
+#                            variable.names = rand_region_pars,
+#                            n.iter = nIter)
+# 
+# # Check for convergence in parameters of interest
+# mcmc_trace(rand_region_sam, rand_region_pars) # Convergence looks fine and rhats <= 1.1
+# summary(as_draws(rand_region_sam)) %>% print(n = Inf)
+# plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0,0.01))
+# 
+# # Plot each predicted prevalence distribution (theta[x]) and sample prevalence.
+# plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0, 0.02))
+# abline(v = 974/113208, col = "red")
+# plot(density(extract_variable(rand_region_sam, "theta[2]")), xlim = c(0, 0.02))
+# abline(v = 617/178136, col = "red")
+# # etc
+# 
+# # See Bayesian stats assignment for tidyverse extraction of theta distributions
+# rand_region_theta <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration")
+# # Will come back to this
+# ### Also need to try random effect on sex and on age, and maybe sex and region together or with age
 
 ################################################################################
 
 ### Bayesian prevalence analysis - try with prevalence model instead of count model
 
 # Try informative prior
+theta_mu <- 0.03
+theta_sigma <- (0.04-0.02) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
-nRegion <- length(unique(chile_bayes$school_region_name_abr))
+nRegion <- length(unique(chile_bayes_aut$school_region_name_abr))
 
 rand_region_model <- "model {
   for(i in 1:nRegion) { # For each region
@@ -307,7 +309,7 @@ rand_region_data <- list(theta_a = theta_a,
                          #nObs = c(113208, 178136, 57116, 44648, 19858, 270637, 146522, 154827, 165436, 27275, 188430, 83353, 68635, 1165047, 67945, 305227),
                          nObs = aut_prev_adjrate$sum_sample_pop_size,
                          #nObs = matrix(c(chile_rand_region$nObs), nrow = nRegion),
-                         #aut_sample = rep(sum(chile_bayes$autism), 16),
+                         #aut_sample = rep(sum(chile_bayes_aut$autism), 16),
                          aut_sample = aut_prev_adjrate$adjusted_count,
                          #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
                          nRegion = nRegion)
@@ -352,20 +354,8 @@ for(i in 1:nRegion) {
   prev_density_plots[[i]] <- density_plot
 }
 do.call(grid.arrange, prev_density_plots)
-
-sam1 <- data.frame(prev = extract_variable(rand_region_sam, paste0("theta[", 1, "]")))
-ggplot(sam1, aes(x = prev)) + geom_density() + 
-
-
-plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0,0.01))
-
-# Plot each predicted prevalence distribution (theta[x]) and sample prevalence.
-plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0, 0.02))
-abline(v = 974/113208, col = "red")
-plot(density(extract_variable(rand_region_sam, "theta[2]")), xlim = c(0, 0.02))
-abline(v = 617/178136, col = "red")
-
-
+#autism_prev_plots <- do.call(grid.arrange, prev_density_plots)
+ggsave("autism_prev_plots.png", autism_prev_plots)
 
 ################################################################################
 
