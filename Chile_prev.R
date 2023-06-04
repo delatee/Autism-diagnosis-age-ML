@@ -27,29 +27,30 @@ chile_stdpop <- chile_stdpop_raw %>%
 # Josephine Barbaro, Nancy Sadka, Melissa Gilbert, et al
 # https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2789926
 
-chile_bayes_aut <- chile %>%
+chile_bayes_aut <- chile_merged %>%
   filter(age_june30 >= 6 & age_june30 <= 18,
          #special_needs_status == 1,
          sex != 0) %>%
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
          age_cat = ifelse(age_june30 <= 8, 1, ifelse(age_june30 <= 11, 2, ifelse(age_june30 <= 14, 3, 4)))) %>% 
-          # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
-  select(#school_code,
-    school_region_name_abr,
-    #school_rurality_code,
-    #teaching_code1,
-    #grade_code1,
-    #grade_letter, 
-    #student_id,
-    sex,             # Maybe add this back in, random effect on sex might be useful
+            # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
+  select(school_region_name_abr,
+    sex,
+    sex_desc,
     age_june30,
-    #special_needs_status,
-    #special_needs_code,
-    #student_region_code,
-    #economic_sector_code,
-    #teaching_code_new,
-    autism,
-    age_cat
+    #edad_alu_2, # equal to age_june30
+    age_cat,
+    school_rurality_code,
+    #rural_rbd_2, # not quite equal to school_rurality_code as it has NA's
+    pago_matricula,
+    pago_mensual,
+    school_fee,
+    ethnicity,
+    mapuche,
+    nationality,
+    ethnic_3_group,
+    #asd_chile, # equal to autism
+    autism 
   ) 
 
 # Prevalence of autism in Chile dataset
@@ -58,7 +59,7 @@ sum(chile_bayes_aut$autism) / nrow(chile_bayes_aut) # 0.00476 = 0.476%, very low
 # Is prevalence the same across geographic regions, age, sex?
 n_std_pop <- sum(chile_stdpop$std_pop)
 
-aut_prev_all<- chile_bayes_aut %>%
+aut_prev_region <- chile_bayes_aut %>%
   group_by(school_region_name_abr, age_june30, sex, autism) %>%
   summarise(count = n()) %>%
   pivot_wider(names_from = autism, values_from = count) %>%
@@ -73,7 +74,7 @@ aut_prev_all<- chile_bayes_aut %>%
          sum_std_pop = sum(std_pop)) %>%
   ungroup()
 
-ggplot(data = aut_prev_all) +
+ggplot(data = aut_prev_region) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
   #geom_col(aes(x = school_region_name_abr, y = prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
     # 1 is male, 2 is female
@@ -83,7 +84,7 @@ ggplot(data = aut_prev_all) +
 # Standardise prevalence by Chile's age and sex based population sizes
 # using https://seer.cancer.gov/seerstat/WebHelp/Rate_Algorithms.htm 
 # and https://wonder.cdc.gov/wonder/help/cancer/fayfeuerconfidenceintervals.pdf 
-aut_prev_adjrate <- aut_prev_all %>%
+aut_prev_region_adj <- aut_prev_region %>%
   group_by(school_region_name_abr) %>%
   summarise(sum_sample_pop_size = sum(sample_pop_size),
             crude_rate = sum(n_autism) / sum(sample_pop_size),
@@ -99,10 +100,10 @@ aut_prev_adjrate <- aut_prev_all %>%
   arrange(school_region_name_abr)
 
 #qchisq(0.3, 2.6)
-#aut_prev_adjrate$var / (2*aut_prev_adjrate$adjusted_rate)
-#(aut_prev_adjrate$var + aut_prev_adjrate$w_M^2) / 2*(aut_prev_adjrate$adjusted_rate + aut_prev_adjrate$w_M)
-#qchisq(p = 0.05/2, df = 2*aut_prev_adjrate$adjusted_rate^2 / aut_prev_adjrate$var)
-#qchisq(p = 1-0.05/2, df = 2*(aut_prev_adjrate$adjusted_rate+aut_prev_adjrate$w_M)^2 / (aut_prev_adjrate$var+aut_prev_adjrate$w_M^2))
+#aut_prev_region_adj$var / (2*aut_prev_region_adj$adjusted_rate)
+#(aut_prev_region_adj$var + aut_prev_region_adj$w_M^2) / 2*(aut_prev_region_adj$adjusted_rate + aut_prev_region_adj$w_M)
+#qchisq(p = 0.05/2, df = 2*aut_prev_region_adj$adjusted_rate^2 / aut_prev_region_adj$var)
+#qchisq(p = 1-0.05/2, df = 2*(aut_prev_region_adj$adjusted_rate+aut_prev_region_adj$w_M)^2 / (aut_prev_region_adj$var+aut_prev_region_adj$w_M^2))
 
 
 ################################################################################
@@ -113,10 +114,19 @@ nObs <- nrow(chile_bayes_aut)
 nIter <- 1000
 nBurn <- 1000
 
-# Start with uniform prior
+# Uniform prior
 theta_a <- 1
 theta_b <- 1
 # This corresponds to a mean of 0.5
+
+# OR Informative prior (global population prevalence)
+# Say autism has mean prevalence of 3% and we are 95% confidence that the prevalence is between 2% and 4%.
+# Then mu = 0.03, sigma = (0.04-0.02) / (2*1.96)
+theta_mu <- 0.03
+theta_sigma <- (0.04-0.02) / (2*1.96)
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
 
 common_model <- "model {
   theta ~ dbeta(theta_a, theta_b) # Prior
@@ -135,7 +145,7 @@ common_data <- list(theta_a = theta_a,
                     nObs = nObs,
                     aut_sample = sum(chile_bayes_aut$autism) #,
                     #spec_mu = 0.996,
-                    #pec_sd = (1.00-0.99) / (2*1.96),
+                    #spec_sd = (1.00-0.99) / (2*1.96),
                     #sens_mu = 0.62,
                     #sens_sd = (0.66-0.57) / (2*1.96)
                     )
@@ -166,58 +176,342 @@ plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
 # Very very narrow posterior distribution centered approx at sample prevalence of 0.00476.
 # Not that surprising given uniform prior was used.
 
+# Informative prior made no difference to posterior distribution
 
+################################################################################
 
-### Try with informative prior
+### Bayesian prevalence analysis - try with prevalence model instead of count model
 
-# Say autism has mean prevalence of 3% and we are 95% confidence that the prevalence is between 2% and 4%.
-# Then mu = 0.03, sigma = (0.04-0.02) / (2*1.96)
+# Try informative prior
 theta_mu <- 0.03
 theta_sigma <- (0.04-0.02) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
-common_data <- list(theta_a = theta_a, 
-                    theta_b = theta_b,
-                    nObs = nObs,
-                    aut_sample = sum(chile_bayes_aut$autism) #,
-                    #spec_mu = 0.996,
-                    #pec_sd = (1.00-0.99) / (2*1.96),
-                    #sens_mu = 0.62,
-                    #sens_sd = (0.66-0.57) / (2*1.96)
-)
+nRegion <- length(unique(chile_bayes_aut$school_region_name_abr))
 
-common_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
-                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
+rand_region_model <- "model {
+  for(i in 1:nRegion) { # For each region
+    theta[i] ~ dbeta(theta_a, theta_b)
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
 
-common_pars <- c("theta_a", "theta_b", "theta", 
-                 #"spec", "sens",
-                 "aut_sample", "aut_pred")
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+rand_region_data <- list(theta_a = theta_a, 
+                         theta_b = theta_b,
+                         #nObs = rep(3056300, 16),
+                         #nObs = c(113208, 178136, 57116, 44648, 19858, 270637, 146522, 154827, 165436, 27275, 188430, 83353, 68635, 1165047, 67945, 305227),
+                         nObs = aut_prev_region_adj$sum_sample_pop_size,
+                         #nObs = matrix(c(chile_rand_region$nObs), nrow = nRegion),
+                         #aut_sample = rep(sum(chile_bayes_aut$autism), 16),
+                         aut_sample = aut_prev_region_adj$adjusted_count,
+                         #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
+                         nRegion = nRegion)
+
+#rand_region_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
+#                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
+
+rand_region_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
 
 # Run JAGS model and discard burn-in samples
-common_jag <- jags.model(textConnection(common_model),
-                         data = common_data,
-                         inits = common_ini,
-                         n.chains = 2,
-                         quiet = TRUE)
-update(common_jag, n.iter = nBurn)
-common_sam <- coda.samples(model = common_jag,
-                           variable.names = common_pars,
-                           n.iter = nIter)
+rand_region_jag <- jags.model(textConnection(rand_region_model),
+                              data = rand_region_data,
+                              #inits = rand_region_ini,
+                              n.chains = 2,
+                              quiet = TRUE)
+update(rand_region_jag, n.iter = nBurn)
+rand_region_sam <- coda.samples(model = rand_region_jag,
+                                variable.names = rand_region_pars,
+                                n.iter = nIter)
 
 # Check for convergence in parameters of interest
-mcmc_trace(common_sam, common_pars) # Convergence looks fine and rhats <= 1.1
-summary(as_draws(common_sam)) # mean posterior theta is still 0.00477
-plot(density(extract_variable(common_sam, "theta")), xlim = c(0,0.01))
-plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
+#mcmc_trace(rand_region_sam, rand_region_pars) 
+mcmc_trace(rand_region_sam, paste0("theta[", 1:nRegion, "]")) # Convergence looks fine and rhats <= 1.1
+mcmc_trace(rand_region_sam, paste0("aut_pred[", 1:nRegion, "]"))# Convergence looks fine and rhats <= 1.1
+summary(as_draws(rand_region_sam)) %>% print(n = Inf)
+rand_region_summ <- summary(subset_draws(as_draws(rand_region_sam), rand_rural_pars),
+                       ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                       ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                       "rhat") %>%
+  arrange(desc(mcse_q50))
+rand_region_summ
 
-# Informative prior made no difference to posterior distribution
+prev_density_plots <- list()
+ 
+for(i in 1:nRegion) {
+  prevs <- data.frame(prev = extract_variable(rand_region_sam, paste0("theta[", i, "]")))
+  density_plot <- ggplot(prevs, aes(x = prev)) + 
+    geom_density() +
+    geom_vline(xintercept = aut_prev_region_adj$ci_lower[i], color = "red", linetype = "dashed") +
+    geom_vline(xintercept = aut_prev_region_adj$ci_upper[i], color = "red", linetype = "dashed") +
+    labs(title = aut_prev_region_adj$school_region_name_abr[i])
+  prev_density_plots[[i]] <- density_plot
+}
+do.call(grid.arrange, prev_density_plots)
+autism_prev_region_plots <- do.call(grid.arrange, prev_density_plots)
+ggsave("autism_prev_plots.png", autism_prev_region_plots, height = 10, width = 15)
+
+################################################################################
+
+# Bayesian prevalence by rurality
+
+aut_prev_rural <- chile_bayes_aut %>%
+  group_by(school_rurality_code, age_june30, sex, autism) %>%
+  summarise(count = n()) %>%
+  pivot_wider(names_from = autism, values_from = count) %>%
+  rename("n_noautism" = "0", "n_autism" = "1", "age" = "age_june30") %>%
+  mutate(n_autism = ifelse(is.na(n_autism), 0, n_autism),
+         sample_pop_size = n_noautism + n_autism,
+         sample_prevalence = n_autism / sample_pop_size) %>%
+  left_join(chile_stdpop, by = c("age", "sex")) %>%
+  mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop,
+         w = std_pop / (sample_pop_size * n_std_pop),
+         w2 = pop_prop / sample_pop_size,
+         #sum_std_pop = sum(std_pop)
+         ) %>%
+  ungroup()
+
+ggplot(data = aut_prev_rural) +
+  geom_col(aes(x = school_rurality_code, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
+#geom_col(aes(x = school_region_name_abr, y = prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
+# 1 is male, 2 is female
+
+aut_prev_rural_adj <- aut_prev_rural %>%
+  group_by(school_rurality_code) %>%
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_autism) / sum(sample_pop_size),
+            crude_count = sum(n_autism),
+            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  arrange(school_rurality_code)
+
+# Prior: age and sex standardised prevalence in the whole Chile dataset
+theta_mu <- 0.0046
+theta_sigma <- (0.0045-0.0047) / (2*1.96)
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+nRural <- length(unique(chile_bayes_aut$school_rurality_code))
+
+rand_rural_model <- "model {
+  for(i in 1:nRural) { # For each rurality
+    theta[i] ~ dbeta(theta_a, theta_b)
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
+
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+rand_rural_data <- list(theta_a = theta_a, 
+                         theta_b = theta_b,
+                         nObs = aut_prev_rural_adj$sum_sample_pop_size,
+                         aut_sample = aut_prev_rural_adj$adjusted_count,
+                         nRural = nRural)
+
+#rand_rural_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
+#                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
+
+rand_rural_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
+
+# Run JAGS model and discard burn-in samples
+rand_rural_jag <- jags.model(textConnection(rand_rural_model),
+                              data = rand_rural_data,
+                              #inits = rand_region_ini,
+                              n.chains = 2,
+                              quiet = TRUE)
+update(rand_rural_jag, n.iter = nBurn)
+rand_rural_sam <- coda.samples(model = rand_rural_jag,
+                                variable.names = rand_rural_pars,
+                                n.iter = nIter)
+
+# Check for convergence in parameters of interest
+#mcmc_trace(rand_region_sam, rand_region_pars) 
+mcmc_trace(rand_rural_sam, paste0("theta[", 1:nRural, "]")) # Convergence looks fine and rhats <= 1.1
+mcmc_trace(rand_rural_sam, paste0("aut_pred[", 1:nRural, "]"))# Convergence looks fine and rhats <= 1.1
+summary(as_draws(rand_rural_sam)) %>% print(n = Inf)
+rand_rural_summ <- summary(subset_draws(as_draws(rand_rural_sam), rand_rural_pars),
+                            ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                            ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                            "rhat") %>%
+  arrange(desc(mcse_q50))
+rand_rural_summ
+
+aut_prev_rural_plots <- list()
+
+for(i in 1:nRural) {
+  prevs <- data.frame(prev = extract_variable(rand_rural_sam, paste0("theta[", i, "]")))
+  density_plot <- ggplot(prevs, aes(x = prev)) + 
+    geom_density() +
+    geom_vline(xintercept = aut_prev_rural_adj$ci_lower[i], color = "red", linetype = "dashed") +
+    geom_vline(xintercept = aut_prev_rural_adj$ci_upper[i], color = "red", linetype = "dashed") +
+    labs(title = aut_prev_rural_adj$school_rurality_code[i])
+  aut_prev_rural_plots[[i]] <- density_plot
+}
+do.call(grid.arrange, aut_prev_rural_plots)
+autism_prev_rural_plots <- do.call(grid.arrange, aut_prev_rural_plots)
+ggsave("autism_prev_plots.png", autism_prev_rural_plots, height = 10, width = 15)
+
+# Assuming 0 = city, 1 = rural. 
+# Narrower CI for city because sample size is bigger
+
+################################################################################
+
+### Bayesian prevalence by ethnicity
+
+aut_prev_ethnic <- chile_bayes_aut %>%
+  filter(school_region_name_abr %in% c("ARAUC", "BBIO", "LAGOS", "RIOS", "RM")) %>%
+  group_by(ethnic_3_group, age_june30, sex, autism) %>%
+  summarise(count = n()) %>%
+  pivot_wider(names_from = autism, values_from = count) %>%
+  rename("n_noautism" = "0", "n_autism" = "1", "age" = "age_june30") %>%
+  mutate(ethnic_2_group = ifelse(ethnic_3_group == "Aymara", "Other ethnic group", ethnic_3_group),
+         n_autism = ifelse(is.na(n_autism), 0, n_autism),
+         sample_pop_size = n_noautism + n_autism,
+         sample_prevalence = n_autism / sample_pop_size) %>%
+  left_join(chile_stdpop, by = c("age", "sex")) %>%
+  mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop,
+         w = std_pop / (sample_pop_size * n_std_pop),
+         w2 = pop_prop / sample_pop_size,
+         #sum_std_pop = sum(std_pop)
+  ) %>%
+  ungroup()
+
+ggplot(data = aut_prev_ethnic) +
+  geom_col(aes(x = ethnic_3_group, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
+#geom_col(aes(x = school_region_name_abr, y = prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
+# 1 is male, 2 is female
+
+aut_prev_ethnic_adj <- aut_prev_ethnic %>%
+  #group_by(ethnic_3_group) %>%
+  group_by(ethnic_2_group) %>%
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_autism) / sum(sample_pop_size),
+            crude_count = sum(n_autism),
+            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  #arrange(ethnic_3_group)
+  arrange(ethnic_2_group)
+
+# Prior: age and sex standardised prevalence in the whole Chile dataset
+theta_mu <- 0.0046
+theta_sigma <- (0.0045-0.0047) / (2*1.96)
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+#nEthnic <- length(unique(chile_bayes_aut$ethnic_3_group))
+nEthnic <- length(unique(aut_prev_ethnic$ethnic_2_group))
+
+rand_ethnic_model <- "model {
+  for(i in 1:nEthnic) { # For each ethnic group
+    theta[i] ~ dbeta(theta_a, theta_b)
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
+
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+rand_ethnic_data <- list(theta_a = theta_a, 
+                        theta_b = theta_b,
+                        nObs = aut_prev_ethnic_adj$sum_sample_pop_size,
+                        aut_sample = aut_prev_ethnic_adj$adjusted_count,
+                        nEthnic = nEthnic)
+
+#rand_rural_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
+#                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
+
+rand_ethnic_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
+
+# Run JAGS model and discard burn-in samples
+rand_ethnic_jag <- jags.model(textConnection(rand_ethnic_model),
+                             data = rand_ethnic_data,
+                             #inits = rand_region_ini,
+                             n.chains = 2,
+                             quiet = TRUE)
+update(rand_ethnic_jag, n.iter = nBurn)
+rand_ethnic_sam <- coda.samples(model = rand_ethnic_jag,
+                               variable.names = rand_ethnic_pars,
+                               n.iter = nIter)
+
+# Check for convergence in parameters of interest
+#mcmc_trace(rand_region_sam, rand_region_pars) 
+mcmc_trace(rand_ethnic_sam, paste0("theta[", 1:nEthnic, "]")) # Convergence looks fine and rhats <= 1.1
+mcmc_trace(rand_ethnic_sam, paste0("aut_pred[", 1:nEthnic, "]"))# Convergence looks fine and rhats <= 1.1
+summary(as_draws(rand_ethnic_sam)) %>% print(n = Inf)
+rand_ethnic_summ <- summary(subset_draws(as_draws(rand_ethnic_sam), rand_ethnic_pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+  arrange(desc(mcse_q50))
+rand_ethnic_summ
+
+aut_prev_ethnic_plots <- list()
+
+for(i in 1:nEthnic) {
+  prevs <- data.frame(prev = extract_variable(rand_ethnic_sam, paste0("theta[", i, "]")))
+  density_plot <- ggplot(prevs, aes(x = prev)) + 
+    geom_density() +
+    geom_vline(xintercept = aut_prev_ethnic_adj$ci_lower[i], color = "red", linetype = "dashed") +
+    geom_vline(xintercept = aut_prev_ethnic_adj$ci_upper[i], color = "red", linetype = "dashed") +
+    #labs(title = aut_prev_ethnic_adj$ethnic_3_group[i])
+    labs(title = aut_prev_ethnic_adj$ethnic_2_group[i])
+  aut_prev_ethnic_plots[[i]] <- density_plot
+}
+do.call(grid.arrange, aut_prev_ethnic_plots)
+autism_prev_ethnic_plots <- do.call(grid.arrange, aut_prev_ethnic_plots)
+ggsave("autism_prev_plots.png", autism_prev_ethnic_plots, height = 10, width = 15)
+
+################################################################################
+
+
+
+
+################################################################################
+
+# Dumping ground
+
+
+b1 <- seq(0, 1, by = 0.001)    
+by1 <- dbeta(b1, shape1 = 33.5, shape2 = 1083) 
+by1 <- dbeta(b1, shape1 = 9.2, shape2 = 13.8) 
+plot(by1)
+
+
+# Set priors for prevalence, sensitivity and specificity of school-based autism assessment
+# Assume sensitivity and specificity are normally distributed
+# aut_prev <- list(y_sample = count(filter(chile_slim, special_needs_code == "105")),
+#                  n_sample = nrow(chile_slim), 
+#                  spec_mu = 0.996, # from Barbaro et al
+#                  spec_sd = (1.00-0.99) / (2*1.96), # from Barbaro et al, CI for spec is 0.99-1.00 (Joseph et al used 0.067 for survey and 0.004 for admin)
+#                  sens_mu = 0.620, # from Barbaro et al, for SACS-R (excluding SACS-PR)
+#                  sens_sd = (0.66-0.57) / (2*1.96), # from Barbaro et al, CI for sens is 0.57-0.66 (Joseph et al used 0.020 for survey and 0.020 for admin)
+#                  p_mu = 0.5, # parameters of beta-proportion distribution, from Joseph et al
+#                  p_kappa = 2 # ditto, kappa must be strictly positive
+#                  #theta_a = 0.5 * 2, # a = mu * kappa
+#                  #theta_b = (1-0.5) * 2 # b = (1-mu) * kappa
+# )
+
+#model <- stan_model("Autism-diagnosis-age-ML/single_test.stan")
+
 
 ################################################################################
 # 
 # ### Bayesian prevalence analysis - random effect on school region with sample prevalences
 # 
-# chile_rand_region <- aut_prev_all %>%
+# chile_rand_region <- aut_prev_region %>%
 #   group_by(school_region_name_abr) %>%
 #   summarise(nObs = sum(sample_pop_size),
 #             aut_sample = sum(n_autism)) %>%
@@ -281,108 +575,5 @@ plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
 # rand_region_theta <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration")
 # # Will come back to this
 # ### Also need to try random effect on sex and on age, and maybe sex and region together or with age
-
-################################################################################
-
-### Bayesian prevalence analysis - try with prevalence model instead of count model
-
-# Try informative prior
-theta_mu <- 0.03
-theta_sigma <- (0.04-0.02) / (2*1.96)
-theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-
-nRegion <- length(unique(chile_bayes_aut$school_region_name_abr))
-
-rand_region_model <- "model {
-  for(i in 1:nRegion) { # For each region
-    theta[i] ~ dbeta(theta_a, theta_b)
-    aut_sample[i] ~ dbin(theta[i], nObs[i])
-
-    aut_pred[i] ~ dbin(theta[i], nObs[i])
-  }
-}"
-
-rand_region_data <- list(theta_a = theta_a, 
-                         theta_b = theta_b,
-                         #nObs = rep(3056300, 16),
-                         #nObs = c(113208, 178136, 57116, 44648, 19858, 270637, 146522, 154827, 165436, 27275, 188430, 83353, 68635, 1165047, 67945, 305227),
-                         nObs = aut_prev_adjrate$sum_sample_pop_size,
-                         #nObs = matrix(c(chile_rand_region$nObs), nrow = nRegion),
-                         #aut_sample = rep(sum(chile_bayes_aut$autism), 16),
-                         aut_sample = aut_prev_adjrate$adjusted_count,
-                         #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
-                         nRegion = nRegion)
-
-#rand_region_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
-#                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
-
-rand_region_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
-
-# Run JAGS model and discard burn-in samples
-rand_region_jag <- jags.model(textConnection(rand_region_model),
-                              data = rand_region_data,
-                              #inits = rand_region_ini,
-                              n.chains = 2,
-                              quiet = TRUE)
-update(rand_region_jag, n.iter = nBurn)
-rand_region_sam <- coda.samples(model = rand_region_jag,
-                                variable.names = rand_region_pars,
-                                n.iter = nIter)
-
-# Check for convergence in parameters of interest
-#mcmc_trace(rand_region_sam, rand_region_pars) 
-mcmc_trace(rand_region_sam, paste0("theta[", 1:nRegion, "]")) # Convergence looks fine and rhats <= 1.1
-mcmc_trace(rand_region_sam, paste0("aut_pred[", 1:nRegion, "]"))# Convergence looks fine and rhats <= 1.1
-summary(as_draws(rand_region_sam)) %>% print(n = Inf)
-rand_region_summ <- summary(subset_draws(as_draws(rand_region_sam), common_pars),
-                       ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
-                       ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
-                       "rhat") %>%
-  arrange(desc(mcse_q50))
-rand_region_summ
-
-prev_density_plots <- list()
- 
-for(i in 1:nRegion) {
-  prevs <- data.frame(prev = extract_variable(rand_region_sam, paste0("theta[", i, "]")))
-  density_plot <- ggplot(prevs, aes(x = prev)) + 
-    geom_density() +
-    geom_vline(xintercept = aut_prev_adjrate$ci_lower[i], color = "red", linetype = "dashed") +
-    geom_vline(xintercept = aut_prev_adjrate$ci_upper[i], color = "red", linetype = "dashed") +
-    labs(title = aut_prev_adjrate$school_region_name_abr[i])
-  prev_density_plots[[i]] <- density_plot
-}
-do.call(grid.arrange, prev_density_plots)
-#autism_prev_plots <- do.call(grid.arrange, prev_density_plots)
-ggsave("autism_prev_plots.png", autism_prev_plots)
-
-################################################################################
-
-# Dumping ground
-
-
-b1 <- seq(0, 1, by = 0.001)    
-by1 <- dbeta(b1, shape1 = 33.5, shape2 = 1083) 
-by1 <- dbeta(b1, shape1 = 9.2, shape2 = 13.8) 
-plot(by1)
-
-
-# Set priors for prevalence, sensitivity and specificity of school-based autism assessment
-# Assume sensitivity and specificity are normally distributed
-# aut_prev <- list(y_sample = count(filter(chile_slim, special_needs_code == "105")),
-#                  n_sample = nrow(chile_slim), 
-#                  spec_mu = 0.996, # from Barbaro et al
-#                  spec_sd = (1.00-0.99) / (2*1.96), # from Barbaro et al, CI for spec is 0.99-1.00 (Joseph et al used 0.067 for survey and 0.004 for admin)
-#                  sens_mu = 0.620, # from Barbaro et al, for SACS-R (excluding SACS-PR)
-#                  sens_sd = (0.66-0.57) / (2*1.96), # from Barbaro et al, CI for sens is 0.57-0.66 (Joseph et al used 0.020 for survey and 0.020 for admin)
-#                  p_mu = 0.5, # parameters of beta-proportion distribution, from Joseph et al
-#                  p_kappa = 2 # ditto, kappa must be strictly positive
-#                  #theta_a = 0.5 * 2, # a = mu * kappa
-#                  #theta_b = (1-0.5) * 2 # b = (1-mu) * kappa
-# )
-
-#model <- stan_model("Autism-diagnosis-age-ML/single_test.stan")
-
 
 
