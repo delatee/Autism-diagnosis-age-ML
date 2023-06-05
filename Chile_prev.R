@@ -22,6 +22,8 @@ chile_stdpop <- chile_stdpop_raw %>%
 # Lawrence Joseph, Theresa W. Gyorkos, Louis Coupal
 # https://www.cambridge.org/core/journals/epidemiology-and-psychiatric-sciences/article/bayesian-approach-to-estimating-the-population-prevalence-of-mood-and-anxiety-disorders-using-multiple-measures/DB1D2CA6C27C7E8C85C60B62B969BB72
 
+# https://www.cambridge.org/core/journals/epidemiology-and-psychiatric-sciences/article/bayesian-approach-to-estimating-the-population-prevalence-of-mood-and-anxiety-disorders-using-multiple-measures/DB1D2CA6C27C7E8C85C60B62B969BB72#article
+
 # Use sensitivity and specificity of Social Attention and Communication Surveillance–Revised (SACS-R) tool
 # "Diagnostic Accuracy of the Social Attention and Communication Surveillance–Revised With Preschool Tool for Early Autism Detection in Very Young Children"
 # Josephine Barbaro, Nancy Sadka, Melissa Gilbert, et al
@@ -81,23 +83,6 @@ ggplot(data = aut_prev_region) +
 
 ################################################################################
 
-# Standardise prevalence by Chile's age and sex based population sizes
-# using https://seer.cancer.gov/seerstat/WebHelp/Rate_Algorithms.htm 
-# and https://wonder.cdc.gov/wonder/help/cancer/fayfeuerconfidenceintervals.pdf 
-aut_prev_region_adj <- aut_prev_region %>%
-  group_by(school_region_name_abr) %>%
-  summarise(sum_sample_pop_size = sum(sample_pop_size),
-            crude_rate = sum(n_autism) / sum(sample_pop_size),
-            crude_count = sum(n_autism),
-            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
-            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
-            #adjusted_count = adjusted_rate * sum_sample_pop_size,
-            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
-            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
-            w_M = max(w),
-            ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
-            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
-  arrange(school_region_name_abr)
 
 #qchisq(0.3, 2.6)
 #aut_prev_region_adj$var / (2*aut_prev_region_adj$adjusted_rate)
@@ -180,11 +165,29 @@ plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
 
 ################################################################################
 
-### Bayesian prevalence analysis - try with prevalence model instead of count model
+### Bayesian prevalence analysis
+
+# Standardise prevalence by Chile's age and sex based population sizes
+# using https://seer.cancer.gov/seerstat/WebHelp/Rate_Algorithms.htm 
+# and https://wonder.cdc.gov/wonder/help/cancer/fayfeuerconfidenceintervals.pdf 
+aut_prev_region_adj <- aut_prev_region %>%
+  group_by(school_region_name_abr) %>%
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_autism) / sum(sample_pop_size),
+            crude_count = sum(n_autism),
+            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  arrange(school_region_name_abr)
 
 # Try informative prior
-theta_mu <- 0.03
-theta_sigma <- (0.04-0.02) / (2*1.96)
+theta_mu <- 0.0046
+theta_sigma <- (0.0047-0.0045) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
@@ -210,15 +213,15 @@ rand_region_data <- list(theta_a = theta_a,
                          #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
                          nRegion = nRegion)
 
-#rand_region_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
-#                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
+rand_region_ini <- list(list(theta = rep(0.001, nRegion)), #, spec = 0.5, sens = 0.5),
+                        list(theta = rep(0.01, nRegion))) #, spec = 0.9, sens = 0.9)) 
 
 rand_region_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
 
 # Run JAGS model and discard burn-in samples
 rand_region_jag <- jags.model(textConnection(rand_region_model),
                               data = rand_region_data,
-                              #inits = rand_region_ini,
+                              inits = rand_region_ini,
                               n.chains = 2,
                               quiet = TRUE)
 update(rand_region_jag, n.iter = nBurn)
@@ -238,20 +241,81 @@ rand_region_summ <- summary(subset_draws(as_draws(rand_region_sam), rand_rural_p
   arrange(desc(mcse_q50))
 rand_region_summ
 
-prev_density_plots <- list()
+aut_prev_region_plots <- list()
+region_post_ci_lower <- list()
+region_post_ci_upper <- list()
  
 for(i in 1:nRegion) {
   prevs <- data.frame(prev = extract_variable(rand_region_sam, paste0("theta[", i, "]")))
+  region_post_ci_lower[[i]] <- quantile(prevs$prev, 0.025)
+  region_post_ci_upper[[i]] <- quantile(prevs$prev, 0.925)
   density_plot <- ggplot(prevs, aes(x = prev)) + 
     geom_density() +
+    xlim(c(0.002, 0.02)) +
+    geom_vline(xintercept = region_post_ci_lower[[i]], color = "blue", linetype = "dotted") +
+    geom_vline(xintercept = region_post_ci_upper[[i]], color = "blue", linetype = "dotted") +
     geom_vline(xintercept = aut_prev_region_adj$ci_lower[i], color = "red", linetype = "dashed") +
     geom_vline(xintercept = aut_prev_region_adj$ci_upper[i], color = "red", linetype = "dashed") +
     labs(title = aut_prev_region_adj$school_region_name_abr[i])
-  prev_density_plots[[i]] <- density_plot
+  aut_prev_region_plots[[i]] <- density_plot
 }
-do.call(grid.arrange, prev_density_plots)
-autism_prev_region_plots <- do.call(grid.arrange, prev_density_plots)
-ggsave("autism_prev_plots.png", autism_prev_region_plots, height = 10, width = 15)
+do.call(grid.arrange, aut_prev_region_plots)
+autism_prev_region_plots <- do.call(grid.arrange, aut_prev_region_plots)
+ggsave("autism_prev_region_plots.png", autism_prev_region_plots, height = 10, width = 15)
+
+
+# Sensitivity analysis - change prior mean
+theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
+              rep(0.0046, 4)) # Same as chosen prior
+theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
+                 0.0001, 0.001, 0.05, 0.01) # +/- 0.1%, 0.5%, 1%, 5%
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+for(j in 1:length(theta_mu)) {
+  #print(j)
+  #print(theta_a[j])
+  #print(theta_b[j])
+  rand_region_data <- list(theta_a = theta_a[j], 
+                           theta_b = theta_b[j],
+                           nObs = aut_prev_region_adj$sum_sample_pop_size,
+                           aut_sample = aut_prev_region_adj$adjusted_count,
+                           nRegion = nRegion)
+  rand_region_jag <- jags.model(textConnection(rand_region_model),
+                                data = rand_region_data,
+                                inits = rand_region_ini,
+                                n.chains = 2,
+                                quiet = TRUE)
+  update(rand_region_jag, n.iter = nBurn)
+  rand_region_sam <- coda.samples(model = rand_region_jag,
+                                  variable.names = rand_region_pars,
+                                  n.iter = nIter)
+  mcmc_trace(rand_region_sam, paste0("theta[", 1:nRegion, "]")) # Convergence looks fine and rhats <= 1.1
+  mcmc_trace(rand_region_sam, paste0("aut_pred[", 1:nRegion, "]"))# Convergence looks fine and rhats <= 1.1
+  
+  # Plot
+  aut_prev_region_plots <- list()
+  region_post_ci_lower <- list()
+  region_post_ci_upper <- list()
+  
+  for(i in 1:nRegion) {
+    prevs <- data.frame(prev = extract_variable(rand_region_sam, paste0("theta[", i, "]")))
+    region_post_ci_lower[[i]] <- quantile(prevs$prev, 0.025)
+    region_post_ci_upper[[i]] <- quantile(prevs$prev, 0.925)
+    density_plot <- ggplot(prevs, aes(x = prev)) + 
+      geom_density() +
+      xlim(c(0.002, 0.02)) +
+      geom_vline(xintercept = region_post_ci_lower[[i]], color = "blue", linetype = "dotted") +
+      geom_vline(xintercept = region_post_ci_upper[[i]], color = "blue", linetype = "dotted") +
+      geom_vline(xintercept = aut_prev_region_adj$ci_lower[i], color = "red", linetype = "dashed") +
+      geom_vline(xintercept = aut_prev_region_adj$ci_upper[i], color = "red", linetype = "dashed") +
+      labs(title = aut_prev_region_adj$school_region_name_abr[i])
+    aut_prev_region_plots[[i]] <- density_plot
+  }
+  autism_prev_region_plots <- do.call(grid.arrange, aut_prev_region_plots)
+  ggsave(paste0("autism_prev_region_plots_", j, ".png"), autism_prev_region_plots, height = 10, width = 15)
+}
+
 
 ################################################################################
 
@@ -295,7 +359,9 @@ aut_prev_rural_adj <- aut_prev_rural %>%
 
 # Prior: age and sex standardised prevalence in the whole Chile dataset
 theta_mu <- 0.0046
-theta_sigma <- (0.0045-0.0047) / (2*1.96)
+theta_sigma <- (0.0047-0.0045) / (2*1.96)
+theta_mu <- 0.02
+theta_sigma <- (0.03-0.01) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
@@ -345,11 +411,18 @@ rand_rural_summ <- summary(subset_draws(as_draws(rand_rural_sam), rand_rural_par
 rand_rural_summ
 
 aut_prev_rural_plots <- list()
+rural_post_ci_lower <- list()
+rural_post_ci_upper <- list()
 
 for(i in 1:nRural) {
   prevs <- data.frame(prev = extract_variable(rand_rural_sam, paste0("theta[", i, "]")))
-  density_plot <- ggplot(prevs, aes(x = prev)) + 
+  rural_post_ci_lower[[i]] <- quantile(prevs$prev, 0.025)
+  rural_post_ci_upper[[i]] <- quantile(prevs$prev, 0.925)
+  density_plot <- ggplot(prevs, aes(x = prev), color =  "blue") + 
     geom_density() +
+    xlim(c(0.003, 0.007)) +
+    geom_vline(xintercept = rural_post_ci_lower[[i]], color = "blue", linetype = "dotted") +
+    geom_vline(xintercept = rural_post_ci_upper[[i]], color = "blue", linetype = "dotted") +
     geom_vline(xintercept = aut_prev_rural_adj$ci_lower[i], color = "red", linetype = "dashed") +
     geom_vline(xintercept = aut_prev_rural_adj$ci_upper[i], color = "red", linetype = "dashed") +
     labs(title = aut_prev_rural_adj$school_rurality_code[i])
@@ -358,6 +431,9 @@ for(i in 1:nRural) {
 do.call(grid.arrange, aut_prev_rural_plots)
 autism_prev_rural_plots <- do.call(grid.arrange, aut_prev_rural_plots)
 ggsave("autism_prev_plots.png", autism_prev_rural_plots, height = 10, width = 15)
+
+summary(extract_variable(rand_rural_sam, paste0("theta[", 1, "]")))
+quantile(extract_variable(rand_rural_sam, paste0("theta[", 1, "]")), 0.025)
 
 # Assuming 0 = city, 1 = rural. 
 # Narrower CI for city because sample size is bigger
@@ -408,7 +484,9 @@ aut_prev_ethnic_adj <- aut_prev_ethnic %>%
 
 # Prior: age and sex standardised prevalence in the whole Chile dataset
 theta_mu <- 0.0046
-theta_sigma <- (0.0045-0.0047) / (2*1.96)
+theta_sigma <- (0.0047-0.0045) / (2*1.96)
+theta_mu <- 0.005
+theta_sigma <- (0.007-0.003) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
@@ -459,11 +537,18 @@ rand_ethnic_summ <- summary(subset_draws(as_draws(rand_ethnic_sam), rand_ethnic_
 rand_ethnic_summ
 
 aut_prev_ethnic_plots <- list()
+ethnic_post_ci_lower <- list()
+ethnic_post_ci_upper <- list()
 
 for(i in 1:nEthnic) {
   prevs <- data.frame(prev = extract_variable(rand_ethnic_sam, paste0("theta[", i, "]")))
+  ethnic_post_ci_lower[[i]] <- quantile(prevs$prev, 0.025)
+  ethnic_post_ci_upper[[i]] <- quantile(prevs$prev, 0.925)
   density_plot <- ggplot(prevs, aes(x = prev)) + 
     geom_density() +
+    xlim(c(0.002, 0.015)) +
+    geom_vline(xintercept = ethnic_post_ci_lower[[i]], color = "blue", linetype = "dotted") +
+    geom_vline(xintercept = ethnic_post_ci_upper[[i]], color = "blue", linetype = "dotted") +
     geom_vline(xintercept = aut_prev_ethnic_adj$ci_lower[i], color = "red", linetype = "dashed") +
     geom_vline(xintercept = aut_prev_ethnic_adj$ci_upper[i], color = "red", linetype = "dashed") +
     #labs(title = aut_prev_ethnic_adj$ethnic_3_group[i])
