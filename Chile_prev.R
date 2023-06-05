@@ -264,7 +264,7 @@ autism_prev_region_plots <- do.call(grid.arrange, aut_prev_region_plots)
 ggsave("autism_prev_region_plots.png", autism_prev_region_plots, height = 10, width = 15)
 
 
-# Sensitivity analysis - change prior mean
+# Sensitivity analysis - alter prior mean and sd
 theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
               rep(0.0046, 4)) # Same as chosen prior
 theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
@@ -360,8 +360,6 @@ aut_prev_rural_adj <- aut_prev_rural %>%
 # Prior: age and sex standardised prevalence in the whole Chile dataset
 theta_mu <- 0.0046
 theta_sigma <- (0.0047-0.0045) / (2*1.96)
-theta_mu <- 0.02
-theta_sigma <- (0.03-0.01) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
@@ -430,13 +428,62 @@ for(i in 1:nRural) {
 }
 do.call(grid.arrange, aut_prev_rural_plots)
 autism_prev_rural_plots <- do.call(grid.arrange, aut_prev_rural_plots)
-ggsave("autism_prev_plots.png", autism_prev_rural_plots, height = 10, width = 15)
+ggsave("autism_prev_rural_plots.png", autism_prev_rural_plots, height = 10, width = 15)
 
 summary(extract_variable(rand_rural_sam, paste0("theta[", 1, "]")))
 quantile(extract_variable(rand_rural_sam, paste0("theta[", 1, "]")), 0.025)
 
 # Assuming 0 = city, 1 = rural. 
 # Narrower CI for city because sample size is bigger
+
+
+# Sensitivity analysis - alter prior mean and sd
+theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
+              rep(0.0046, 4)) # Same as chosen prior
+theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
+                 0.0001, 0.001, 0.05, 0.01) # +/- 0.1%, 0.5%, 1%, 5%
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+for(j in 1:length(theta_mu)) {
+  rand_rural_data <- list(theta_a = theta_a[j], 
+                          theta_b = theta_b[j],
+                          nObs = aut_prev_rural_adj$sum_sample_pop_size,
+                          aut_sample = aut_prev_rural_adj$adjusted_count,
+                          nRural = nRural)
+  rand_rural_jag <- jags.model(textConnection(rand_rural_model),
+                               data = rand_rural_data,
+                               #inits = rand_region_ini,
+                               n.chains = 2,
+                               quiet = TRUE)
+  update(rand_rural_jag, n.iter = nBurn)
+  rand_rural_sam <- coda.samples(model = rand_rural_jag,
+                                 variable.names = rand_rural_pars,
+                                 n.iter = nIter)
+  
+  # Plots
+  aut_prev_rural_plots <- list()
+  rural_post_ci_lower <- list()
+  rural_post_ci_upper <- list()
+  
+  for(i in 1:nRural) {
+    prevs <- data.frame(prev = extract_variable(rand_rural_sam, paste0("theta[", i, "]")))
+    rural_post_ci_lower[[i]] <- quantile(prevs$prev, 0.025)
+    rural_post_ci_upper[[i]] <- quantile(prevs$prev, 0.925)
+    density_plot <- ggplot(prevs, aes(x = prev), color =  "blue") + 
+      geom_density() +
+      xlim(c(0.004, 0.01)) +
+      geom_vline(xintercept = rural_post_ci_lower[[i]], color = "blue", linetype = "dotted") +
+      geom_vline(xintercept = rural_post_ci_upper[[i]], color = "blue", linetype = "dotted") +
+      geom_vline(xintercept = aut_prev_rural_adj$ci_lower[i], color = "red", linetype = "dashed") +
+      geom_vline(xintercept = aut_prev_rural_adj$ci_upper[i], color = "red", linetype = "dashed") +
+      labs(title = aut_prev_rural_adj$school_rurality_code[i])
+    aut_prev_rural_plots[[i]] <- density_plot
+  }
+  do.call(grid.arrange, aut_prev_rural_plots)
+  autism_prev_rural_plots <- do.call(grid.arrange, aut_prev_rural_plots)
+  ggsave(paste0("autism_prev_rural_plots_", j, ".png"), autism_prev_rural_plots, height = 10, width = 15)
+}
 
 ################################################################################
 
@@ -461,8 +508,9 @@ aut_prev_ethnic <- chile_bayes_aut %>%
   ungroup()
 
 ggplot(data = aut_prev_ethnic) +
-  geom_col(aes(x = ethnic_3_group, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
-#geom_col(aes(x = school_region_name_abr, y = prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
+  #geom_col(aes(x = ethnic_3_group, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
+  geom_col(aes(x = ethnic_2_group, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
+  #geom_col(aes(x = ethnic_3_group, y = sample_prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
 # 1 is male, 2 is female
 
 aut_prev_ethnic_adj <- aut_prev_ethnic %>%
@@ -485,8 +533,6 @@ aut_prev_ethnic_adj <- aut_prev_ethnic %>%
 # Prior: age and sex standardised prevalence in the whole Chile dataset
 theta_mu <- 0.0046
 theta_sigma <- (0.0047-0.0045) / (2*1.96)
-theta_mu <- 0.005
-theta_sigma <- (0.007-0.003) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
@@ -557,7 +603,59 @@ for(i in 1:nEthnic) {
 }
 do.call(grid.arrange, aut_prev_ethnic_plots)
 autism_prev_ethnic_plots <- do.call(grid.arrange, aut_prev_ethnic_plots)
-ggsave("autism_prev_plots.png", autism_prev_ethnic_plots, height = 10, width = 15)
+ggsave("autism_prev_ethnicity_plots.png", autism_prev_ethnic_plots, height = 10, width = 15)
+
+
+
+# Sensitivity analysis - alter prior mean and sd
+theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
+              rep(0.0046, 4)) # Same as chosen prior
+theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
+                 0.0001, 0.001, 0.05, 0.01) # +/- 0.1%, 0.5%, 1%, 5%
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+for(j in 1:length(theta_mu)) {
+  rand_ethnic_data <- list(theta_a = theta_a[j], 
+                           theta_b = theta_b[j],
+                           nObs = aut_prev_ethnic_adj$sum_sample_pop_size,
+                           aut_sample = aut_prev_ethnic_adj$adjusted_count,
+                           nEthnic = nEthnic)
+  rand_ethnic_jag <- jags.model(textConnection(rand_ethnic_model),
+                                data = rand_ethnic_data,
+                                #inits = rand_region_ini,
+                                n.chains = 2,
+                                quiet = TRUE)
+  update(rand_ethnic_jag, n.iter = nBurn)
+  rand_ethnic_sam <- coda.samples(model = rand_ethnic_jag,
+                                  variable.names = rand_ethnic_pars,
+                                  n.iter = nIter)
+  
+  # Plots
+  aut_prev_ethnic_plots <- list()
+  ethnic_post_ci_lower <- list()
+  ethnic_post_ci_upper <- list()
+  
+  for(i in 1:nEthnic) {
+    prevs <- data.frame(prev = extract_variable(rand_ethnic_sam, paste0("theta[", i, "]")))
+    ethnic_post_ci_lower[[i]] <- quantile(prevs$prev, 0.025)
+    ethnic_post_ci_upper[[i]] <- quantile(prevs$prev, 0.925)
+    density_plot <- ggplot(prevs, aes(x = prev)) + 
+      geom_density() +
+      xlim(c(0.002, 0.021)) +
+      geom_vline(xintercept = ethnic_post_ci_lower[[i]], color = "blue", linetype = "dotted") +
+      geom_vline(xintercept = ethnic_post_ci_upper[[i]], color = "blue", linetype = "dotted") +
+      geom_vline(xintercept = aut_prev_ethnic_adj$ci_lower[i], color = "red", linetype = "dashed") +
+      geom_vline(xintercept = aut_prev_ethnic_adj$ci_upper[i], color = "red", linetype = "dashed") +
+      #labs(title = aut_prev_ethnic_adj$ethnic_3_group[i])
+      labs(title = aut_prev_ethnic_adj$ethnic_2_group[i])
+    aut_prev_ethnic_plots[[i]] <- density_plot
+  }
+  do.call(grid.arrange, aut_prev_ethnic_plots)
+  autism_prev_ethnic_plots <- do.call(grid.arrange, aut_prev_ethnic_plots)
+  ggsave(paste0("autism_prev_ethnicity_plots_", j, ".png"), autism_prev_ethnic_plots, height = 10, width = 15)
+  
+}
 
 ################################################################################
 
