@@ -1,11 +1,88 @@
-# Adele Tyson, agmt3@cam.ac.uk
-# 22/5/2023
-# Bayesian prevalence analysis of autism prevalence in Chile and by school's region
+---
+title: "Chile_prev_rmd"
+author: "Adele Tyson"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
 
-# Load the data and environment setup
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation")
+```
 
-setwd("C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation")
-source("Autism-diagnosis-age-ML/Chile.R")
+```{r}
+
+#source("Chile_prev.R", local = knitr::knit_global())
+
+library(nleqslv) # Only needed for robince bayesian prevalence
+library(janitor)
+library(gridExtra)
+library(readxl)
+library(psych)
+library(Hmisc)
+library(poolr)
+library(epitools)
+library(corrplot)
+library(caret)
+library(mltools)
+library(ggrepel)
+library(rjags)
+library(rstan)
+library(posterior)
+library(tidybayes)
+library(bayesplot)
+library(tidyverse)
+
+```
+
+# Bayesian prevalence analysis of autism prevalence in Chile
+
+## Load data
+
+```{r}
+
+chile_merged_raw <- read.csv("04_Data/Data_Chile_Merge.csv") %>% clean_names()
+
+chile_merged <- chile_merged_raw %>%
+  rename(sex_desc = sex,
+         year = agno,
+         school_code = rbd,
+         school_check_code = dgv_rbd, 
+         school_name = nom_rbd,
+         school_region_code = cod_reg_rbd,
+         school_region_name_abr = nom_reg_rbd_a,
+         school_province_code = cod_pro_rbd,
+         school_commune_code = cod_com_rbd,
+         school_commune_name = nom_com_rbd,
+         school_dept_code = cod_deprov_rbd,
+         school_dept_name = nom_deprov_rbd,
+         school_dependency_code = cod_depe, # has categories 1-6, no1 and no2 here are no1 in grouped
+         school_dependency_code_grouped = cod_depe2, # has categories 1-5
+         school_rurality_code = rural_rbd,
+         school_operation_status = estado_estab, 
+         teaching_code1 = cod_ense, # min = 10, max = 910, eg preschool, special education hearing impaired
+         teaching_code2 = cod_ense2, # subject matter coding, 1-8
+         teaching_code3 = cod_ense3, # age based coding, 1-7
+         grade_code1 = cod_grado, # grade of schooling, 1-10, 21-25, 31-34, nests in teaching_code1
+         grade_code2 = cod_grado2, # equivalent grade of schooling for adult special education, 1-8, 99
+         grade_letter = let_cur, # refers to the class within the grade, close to start of alphabet is higher aptitude
+         course_timing = cod_jor, # time of day, morning, afternoon, both, night, no info
+         course_type = cod_tip_cur, # 0 = simple course, 1-4 = combined course, 99 = no info
+         course_descr = cod_des_cur, # Description of course (TP secondary education only). 0: Does not apply, 1: Only High School, 2: Dual, 3: Other
+         student_id = mrun,
+         sex = gen_alu, # 0 = no info, 1 = male, 2 = female
+         dob = fec_nac_alu,
+         age_june30 = edad_alu, # age at 30th June 2021
+         special_needs_status = int_alu, # integrated student indicator, 0 = no, 1 = yes. Mostly no
+         special_needs_code = cod_int_alu, # ADHD, blindness, etc. 0 = none. 105 = autism, 203 = ADHD. See ER_Matricula_por_alumno_PUBL_MRUN annex 7
+         student_region_code = cod_reg_alu,
+         student_commune_code = cod_com_alu,
+         student_commune_name = nom_com_alu,
+         economic_sector_code = cod_sec,
+         economic_specialty_code = cod_espe,
+         economic_branch_code = cod_rama,
+         economic_profspec_code = cod_men,
+         teaching_code_new = ens) 
 
 chile_stdpop_raw <- read_excel("04_Data/pop_chile_2021_single_age.xlsx") %>%
   clean_names() 
@@ -15,20 +92,20 @@ chile_stdpop <- chile_stdpop_raw %>%
   rename("std_pop" = "pop_2021") %>%
   mutate(pop_prop = std_pop / sum(std_pop))
 
+```
 
 
-################################################################################
+Try Bayesian analysis of autism prevalence and specificity and sensitivity of school assessment
+"Bayesian Estimation of Disease Prevalence and the Parameters of Diagnostic Tests in the Absence of a Gold Standard"
+Lawrence Joseph, Theresa W. Gyorkos, Louis Coupal
+https://www.cambridge.org/core/journals/epidemiology-and-psychiatric-sciences/article/bayesian-approach-to-estimating-the-population-prevalence-of-mood-and-anxiety-disorders-using-multiple-measures/DB1D2CA6C27C7E8C85C60B62B969BB72
 
-# Try Bayesian analysis of autism prevalence and specificity and sensitivity of school assessment
-# "Bayesian Estimation of Disease Prevalence and the Parameters of Diagnostic Tests in the Absence of a Gold Standard"
-# Lawrence Joseph, Theresa W. Gyorkos, Louis Coupal
-# https://www.cambridge.org/core/journals/epidemiology-and-psychiatric-sciences/article/bayesian-approach-to-estimating-the-population-prevalence-of-mood-and-anxiety-disorders-using-multiple-measures/DB1D2CA6C27C7E8C85C60B62B969BB72
+Use sensitivity and specificity of Social Attention and Communication Surveillance–Revised (SACS-R) tool
+"Diagnostic Accuracy of the Social Attention and Communication Surveillance–Revised With Preschool Tool for Early Autism Detection in Very Young Children"
+Josephine Barbaro, Nancy Sadka, Melissa Gilbert, et al
+https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2789926
 
-# Use sensitivity and specificity of Social Attention and Communication Surveillance–Revised (SACS-R) tool
-# "Diagnostic Accuracy of the Social Attention and Communication Surveillance–Revised With Preschool Tool for Early Autism Detection in Very Young Children"
-# Josephine Barbaro, Nancy Sadka, Melissa Gilbert, et al
-# https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2789926
-
+```{r}
 chile_bayes_aut <- chile_merged %>%
   filter(age_june30 >= 6 & age_june30 <= 18,
          #special_needs_status == 1,
@@ -80,25 +157,17 @@ ggplot(data = aut_prev_region) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
   #geom_col(aes(x = school_region_name_abr, y = prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
     # 1 is male, 2 is female
+```
 
-################################################################################
+## Bayesian prevalence analysis - common effects model with sample prevalence
 
-
-#qchisq(0.3, 2.6)
-#aut_prev_region_adj$var / (2*aut_prev_region_adj$adjusted_rate)
-#(aut_prev_region_adj$var + aut_prev_region_adj$w_M^2) / 2*(aut_prev_region_adj$adjusted_rate + aut_prev_region_adj$w_M)
-#qchisq(p = 0.05/2, df = 2*aut_prev_region_adj$adjusted_rate^2 / aut_prev_region_adj$var)
-#qchisq(p = 1-0.05/2, df = 2*(aut_prev_region_adj$adjusted_rate+aut_prev_region_adj$w_M)^2 / (aut_prev_region_adj$var+aut_prev_region_adj$w_M^2))
-
-
-################################################################################
-
-# Bayesian prevalence analysis - common effects model with sample prevalence
-
+```{r}
 nObs <- nrow(chile_bayes_aut)
 nIter <- 1000
 nBurn <- 1000
+```
 
+```{r, include = FALSE}
 # Uniform prior
 theta_a <- 1
 theta_b <- 1
@@ -162,17 +231,16 @@ plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
 # Not that surprising given uniform prior was used.
 
 # Informative prior made no difference to posterior distribution
+```
 
-################################################################################
 
-### Bayesian prevalence analysis
+## Bayesian prevalence analysis
 
-# Standardise prevalence by Chile's age and sex based population sizes
-# using https://seer.cancer.gov/seerstat/WebHelp/Rate_Algorithms.htm 
-# and https://wonder.cdc.gov/wonder/help/cancer/fayfeuerconfidenceintervals.pdf 
+Standardise prevalence by Chile's age and sex based population sizes using https://seer.cancer.gov/seerstat/WebHelp/Rate_Algorithms.htm and https://wonder.cdc.gov/wonder/help/cancer/fayfeuerconfidenceintervals.pdf 
 
-# See https://github.com/Dpananos/bayes_multiple_measures/blob/master/analysis/sensitivity_analysis.R for more sensitivity analysis ideas
+See https://github.com/Dpananos/bayes_multiple_measures/blob/master/analysis/sensitivity_analysis.R for more sensitivity analysis ideas
 
+```{r}
 aut_prev_region_adj <- aut_prev_region %>%
   group_by(school_region_name_abr) %>%
   summarise(sum_sample_pop_size = sum(sample_pop_size),
@@ -265,11 +333,13 @@ for(i in 1:nRegion) {
   aut_prev_region_plots[[i]] <- density_plot
 }
 do.call(grid.arrange, aut_prev_region_plots)
-autism_prev_region_plots <- do.call(grid.arrange, aut_prev_region_plots)
-ggsave("autism_prev_region_plots.png", autism_prev_region_plots, height = 10, width = 15)
+#autism_prev_region_plots <- do.call(grid.arrange, aut_prev_region_plots)
+#ggsave("autism_prev_region_plots.png", autism_prev_region_plots, height = 10, width = 15)
+```
 
+### Sensitivity analysis - alter prior mean and sd
 
-# Sensitivity analysis - alter prior mean and sd
+```{r}
 theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
               rep(0.0046, 4)) # Same as chosen prior
 theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
@@ -318,14 +388,13 @@ for(j in 1:length(theta_mu)) {
     aut_prev_region_plots[[i]] <- density_plot
   }
   autism_prev_region_plots <- do.call(grid.arrange, aut_prev_region_plots)
-  ggsave(paste0("autism_prev_region_plots_", j, ".png"), autism_prev_region_plots, height = 10, width = 15)
+  #ggsave(paste0("autism_prev_region_plots_", j, ".png"), autism_prev_region_plots, height = 10, width = 15)
 }
+```
 
+## Bayesian prevalence by rurality
 
-################################################################################
-
-# Bayesian prevalence by rurality
-
+```{r}
 aut_prev_rural <- chile_bayes_aut %>%
   group_by(school_rurality_code, age_june30, sex, autism) %>%
   summarise(count = n()) %>%
@@ -432,14 +501,17 @@ for(i in 1:nRural) {
   aut_prev_rural_plots[[i]] <- density_plot
 }
 do.call(grid.arrange, aut_prev_rural_plots)
-autism_prev_rural_plots <- do.call(grid.arrange, aut_prev_rural_plots)
-ggsave("autism_prev_rural_plots.png", autism_prev_rural_plots, height = 10, width = 15)
+#autism_prev_rural_plots <- do.call(grid.arrange, aut_prev_rural_plots)
+#ggsave("autism_prev_rural_plots.png", autism_prev_rural_plots, height = 10, width = 15)
+```
 
-# Assuming 0 = city, 1 = rural. 
-# Narrower CI for city because sample size is bigger
+Assuming 0 = city, 1 = rural. 
+Narrower CI for city because sample size is bigger
 
 
-# Sensitivity analysis - alter prior mean and sd
+### Sensitivity analysis - alter prior mean and sd
+
+```{r}
 theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
               rep(0.0046, 4)) # Same as chosen prior
 theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
@@ -604,12 +676,14 @@ for(i in 1:nEthnic) {
   aut_prev_ethnic_plots[[i]] <- density_plot
 }
 do.call(grid.arrange, aut_prev_ethnic_plots)
-autism_prev_ethnic_plots <- do.call(grid.arrange, aut_prev_ethnic_plots)
-ggsave("autism_prev_ethnicity_plots.png", autism_prev_ethnic_plots, height = 10, width = 15)
+#autism_prev_ethnic_plots <- do.call(grid.arrange, aut_prev_ethnic_plots)
+#ggsave("autism_prev_ethnicity_plots.png", autism_prev_ethnic_plots, height = 10, width = 15)
 
+```
 
+### Sensitivity analysis - alter prior mean and sd
 
-# Sensitivity analysis - alter prior mean and sd
+```{r}
 theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
               rep(0.0046, 4)) # Same as chosen prior
 theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
@@ -654,15 +728,17 @@ for(j in 1:length(theta_mu)) {
     aut_prev_ethnic_plots[[i]] <- density_plot
   }
   do.call(grid.arrange, aut_prev_ethnic_plots)
-  autism_prev_ethnic_plots <- do.call(grid.arrange, aut_prev_ethnic_plots)
-  ggsave(paste0("autism_prev_ethnicity_plots_", j, ".png"), autism_prev_ethnic_plots, height = 10, width = 15)
+  #autism_prev_ethnic_plots <- do.call(grid.arrange, aut_prev_ethnic_plots)
+  #ggsave(paste0("autism_prev_ethnicity_plots_", j, ".png"), autism_prev_ethnic_plots, height = 10, width = 15)
   
 }
+```
 
 ################################################################################
 
-### Bayesian prevalence by economic status
+## Bayesian prevalence by economic status
 
+```{r}
 aut_prev_econ <- chile_bayes_aut %>%
   mutate(school_fee = ifelse(school_fee == "", "SIN INFORMACION", school_fee),
          school_fee_group = ifelse(school_fee == "GRATUITO", "Free", 
@@ -771,11 +847,14 @@ for(i in 1:nEcon) {
   aut_prev_econ_plots[[i]] <- density_plot
 }
 do.call(grid.arrange, aut_prev_econ_plots)
-autism_prev_econ_plots <- do.call(grid.arrange, aut_prev_econ_plots)
-ggsave("autism_prev_econ_plots.png", autism_prev_econ_plots, height = 10, width = 15)
+#autism_prev_econ_plots <- do.call(grid.arrange, aut_prev_econ_plots)
+#ggsave("autism_prev_econ_plots.png", autism_prev_econ_plots, height = 10, width = 15)
+```
 
 
-# Sensitivity analysis - alter prior mean and sd
+### Sensitivity analysis - alter prior mean and sd
+
+```{r}
 theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
               rep(0.0046, 4)) # Same as chosen prior
 theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
@@ -824,107 +903,8 @@ for(j in 1:length(theta_mu)) {
       labs(title = aut_prev_econ_adj$school_fee_group[i])
     aut_prev_econ_plots[[i]] <- density_plot
   }
-  autism_prev_econ_plots <- do.call(grid.arrange, aut_prev_econ_plots)
-  ggsave(paste0("autism_prev_econ_plots_", j, ".png"), autism_prev_econ_plots, height = 10, width = 15)
+  #autism_prev_econ_plots <- do.call(grid.arrange, aut_prev_econ_plots)
+  #ggsave(paste0("autism_prev_econ_plots_", j, ".png"), autism_prev_econ_plots, height = 10, width = 15)
 }
-
-
-
-################################################################################
-
-# Dumping ground
-
-
-b1 <- seq(0, 1, by = 0.001)    
-by1 <- dbeta(b1, shape1 = 33.5, shape2 = 1083) 
-by1 <- dbeta(b1, shape1 = 9.2, shape2 = 13.8) 
-plot(by1)
-
-
-# Set priors for prevalence, sensitivity and specificity of school-based autism assessment
-# Assume sensitivity and specificity are normally distributed
-# aut_prev <- list(y_sample = count(filter(chile_slim, special_needs_code == "105")),
-#                  n_sample = nrow(chile_slim), 
-#                  spec_mu = 0.996, # from Barbaro et al
-#                  spec_sd = (1.00-0.99) / (2*1.96), # from Barbaro et al, CI for spec is 0.99-1.00 (Joseph et al used 0.067 for survey and 0.004 for admin)
-#                  sens_mu = 0.620, # from Barbaro et al, for SACS-R (excluding SACS-PR)
-#                  sens_sd = (0.66-0.57) / (2*1.96), # from Barbaro et al, CI for sens is 0.57-0.66 (Joseph et al used 0.020 for survey and 0.020 for admin)
-#                  p_mu = 0.5, # parameters of beta-proportion distribution, from Joseph et al
-#                  p_kappa = 2 # ditto, kappa must be strictly positive
-#                  #theta_a = 0.5 * 2, # a = mu * kappa
-#                  #theta_b = (1-0.5) * 2 # b = (1-mu) * kappa
-# )
-
-#model <- stan_model("Autism-diagnosis-age-ML/single_test.stan")
-
-
-################################################################################
-# 
-# ### Bayesian prevalence analysis - random effect on school region with sample prevalences
-# 
-# chile_rand_region <- aut_prev_region %>%
-#   group_by(school_region_name_abr) %>%
-#   summarise(nObs = sum(sample_pop_size),
-#             aut_sample = sum(n_autism)) %>%
-#   arrange(school_region_name_abr)
-# 
-# # Try informative prior
-# theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-# theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-# 
-# nRegion <- length(unique(chile_bayes_aut$school_region_name_abr))
-# 
-# rand_region_model <- "model {
-#   for(i in 1:nRegion) { # For each region
-#     theta[i] ~ dbeta(theta_a, theta_b)
-#     aut_sample[i] ~ dbinom(theta[i], nObs[i])
-# 
-#     aut_pred[i] ~ dbinom(theta[i], nObs[i])
-#   }
-# }"
-# 
-# rand_region_data <- list(theta_a = theta_a, 
-#                     theta_b = theta_b,
-#                     #nObs = rep(3056300, 16),
-#                     #nObs = c(113208, 178136, 57116, 44648, 19858, 270637, 146522, 154827, 165436, 27275, 188430, 83353, 68635, 1165047, 67945, 305227),
-#                     nObs = chile_rand_region$nObs,
-#                     #nObs = matrix(c(chile_rand_region$nObs), nrow = nRegion),
-#                     #aut_sample = rep(sum(chile_bayes_aut$autism), 16),
-#                     aut_sample = chile_rand_region$aut_sample,
-#                     #aut_sample = matrix(c(chile_rand_region$aut_sample), nrow = nRegion),
-#                     nRegion = nRegion)
-# 
-# #rand_region_ini <- list(list(theta = 0.001), #, spec = 0.5, sens = 0.5),
-# #                   list(theta = 0.01)) #, spec = 0.9, sens = 0.9)) 
-# 
-# rand_region_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
-# 
-# # Run JAGS model and discard burn-in samples
-# rand_region_jag <- jags.model(textConnection(rand_region_model),
-#                          data = rand_region_data,
-#                          #inits = rand_region_ini,
-#                          n.chains = 2,
-#                          quiet = TRUE)
-# update(rand_region_jag, n.iter = nBurn)
-# rand_region_sam <- coda.samples(model = rand_region_jag,
-#                            variable.names = rand_region_pars,
-#                            n.iter = nIter)
-# 
-# # Check for convergence in parameters of interest
-# mcmc_trace(rand_region_sam, rand_region_pars) # Convergence looks fine and rhats <= 1.1
-# summary(as_draws(rand_region_sam)) %>% print(n = Inf)
-# plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0,0.01))
-# 
-# # Plot each predicted prevalence distribution (theta[x]) and sample prevalence.
-# plot(density(extract_variable(rand_region_sam, "theta[1]")), xlim = c(0, 0.02))
-# abline(v = 974/113208, col = "red")
-# plot(density(extract_variable(rand_region_sam, "theta[2]")), xlim = c(0, 0.02))
-# abline(v = 617/178136, col = "red")
-# # etc
-# 
-# # See Bayesian stats assignment for tidyverse extraction of theta distributions
-# rand_region_theta <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration")
-# # Will come back to this
-# ### Also need to try random effect on sex and on age, and maybe sex and region together or with age
-
+```
 
