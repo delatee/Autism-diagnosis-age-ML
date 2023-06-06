@@ -22,8 +22,6 @@ chile_stdpop <- chile_stdpop_raw %>%
 # Lawrence Joseph, Theresa W. Gyorkos, Louis Coupal
 # https://www.cambridge.org/core/journals/epidemiology-and-psychiatric-sciences/article/bayesian-approach-to-estimating-the-population-prevalence-of-mood-and-anxiety-disorders-using-multiple-measures/DB1D2CA6C27C7E8C85C60B62B969BB72
 
-# https://www.cambridge.org/core/journals/epidemiology-and-psychiatric-sciences/article/bayesian-approach-to-estimating-the-population-prevalence-of-mood-and-anxiety-disorders-using-multiple-measures/DB1D2CA6C27C7E8C85C60B62B969BB72#article
-
 # Use sensitivity and specificity of Social Attention and Communication Surveillance–Revised (SACS-R) tool
 # "Diagnostic Accuracy of the Social Attention and Communication Surveillance–Revised With Preschool Tool for Early Autism Detection in Very Young Children"
 # Josephine Barbaro, Nancy Sadka, Melissa Gilbert, et al
@@ -191,7 +189,7 @@ theta_sigma <- (0.0047-0.0045) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
-nRegion <- length(unique(chile_bayes_aut$school_region_name_abr))
+nRegion <- length(unique(aut_prev_region$school_region_name_abr))
 
 rand_region_model <- "model {
   for(i in 1:nRegion) { # For each region
@@ -234,7 +232,7 @@ rand_region_sam <- coda.samples(model = rand_region_jag,
 mcmc_trace(rand_region_sam, paste0("theta[", 1:nRegion, "]")) # Convergence looks fine and rhats <= 1.1
 mcmc_trace(rand_region_sam, paste0("aut_pred[", 1:nRegion, "]"))# Convergence looks fine and rhats <= 1.1
 summary(as_draws(rand_region_sam)) %>% print(n = Inf)
-rand_region_summ <- summary(subset_draws(as_draws(rand_region_sam), rand_rural_pars),
+rand_region_summ <- summary(subset_draws(as_draws(rand_region_sam), rand_region_pars),
                        ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
                        ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
                        "rhat") %>%
@@ -363,7 +361,7 @@ theta_sigma <- (0.0047-0.0045) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
-nRural <- length(unique(chile_bayes_aut$school_rurality_code))
+nRural <- length(unique(aut_prev_rural$school_rurality_code))
 
 rand_rural_model <- "model {
   for(i in 1:nRural) { # For each rurality
@@ -429,9 +427,6 @@ for(i in 1:nRural) {
 do.call(grid.arrange, aut_prev_rural_plots)
 autism_prev_rural_plots <- do.call(grid.arrange, aut_prev_rural_plots)
 ggsave("autism_prev_rural_plots.png", autism_prev_rural_plots, height = 10, width = 15)
-
-summary(extract_variable(rand_rural_sam, paste0("theta[", 1, "]")))
-quantile(extract_variable(rand_rural_sam, paste0("theta[", 1, "]")), 0.025)
 
 # Assuming 0 = city, 1 = rural. 
 # Narrower CI for city because sample size is bigger
@@ -536,7 +531,7 @@ theta_sigma <- (0.0047-0.0045) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
-#nEthnic <- length(unique(chile_bayes_aut$ethnic_3_group))
+#nEthnic <- length(unique(aut_prev_ethnic$ethnic_3_group))
 nEthnic <- length(unique(aut_prev_ethnic$ethnic_2_group))
 
 rand_ethnic_model <- "model {
@@ -659,6 +654,172 @@ for(j in 1:length(theta_mu)) {
 
 ################################################################################
 
+### Bayesian prevalence by economic status
+
+aut_prev_econ <- chile_bayes_aut %>%
+  mutate(school_fee = ifelse(school_fee == "", "SIN INFORMACION", school_fee),
+         school_fee_group = ifelse(school_fee == "GRATUITO", "Free", 
+                                  ifelse(school_fee %in% c("$1.000 A $10.000", "$10.001 A $25.000", "$25.001 A $50.000", "$50.001 A $100.000"), "Low",
+                                         ifelse(school_fee == "MAS DE $100.000", "High", "No information")))) %>%
+  group_by(school_fee, school_fee_group, age_june30, sex, autism) %>%
+  summarise(count = n()) %>%
+  pivot_wider(names_from = autism, values_from = count) %>%
+  rename("n_noautism" = "0", "n_autism" = "1", "age" = "age_june30") %>%
+  mutate(n_autism = ifelse(is.na(n_autism), 0, n_autism),
+         sample_pop_size = n_noautism + n_autism,
+         sample_prevalence = n_autism / sample_pop_size) %>%
+  left_join(chile_stdpop, by = c("age", "sex")) %>%
+  mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop,
+         w = std_pop / (sample_pop_size * n_std_pop),
+         w2 = pop_prop / sample_pop_size,
+         sum_std_pop = sum(std_pop)) %>%
+  ungroup()
+
+aut_prev_econ_adj <- aut_prev_econ %>%
+  #group_by(school_fee) %>%
+  group_by(school_fee_group) %>%
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_autism) / sum(sample_pop_size),
+            crude_count = sum(n_autism),
+            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  #arrange(school_fee)
+  arrange(school_fee_group)
+
+# Try informative prior
+theta_mu <- 0.0046
+theta_sigma <- (0.0047-0.0045) / (2*1.96)
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+nEcon <- length(unique(aut_prev_econ$school_fee))
+nEcon <- length(unique(aut_prev_econ$school_fee_group))
+
+rand_econ_model <- "model {
+  for(i in 1:nEcon) { # For each economic status level
+    theta[i] ~ dbeta(theta_a, theta_b)
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
+
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+rand_econ_data <- list(theta_a = theta_a, 
+                         theta_b = theta_b,
+                         nObs = aut_prev_econ_adj$sum_sample_pop_size,
+                         aut_sample = aut_prev_econ_adj$adjusted_count,
+                         nEcon = nEcon)
+
+rand_econ_ini <- list(list(theta = rep(0.001, nEcon)), #, spec = 0.5, sens = 0.5),
+                        list(theta = rep(0.01, nEcon))) #, spec = 0.9, sens = 0.9)) 
+
+rand_econ_pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
+
+# Run JAGS model and discard burn-in samples
+rand_econ_jag <- jags.model(textConnection(rand_econ_model),
+                              data = rand_econ_data,
+                              inits = rand_econ_ini,
+                              n.chains = 2,
+                              quiet = TRUE)
+update(rand_econ_jag, n.iter = nBurn)
+rand_econ_sam <- coda.samples(model = rand_econ_jag,
+                                variable.names = rand_econ_pars,
+                                n.iter = nIter)
+
+# Check for convergence in parameters of interest
+#mcmc_trace(rand_region_sam, rand_region_pars) 
+mcmc_trace(rand_econ_sam, paste0("theta[", 1:nEcon, "]")) # Convergence looks fine and rhats <= 1.1
+mcmc_trace(rand_econ_sam, paste0("aut_pred[", 1:nEcon, "]"))# Convergence looks fine and rhats <= 1.1
+summary(as_draws(rand_econ_sam)) %>% print(n = Inf)
+rand_econ_summ <- summary(subset_draws(as_draws(rand_econ_sam), rand_econ_pars),
+                            ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                            ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                            "rhat") %>%
+  arrange(desc(mcse_q50))
+rand_econ_summ
+
+aut_prev_econ_plots <- list()
+econ_post_ci_lower <- list()
+econ_post_ci_upper <- list()
+
+for(i in 1:nEcon) {
+  prevs <- data.frame(prev = extract_variable(rand_econ_sam, paste0("theta[", i, "]")))
+  econ_post_ci_lower[[i]] <- quantile(prevs$prev, 0.025)
+  econ_post_ci_upper[[i]] <- quantile(prevs$prev, 0.925)
+  density_plot <- ggplot(prevs, aes(x = prev)) + 
+    geom_density() +
+    xlim(c(0.0002, 0.045)) +
+    geom_vline(xintercept = econ_post_ci_lower[[i]], color = "blue", linetype = "dotted") +
+    geom_vline(xintercept = econ_post_ci_upper[[i]], color = "blue", linetype = "dotted") +
+    geom_vline(xintercept = aut_prev_econ_adj$ci_lower[i], color = "red", linetype = "dashed") +
+    geom_vline(xintercept = aut_prev_econ_adj$ci_upper[i], color = "red", linetype = "dashed") +
+    #labs(title = aut_prev_econ_adj$school_fee[i])
+    labs(title = aut_prev_econ_adj$school_fee_group[i])
+  aut_prev_econ_plots[[i]] <- density_plot
+}
+do.call(grid.arrange, aut_prev_econ_plots)
+autism_prev_econ_plots <- do.call(grid.arrange, aut_prev_econ_plots)
+ggsave("autism_prev_econ_plots.png", autism_prev_econ_plots, height = 10, width = 15)
+
+
+# Sensitivity analysis - alter prior mean and sd
+theta_mu <- c(0.001, 0.005, 0.01, 0.02, # 0.1%, 0.5%, 1%, 2% prevalence
+              rep(0.0046, 4)) # Same as chosen prior
+theta_sigma <- c(rep(0.001/1.96, 4), # Same as chosen prior
+                 0.0001, 0.001, 0.05, 0.01) # +/- 0.1%, 0.5%, 1%, 5%
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+for(j in 1:length(theta_mu)) {
+  #print(j)
+  #print(theta_a[j])
+  #print(theta_b[j])
+  rand_econ_data <- list(theta_a = theta_a[j], 
+                           theta_b = theta_b[j],
+                           nObs = aut_prev_econ_adj$sum_sample_pop_size,
+                           aut_sample = aut_prev_econ_adj$adjusted_count,
+                           nEcon = nEcon)
+  rand_econ_jag <- jags.model(textConnection(rand_econ_model),
+                                data = rand_econ_data,
+                                inits = rand_econ_ini,
+                                n.chains = 2,
+                                quiet = TRUE)
+  update(rand_econ_jag, n.iter = nBurn)
+  rand_econ_sam <- coda.samples(model = rand_econ_jag,
+                                  variable.names = rand_econ_pars,
+                                  n.iter = nIter)
+  mcmc_trace(rand_econ_sam, paste0("theta[", 1:nEcon, "]")) # Convergence looks fine and rhats <= 1.1
+  mcmc_trace(rand_econ_sam, paste0("aut_pred[", 1:nEcon, "]"))# Convergence looks fine and rhats <= 1.1
+  
+  # Plot
+  aut_prev_econ_plots <- list()
+  econ_post_ci_lower <- list()
+  econ_post_ci_upper <- list()
+  
+  for(i in 1:nEcon) {
+    prevs <- data.frame(prev = extract_variable(rand_econ_sam, paste0("theta[", i, "]")))
+    econ_post_ci_lower[[i]] <- quantile(prevs$prev, 0.025)
+    econ_post_ci_upper[[i]] <- quantile(prevs$prev, 0.925)
+    density_plot <- ggplot(prevs, aes(x = prev)) + 
+      geom_density() +
+      xlim(c(0.0002, 0.05)) +
+      geom_vline(xintercept = econ_post_ci_lower[[i]], color = "blue", linetype = "dotted") +
+      geom_vline(xintercept = econ_post_ci_upper[[i]], color = "blue", linetype = "dotted") +
+      geom_vline(xintercept = aut_prev_econ_adj$ci_lower[i], color = "red", linetype = "dashed") +
+      geom_vline(xintercept = aut_prev_econ_adj$ci_upper[i], color = "red", linetype = "dashed") +
+      #labs(title = aut_prev_econ_adj$school_fee[i])
+      labs(title = aut_prev_econ_adj$school_fee_group[i])
+    aut_prev_econ_plots[[i]] <- density_plot
+  }
+  autism_prev_econ_plots <- do.call(grid.arrange, aut_prev_econ_plots)
+  ggsave(paste0("autism_prev_econ_plots_", j, ".png"), autism_prev_econ_plots, height = 10, width = 15)
+}
 
 
 
