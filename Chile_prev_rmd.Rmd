@@ -10,7 +10,7 @@ knitr::opts_chunk$set(echo = TRUE)
 knitr::opts_knit$set(root.dir = "C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation")
 ```
 
-```{r}
+```{r, message = FALSE}
 
 #source("Chile_prev.R", local = knitr::knit_global())
 
@@ -111,8 +111,14 @@ chile_bayes_aut <- chile_merged %>%
          #special_needs_status == 1,
          sex != 0) %>%
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         age_cat = ifelse(age_june30 <= 8, 1, ifelse(age_june30 <= 11, 2, ifelse(age_june30 <= 14, 3, 4)))) %>% 
-            # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
+         age_cat = ifelse(age_june30 <= 8, 1, ifelse(age_june30 <= 11, 2, ifelse(age_june30 <= 14, 3, 4))),
+          # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
+         ethnic_2_group = ifelse(ethnic_3_group == "Aymara", "Other ethnic group", ethnic_3_group),
+         school_fee = ifelse(school_fee == "", "SIN INFORMACION", school_fee),
+         school_fee_group = ifelse(school_fee == "GRATUITO", "Free", 
+                                  ifelse(school_fee %in% c("$1.000 A $10.000", "$10.001 A $25.000", "$25.001 A $50.000", "$50.001 A $100.000"), "Low",
+                                         ifelse(school_fee == "MAS DE $100.000", "High", "No information")))) %>% 
+            
   select(school_region_name_abr,
     sex,
     sex_desc,
@@ -124,10 +130,12 @@ chile_bayes_aut <- chile_merged %>%
     pago_matricula,
     pago_mensual,
     school_fee,
+    school_fee_group,
     ethnicity,
     mapuche,
     nationality,
     ethnic_3_group,
+    ethnic_2_group,
     #asd_chile, # equal to autism
     autism 
   ) 
@@ -137,25 +145,65 @@ sum(chile_bayes_aut$autism) / nrow(chile_bayes_aut) # 0.00476 = 0.476%, very low
 
 # Is prevalence the same across geographic regions, age, sex?
 n_std_pop <- sum(chile_stdpop$std_pop)
+```
 
-aut_prev_region <- chile_bayes_aut %>%
-  group_by(school_region_name_abr, age_june30, sex, autism) %>%
-  summarise(count = n()) %>%
-  pivot_wider(names_from = autism, values_from = count) %>%
-  rename("n_noautism" = "0", "n_autism" = "1", "age" = "age_june30") %>%
-  mutate(n_autism = ifelse(is.na(n_autism), 0, n_autism),
-         sample_pop_size = n_noautism + n_autism,
-         sample_prevalence = n_autism / sample_pop_size) %>%
-  left_join(chile_stdpop, by = c("age", "sex")) %>%
-  mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop,
-         w = std_pop / (sample_pop_size * n_std_pop),
-         w2 = pop_prop / sample_pop_size,
-         sum_std_pop = sum(std_pop)) %>%
-  ungroup()
+
+## Define some functions to keep code clean
+
+```{r}
+get_grouped_prev <- function(x, stdpop, grouping_vars) {
+  # Calculates sample prevalence, age- and sex-standardised prevalence and group weighting for supplied feature grouping
+  # x = chile_bayes_aut
+  # stdpop = standard population with age and sex counts
+  # grouping_vars = variables in x to group by
+  x_grouped <- x %>% 
+    group_by(across(all_of(grouping_vars))) %>%
+    summarise(count = n()) %>%
+    pivot_wider(names_from = autism, values_from = count) %>%
+    rename("n_noautism" = "0", "n_autism" = "1", "age" = "age_june30") %>%
+    mutate(n_autism = ifelse(is.na(n_autism), 0, n_autism), # If there are no cases of autism in the group, input 0
+           sample_pop_size = n_noautism + n_autism, # Total sample population is autism cases + not cases
+           sample_prevalence = n_autism / sample_pop_size) %>% # Prevalence of autism in the group
+    left_join(stdpop, by = c("age", "sex")) %>%
+    mutate(aut_prev_std = n_autism / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+           w = std_pop / (sample_pop_size * n_std_pop), # Weight of the group using standard population
+           #w2 = pop_prop / sample_pop_size,
+           #sum_std_pop = sum(std_pop)
+           ) %>%
+    ungroup()
+  return(x_grouped)
+}
+
+get_adjusted_prev <- function(x, grouping_vars) {
+  # Turns grouped prevalences into age- and sex- adjusted prevalences with Fay and Feuer Gamma confidence intervals
+  # x = output from get_grouped_prev
+  x_adj <- x %>%
+  group_by(across(all_of(grouping_vars))) %>%
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_autism) / sum(sample_pop_size),
+            crude_count = sum(n_autism),
+            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  arrange(across(all_of(grouping_vars)))
+}
+
+
+```
+
+```{r}
+
+aut_prev_region <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                                    grouping_vars = c("school_region_name_abr", "age_june30", "sex", "autism"))
 
 ggplot(data = aut_prev_region) +
-  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
-  #geom_col(aes(x = school_region_name_abr, y = prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
+  #geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge")
+  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = sex, fill = as.factor(sex)), position = "dodge")
     # 1 is male, 2 is female
 ```
 
@@ -313,6 +361,40 @@ rand_region_summ <- summary(subset_draws(as_draws(rand_region_sam), rand_region_
                        "rhat") %>%
   arrange(desc(mcse_q50))
 rand_region_summ
+
+reg_mat <- as_draws_matrix(as_draws(rand_region_sam))
+aut_prev_reg <- array(data = reg_mat[, paste0("theta[",1:nRegion,"]")], dim = c(nIter, nRegion))
+colnames(aut_prev_reg) <- sort(unique(aut_prev_region_adj$school_region_name_abr))
+aut_prev_reg_long <- aut_prev_reg %>% pivot_longer()
+
+RegionNames <- sort(unique(aut_prev_region_adj$school_region_name_abr))
+
+aut_prev_reg <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration") %>%
+  select(c("Iteration", contains("theta["))) %>%
+  pivot_longer(cols = contains("theta["),
+               names_to = "Region",
+               values_to = "predicted_prev") %>%
+  mutate(school_region_name_abr = factor(Region, 
+                          levels = c(paste0("theta[",1:nRegion,"]")),
+                          labels = RegionNames))
+
+aut_prev_region_adj <- aut_prev_region_adj %>%
+  left_join(aut_prev_reg %>% group_by(school_region_name_abr) %>% summarise(post_lower = quantile(predicted_prev, 0.025),
+                                                                            post_upper = quantile(predicted_prev, 0.975)),
+            by = "school_region_name_abr")
+
+#aut_prev_reg_ci <- aut_prev_reg %>% 
+#  group_by(Region_name) %>% 
+#  summarise(post_lower = quantile(predicted_prev, 0.025), post_upper = quantile(predicted_prev, 0.975)) %>%
+  
+
+ggplot(aut_prev_reg) +
+  geom_density(aes(x = predicted_prev)) +
+  geom_vline(data = aut_prev_region_adj, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_region_adj, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_region_adj, aes(xintercept = ci_lower), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_region_adj, aes(xintercept = ci_upper), color = "red", linetype = "dashed") +
+  facet_wrap(~school_region_name_abr)
 
 aut_prev_region_plots <- list()
 region_post_ci_lower <- list()
