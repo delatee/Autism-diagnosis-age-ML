@@ -55,6 +55,12 @@ chile_bayes_aut <- chile_merged %>%
     autism 
   ) 
 
+# Sort out health service name issues
+chile_bayes_aut %>%
+  filter(is.na(health_service_name)) %>%
+  group_by(school_commune_name) %>%
+  summarise(n = n())
+
 # Prevalence of autism in Chile dataset
 sum(chile_bayes_aut$autism) / nrow(chile_bayes_aut) # 0.00476 = 0.476%, very low
 
