@@ -306,7 +306,7 @@ See https://github.com/Dpananos/bayes_multiple_measures/blob/master/analysis/sen
 
 ### By region, with sensitivity analysis (alter prior mean and sd)
 
-```{r define functions}
+```{r region}
 aut_prev_region_adj <- get_adjusted_prev(aut_prev_region, grouping_vars = "school_region_name_abr")
 
 nRegion <- length(unique(aut_prev_region$school_region_name_abr))
@@ -373,6 +373,160 @@ for(j in 1:length(theta_mu)) {
     labs(title = paste0("Prior mean = ", theta_mu[j], ", prior sd = ", signif(theta_sigma[j], 3))))
 }
 ```
+
+```{r}
+aut_prev_region_adj <- get_adjusted_prev(aut_prev_region, grouping_vars = "school_region_name_abr")
+
+rand_model <- "model {
+  for(i in 1:nFeat) { # For each category in the feature
+    theta[i] ~ dbeta(theta_a, theta_b)
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+
+do_jags_rand_model <- function(x, feat, model, theta_a, theta_b, pars, nBurn = 1000, nIter = 1000, convergence_checks = TRUE) {
+  # x = output from get_adjusted_prev. Needs to have columns sum_sample_pop_size, adjusted_count
+  # feat = feature being used as random effect
+  # model = JAGS random effects model
+  # theta_a and theta_b single values or vectors of priors for beta distribution
+  # pars = model parameters to report
+  # nBurn = number of burn-in samples
+  # nIter = number of posterior iterations
+
+  nFeat <- length(unique(x[[feat]]))
+  FeatNames <- sort(unique(x[[feat]]))
+
+  rand_ini <- list(list(theta = rep(0.001, nFeat)), #, spec = 0.5, sens = 0.5),
+                   list(theta = rep(0.01, nFeat))) #, spec = 0.9, sens = 0.9)) 
+  
+  for(j in 1:length(theta_a)) {
+    # Run JAGS model
+    rand_data <- list(theta_a = theta_a[j], 
+                      theta_b = theta_b[j],
+                      nObs = x$sum_sample_pop_size,
+                      aut_sample = x$adjusted_count,
+                      nFeat = nFeat)
+    rand_jag <- jags.model(textConnection(model),
+                           data = rand_data,
+                           inits = rand_ini,
+                           n.chains = 2,
+                           quiet = TRUE)
+    update(rand_jag, n.iter = nBurn)
+    rand_sam <- coda.samples(model = rand_jag,
+                             variable.names = pars,
+                             n.iter = nIter)
+    
+    # Convergence checks
+    if(convergence_checks) {
+      print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+      print(mcmc_trace(rand_sam, paste0("aut_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+      rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+        arrange(desc(rhat))
+      print(rand_summ)
+    }
+    
+    # Posterior density plots
+    aut_prev_post <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+      select(c("Iteration", contains("theta["))) %>%
+      pivot_longer(cols = contains("theta["),
+                   names_to = "Feat",
+                   values_to = "predicted_prev") %>%
+      mutate(Feat_names = factor(Feat, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames))
+    
+    aut_prev_ci <- aut_prev_post %>%
+      group_by(Feat_names) %>%
+      summarise(post_lower = quantile(predicted_prev, 0.025),
+                post_upper = quantile(predicted_prev, 0.975))
+  
+      
+  }
+  
+  return(aut_prev_ci)
+}
+
+  
+ 
+testing <- do_jags_rand_model(x = aut_prev_region_adj,
+                              feat = "school_region_name_abr",
+                              model = rand_model,
+                              theta_a = theta_a[1],
+                              theta_b = theta_b[1],
+                              pars = pars, 
+                              convergence_checks = TRUE)
+testing
+
+
+  
+  print(ggplot() +
+    geom_density(data = aut_prev_region_post, aes(x = predicted_prev)) +
+    geom_vline(data = aut_prev_region_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
+    geom_vline(data = aut_prev_region_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
+    geom_vline(data = aut_prev_region_adj, aes(xintercept = ci_lower), color = "red", linetype = "dashed") +
+    geom_vline(data = aut_prev_region_adj, aes(xintercept = ci_upper), color = "red", linetype = "dashed") +
+    facet_wrap(~school_region_name_abr) +
+    labs(title = paste0("Prior mean = ", theta_mu[j], ", prior sd = ", signif(theta_sigma[j], 3))))
+
+
+
+
+
+for(j in 1:length(theta_mu)) {
+  rand_data <- list(theta_a = theta_a[j], 
+                           theta_b = theta_b[j],
+                           nObs = aut_prev_region_adj$sum_sample_pop_size,
+                           aut_sample = aut_prev_region_adj$adjusted_count,
+                           nRegion = nRegion)
+  rand_region_jag <- jags.model(textConnection(rand_region_model),
+                                data = rand_region_data,
+                                inits = rand_region_ini,
+                                n.chains = 2,
+                                quiet = TRUE)
+  update(rand_region_jag, n.iter = nBurn)
+  rand_region_sam <- coda.samples(model = rand_region_jag,
+                                  variable.names = pars,
+                                  n.iter = nIter)
+  mcmc_trace(rand_region_sam, paste0("theta[", 1:nRegion, "]")) # Convergence looks fine and rhats <= 1.1
+  mcmc_trace(rand_region_sam, paste0("aut_pred[", 1:nRegion, "]"))# Convergence looks fine and rhats <= 1.1
+  rand_region_summ <- summary(subset_draws(as_draws(rand_region_sam), pars),
+                       ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                       ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                       "rhat") %>%
+    arrange(desc(mcse_q50))
+  rand_region_summ
+  
+  # Plot
+  aut_prev_region_post <- as_tibble(as_draws_matrix(rand_region_sam), rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "Region",
+                 values_to = "predicted_prev") %>%
+    mutate(school_region_name_abr = factor(Region, 
+                                           levels = c(paste0("theta[",1:nRegion,"]")),
+                                           labels = RegionNames))
+  
+  aut_prev_region_ci <- aut_prev_region_post %>%
+    group_by(school_region_name_abr) %>%
+    summarise(post_lower = quantile(predicted_prev, 0.025),
+              post_upper = quantile(predicted_prev, 0.975))
+  
+  print(ggplot() +
+    geom_density(data = aut_prev_region_post, aes(x = predicted_prev)) +
+    geom_vline(data = aut_prev_region_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
+    geom_vline(data = aut_prev_region_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
+    geom_vline(data = aut_prev_region_adj, aes(xintercept = ci_lower), color = "red", linetype = "dashed") +
+    geom_vline(data = aut_prev_region_adj, aes(xintercept = ci_upper), color = "red", linetype = "dashed") +
+    facet_wrap(~school_region_name_abr) +
+    labs(title = paste0("Prior mean = ", theta_mu[j], ", prior sd = ", signif(theta_sigma[j], 3))))
+}
+
+
+```
+
 
 ## Bayesian prevalence by rurality
 
