@@ -1,0 +1,27 @@
+---
+title: "Bayesian record matching"
+author: "Adele Tyson"
+date: "`r Sys.Date()`"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = "C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation")
+```
+
+```{r libraries}
+
+library(janitor)
+library(tidyverse)
+
+```
+
+
+## R Markdown
+
+```{r}
+clinical_small <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx") %>% clean_names()
+
+
+```

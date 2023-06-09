@@ -231,12 +231,12 @@ get_adjusted_prev <- function(x, grouping_vars) {
             var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
             #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
-            ci_lower = var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var),
+            ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
             ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
   arrange(across(all_of(grouping_vars)))
 }
 
-do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBurn = 1000, nIter = 1000, convergence_checks = TRUE) {
+do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBurn = 1000, nIter = 1000, convergence_checks = FALSE) {
   # x = output from get_adjusted_prev. Needs to have columns sum_sample_pop_size, adjusted_count
   # feat = feature being used as random effect
   # model = JAGS random effects model
@@ -436,7 +436,7 @@ See https://github.com/Dpananos/bayes_multiple_measures/blob/master/analysis/sen
 ```{r region plot}
 
 aut_prev_region <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("school_region_name_abr", "age_june30", "age_cat_name", "sex", "autism"))
+                                    grouping_vars = c("school_region_name_abr", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
 
 ggplot(data = aut_prev_region) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
@@ -455,6 +455,16 @@ ggplot(data = aut_prev_region) +
        x = "School region",
        y = "Sample prevalence",
        fill = "Age")
+
+ggplot(data = aut_prev_region) +
+  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  scale_fill_viridis_d() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Autism prevalence by sex",
+       x = "School region",
+       y = "Sample prevalence",
+       fill = "Age category")
 
 ggplot(data = aut_prev_region) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = sex, fill = as.factor(sex)), position = "dodge") +
@@ -477,7 +487,7 @@ aut_prev_region_post <- do_jags_rand_model(x = aut_prev_region_adj,
                               theta_mu = theta_mu_prior,
                               theta_sigma = theta_sigma_prior,
                               pars = pars, 
-                              convergence_checks = TRUE) %>%
+                              convergence_checks = FALSE) %>%
   rename("school_region_name_abr" = "Feat_names")
 
 plot_post_density(aut_prev_region_post, aut_prev_region_adj, feat = "school_region_name_abr", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
@@ -531,13 +541,23 @@ Each health service operates in only one region, some regions (RM, VALPO, LAGOS,
 ```{r health plot}
 
 aut_prev_health <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("health_service_name", "age_june30", "age_cat_name", "sex", "autism"))
+                                    grouping_vars = c("health_service_name", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
 
 ggplot(data = aut_prev_health) +
   geom_col(aes(x = health_service_name, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
   scale_fill_viridis_d() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(title = "Autism prevalence",
+       x = "School health service",
+       y = "Sample prevalence",
+       fill = "Age category")
+
+ggplot(data = aut_prev_health) +
+  geom_col(aes(x = health_service_name, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  scale_fill_viridis_d() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Autism prevalence by sex",
        x = "School health service",
        y = "Sample prevalence",
        fill = "Age category")
@@ -562,7 +582,7 @@ aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
                               theta_mu = theta_mu_prior,
                               theta_sigma = theta_sigma_prior,
                               pars = pars, 
-                              convergence_checks = TRUE) %>%
+                              convergence_checks = FALSE) %>%
   rename("health_service_name" = "Feat_names")
 
 plot_post_density(aut_prev_health_post, aut_prev_health_adj, feat = "health_service_name", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
@@ -599,13 +619,23 @@ for(j in 1:length(theta_mu_extrapolate)) {
 
 ```{r rural plot}
 aut_prev_rural <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("school_rurality_code", "age_june30", "age_cat_name", "sex", "autism"))
+                                    grouping_vars = c("school_rurality_code", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
 
 ggplot(data = aut_prev_rural) +
   geom_col(aes(x = as.factor(school_rurality_code), y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
   scale_fill_viridis_d() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Autism prevalence",
+       x = "Rurality status",
+       y = "Sample prevalence",
+       fill = "Age category")
+
+ggplot(data = aut_prev_rural) +
+  geom_col(aes(x = as.factor(school_rurality_code), y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  scale_fill_viridis_d() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Autism prevalence by sex",
        x = "Rurality status",
        y = "Sample prevalence",
        fill = "Age category")
@@ -630,7 +660,7 @@ aut_prev_rural_post <- do_jags_rand_model(x = aut_prev_rural_adj,
                               theta_mu = theta_mu_prior,
                               theta_sigma = theta_sigma_prior,
                               pars = pars, 
-                              convergence_checks = TRUE) %>%
+                              convergence_checks = FALSE) %>%
   rename("school_rurality_code" = "Feat_names")
 
 plot_post_density(aut_prev_rural_post, aut_prev_rural_adj, feat = "school_rurality_code", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
@@ -670,7 +700,7 @@ Only use regions with large Mapuche populations
 aut_prev_ethnic <- chile_bayes_aut %>%
   filter(school_region_name_abr %in% c("ARAUC", "BBIO", "LAGOS", "RIOS", "RM")) %>%
   get_grouped_prev(stdpop = chile_stdpop, 
-                   grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "autism"))
+                   grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
 
 
 ggplot(data = aut_prev_ethnic) +
@@ -678,6 +708,16 @@ ggplot(data = aut_prev_ethnic) +
   scale_fill_viridis_d() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Autism prevalence",
+       x = "Ethnicity",
+       y = "Sample prevalence",
+       fill = "Age category")
+
+ggplot(data = aut_prev_ethnic) +
+  geom_col(aes(x = as.factor(ethnic_2_group), y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  scale_fill_viridis_d() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Autism prevalence by sex",
        x = "Ethnicity",
        y = "Sample prevalence",
        fill = "Age category")
@@ -702,7 +742,7 @@ aut_prev_ethnic_post <- do_jags_rand_model(x = aut_prev_ethnic_adj,
                               theta_mu = theta_mu_prior,
                               theta_sigma = theta_sigma_prior,
                               pars = pars, 
-                              convergence_checks = TRUE) %>%
+                              convergence_checks = FALSE) %>%
   rename("ethnic_2_group" = "Feat_names")
 
 plot_post_density(aut_prev_ethnic_post, aut_prev_ethnic_adj, feat = "ethnic_2_group", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
@@ -738,13 +778,24 @@ for(j in 1:length(theta_mu_extrapolate)) {
 
 ```{r economicAll plot}
 aut_prev_econ <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("school_fee", "school_fee_group", "age_june30", "age_cat_name", "sex", "autism"))
+                                    grouping_vars = c("school_fee", "school_fee_group", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
 
 ggplot(data = aut_prev_econ) +
   geom_col(aes(x = as.factor(school_fee), y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
   scale_fill_viridis_d() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Autism prevalence",
+       x = "Economic status (all)",
+       y = "Sample prevalence",
+       fill = "Age category")
+
+
+ggplot(data = aut_prev_econ) +
+  geom_col(aes(x = as.factor(school_fee), y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  scale_fill_viridis_d() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Autism prevalence by sex",
        x = "Economic status (all)",
        y = "Sample prevalence",
        fill = "Age category")
@@ -772,7 +823,7 @@ aut_prev_econ_post <- do_jags_rand_model(x = aut_prev_econ_adj,
                               theta_mu = theta_mu_prior,
                               theta_sigma = theta_sigma_prior,
                               pars = pars, 
-                              convergence_checks = TRUE) %>%
+                              convergence_checks = FALSE) %>%
   rename("school_fee" = "Feat_names")
 
 plot_post_density(aut_prev_econ_post, aut_prev_econ_adj, feat = "school_fee", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
@@ -817,6 +868,16 @@ ggplot(data = aut_prev_econ) +
        fill = "Age category")
 
 ggplot(data = aut_prev_econ) +
+  geom_col(aes(x = as.factor(school_fee_group), y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  scale_fill_viridis_d() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Autism prevalence by sex",
+       x = "Economic status (grouped)",
+       y = "Sample prevalence",
+       fill = "Age category")
+
+ggplot(data = aut_prev_econ) +
   geom_col(aes(x = as.factor(school_fee_group), y = sample_prevalence, group = sex, fill = as.factor(sex)), position = "dodge") +
   scale_fill_manual(values = c("#03CEA4", "#802392")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -837,7 +898,7 @@ aut_prev_econG_post <- do_jags_rand_model(x = aut_prev_econG_adj,
                               theta_mu = theta_mu_prior,
                               theta_sigma = theta_sigma_prior,
                               pars = pars, 
-                              convergence_checks = TRUE) %>%
+                              convergence_checks = FALSE) %>%
   rename("school_fee_group" = "Feat_names")
 
 plot_post_density(aut_prev_econG_post, aut_prev_econG_adj, feat = "school_fee_group", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
@@ -868,15 +929,59 @@ for(j in 1:length(theta_mu_extrapolate)) {
 ```
 
 
+## Random effect on sex
 
-## Random effect on region, sexes separate
-
-```{r region by sex}
-# Females
+```{r sex}
 chile_stdpop_f <- chile_stdpop %>%
   filter(sex == 2) %>%
   mutate(pop_prop = std_pop / sum(std_pop))
+chile_stdpop_m <- chile_stdpop %>%
+  filter(sex == 1) %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
 
+aut_prev_f <- chile_bayes_aut %>%
+  filter(sex == 2) %>%
+  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"))
+aut_prev_adj_f <- get_adjusted_prev(aut_prev_f, grouping_vars = c()) %>% mutate(sex = 2)
+
+aut_prev_m <- chile_bayes_aut %>%
+  filter(sex == 1) %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"))
+aut_prev_adj_m <- get_adjusted_prev(aut_prev_m, grouping_vars = c()) %>% mutate(sex = 1)
+
+aut_prev_sex_adj <- rbind(aut_prev_adj_m, aut_prev_adj_f) 
+# have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
+
+aut_prev_sex_post <- do_jags_rand_model(x = aut_prev_sex_adj,
+                              feat = "sex",
+                              model = rand_model,
+                              theta_mu = theta_mu_prior,
+                              theta_sigma = theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("sex" = "Feat_names")
+
+plot_post_density(aut_prev_sex_post, aut_prev_sex_adj, feat = "sex", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
+
+
+```
+
+
+## Random effect on region, sexes separate
+
+Need sex specific priors - use age-adjusted prevalence from above
+
+```{r sex priors}
+theta_mu_prior_f <- aut_prev_adj_f$adjusted_rate
+theta_sigma_prior_f <- sqrt(aut_prev_adj_f$var)
+
+theta_mu_prior_m <- aut_prev_adj_m$adjusted_rate
+theta_sigma_prior_m <- sqrt(aut_prev_adj_m$var)
+
+```
+
+```{r region by sex}
+# Females
 aut_prev_region_f <- chile_bayes_aut %>%
   filter(sex == 2) %>%
   get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("school_region_name_abr", "age_june30", "sex", "autism"))
@@ -886,8 +991,8 @@ aut_prev_region_adj_f <- get_adjusted_prev(aut_prev_region_f, grouping_vars = "s
 aut_prev_region_post_f <- do_jags_rand_model(x = aut_prev_region_adj_f,
                               feat = "school_region_name_abr",
                               model = rand_model,
-                              theta_mu = theta_mu_prior,
-                              theta_sigma = theta_sigma_prior,
+                              theta_mu = theta_mu_prior_f,
+                              theta_sigma = theta_sigma_prior_f,
                               pars = pars, 
                               convergence_checks = FALSE) %>%
   rename("school_region_name_abr" = "Feat_names")
@@ -895,10 +1000,6 @@ aut_prev_region_post_f <- do_jags_rand_model(x = aut_prev_region_adj_f,
 plot_post_density(aut_prev_region_post_f, aut_prev_region_adj_f, feat = "school_region_name_abr", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
 
 # Males
-chile_stdpop_m <- chile_stdpop %>%
-  filter(sex == 1) %>%
-  mutate(pop_prop = std_pop / sum(std_pop))
-
 aut_prev_region_m <- chile_bayes_aut %>%
   filter(sex == 1) %>%
   get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("school_region_name_abr", "age_june30", "sex", "autism"))
@@ -908,8 +1009,8 @@ aut_prev_region_adj_m <- get_adjusted_prev(aut_prev_region_m, grouping_vars = "s
 aut_prev_region_post_m <- do_jags_rand_model(x = aut_prev_region_adj_m,
                               feat = "school_region_name_abr",
                               model = rand_model,
-                              theta_mu = theta_mu_prior,
-                              theta_sigma = theta_sigma_prior,
+                              theta_mu = theta_mu_prior_m,
+                              theta_sigma = theta_sigma_prior_m,
                               pars = pars, 
                               convergence_checks = FALSE) %>%
   rename("school_region_name_abr" = "Feat_names")
@@ -919,14 +1020,224 @@ plot_post_density(aut_prev_region_post_m, aut_prev_region_adj_m, feat = "school_
 
 ```
 
+Maybe need different extrapolation priors for females?
 
 ```{r region by sex extrapolate}
+# Females
+for(j in 1:length(theta_mu_extrapolate)) {
+  aut_prev_region_post_f <- do_jags_rand_model(x = aut_prev_region_adj_f,
+                                             feat = "school_region_name_abr",
+                                             model = rand_model,
+                                             theta_mu = theta_mu_extrapolate[j],
+                                             theta_sigma = theta_sigma_extrapolate[j],
+                                             pars = pars, 
+                                             convergence_checks = FALSE) %>%
+    rename("school_region_name_abr" = "Feat_names")
+  
+  plot_post_density(aut_prev_region_post_f, 
+                    aut_prev_region_adj_f, 
+                    feat = "school_region_name_abr", 
+                    theta_mu = theta_mu_extrapolate[j],
+                    theta_sigma = theta_sigma_extrapolate[j])
+  
+}
+
+# Males
+for(j in 1:length(theta_mu_extrapolate)) {
+  aut_prev_region_post_m <- do_jags_rand_model(x = aut_prev_region_adj_m,
+                                             feat = "school_region_name_abr",
+                                             model = rand_model,
+                                             theta_mu = theta_mu_extrapolate[j],
+                                             theta_sigma = theta_sigma_extrapolate[j],
+                                             pars = pars, 
+                                             convergence_checks = FALSE) %>%
+    rename("school_region_name_abr" = "Feat_names")
+  
+  plot_post_density(aut_prev_region_post_m, 
+                    aut_prev_region_adj_m, 
+                    feat = "school_region_name_abr", 
+                    theta_mu = theta_mu_extrapolate[j],
+                    theta_sigma = theta_sigma_extrapolate[j])
+  
+}
+
+```
+
+
+## Random effect on ethnicity, sexes separate
+
+Need sex-specific priors
+
+```{r ethnicity by sex}
+# Females
+aut_prev_ethnic_f <- chile_bayes_aut %>%
+  filter(sex == 2) %>%
+  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("ethnic_2_group", "age_june30", "sex", "autism"))
+
+aut_prev_ethnic_adj_f <- get_adjusted_prev(aut_prev_ethnic_f, grouping_vars = "ethnic_2_group")
+
+aut_prev_ethnic_post_f <- do_jags_rand_model(x = aut_prev_ethnic_adj_f,
+                              feat = "ethnic_2_group",
+                              model = rand_model,
+                              theta_mu = theta_mu_prior_f,
+                              theta_sigma = theta_sigma_prior_f,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("ethnic_2_group" = "Feat_names")
+
+plot_post_density(aut_prev_ethnic_post_f, aut_prev_ethnic_adj_f, feat = "ethnic_2_group", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
+
+# Males
+aut_prev_ethnic_m <- chile_bayes_aut %>%
+  filter(sex == 1) %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("ethnic_2_group", "age_june30", "sex", "autism"))
+
+aut_prev_ethnic_adj_m <- get_adjusted_prev(aut_prev_ethnic_m, grouping_vars = "ethnic_2_group")
+
+aut_prev_ethnic_post_m <- do_jags_rand_model(x = aut_prev_ethnic_adj_m,
+                              feat = "ethnic_2_group",
+                              model = rand_model,
+                              theta_mu = theta_mu_prior_m,
+                              theta_sigma = theta_sigma_prior_m,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("ethnic_2_group" = "Feat_names")
+
+plot_post_density(aut_prev_ethnic_post_m, aut_prev_ethnic_adj_m, feat = "ethnic_2_group", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
 
 
 ```
 
 
+```{r ethnicity by sex extrapolate}
+# Females
+for(j in 1:length(theta_mu_extrapolate)) {
+  aut_prev_ethnic_post_f <- do_jags_rand_model(x = aut_prev_ethnic_adj_f,
+                                             feat = "ethnic_2_group",
+                                             model = rand_model,
+                                             theta_mu = theta_mu_extrapolate[j],
+                                             theta_sigma = theta_sigma_extrapolate[j],
+                                             pars = pars, 
+                                             convergence_checks = FALSE) %>%
+    rename("ethnic_2_group" = "Feat_names")
+  
+  plot_post_density(aut_prev_ethnic_post_f, 
+                    aut_prev_ethnic_adj_f, 
+                    feat = "ethnic_2_group", 
+                    theta_mu = theta_mu_extrapolate[j],
+                    theta_sigma = theta_sigma_extrapolate[j])
+  
+}
 
+# Males
+for(j in 1:length(theta_mu_extrapolate)) {
+  aut_prev_ethnic_post_m <- do_jags_rand_model(x = aut_prev_ethnic_adj_m,
+                                             feat = "ethnic_2_group",
+                                             model = rand_model,
+                                             theta_mu = theta_mu_extrapolate[j],
+                                             theta_sigma = theta_sigma_extrapolate[j],
+                                             pars = pars, 
+                                             convergence_checks = FALSE) %>%
+    rename("ethnic_2_group" = "Feat_names")
+  
+  plot_post_density(aut_prev_ethnic_post_m, 
+                    aut_prev_ethnic_adj_m, 
+                    feat = "ethnic_2_group", 
+                    theta_mu = theta_mu_extrapolate[j],
+                    theta_sigma = theta_sigma_extrapolate[j])
+  
+}
+
+```
+
+
+
+
+## Random effect on economic status, sexes separate
+
+```{r economic by sex}
+# Females
+aut_prev_econ_f <- chile_bayes_aut %>%
+  filter(sex == 2) %>%
+  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("school_fee", "age_june30", "sex", "autism"))
+
+aut_prev_econ_adj_f <- get_adjusted_prev(aut_prev_econ_f, grouping_vars = "school_fee")
+
+aut_prev_econ_post_f <- do_jags_rand_model(x = aut_prev_econ_adj_f,
+                              feat = "school_fee",
+                              model = rand_model,
+                              theta_mu = theta_mu_prior_f,
+                              theta_sigma = theta_sigma_prior_f,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("school_fee" = "Feat_names")
+
+plot_post_density(aut_prev_econ_post_f, aut_prev_econ_adj_f, feat = "school_fee", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
+
+# Males
+aut_prev_econ_m <- chile_bayes_aut %>%
+  filter(sex == 1) %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("school_fee", "age_june30", "sex", "autism"))
+
+aut_prev_econ_adj_m <- get_adjusted_prev(aut_prev_econ_m, grouping_vars = "school_fee")
+
+aut_prev_econ_post_m <- do_jags_rand_model(x = aut_prev_econ_adj_m,
+                              feat = "school_fee",
+                              model = rand_model,
+                              theta_mu = theta_mu_prior_m,
+                              theta_sigma = theta_sigma_prior_m,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("school_fee" = "Feat_names")
+
+plot_post_density(aut_prev_econ_post_m, aut_prev_econ_adj_m, feat = "school_fee", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
+
+```
+
+Maybe need to redefine gamma upper CI for female 1,000-10,000 because there are 0 cases.
+
+```{r economic by sex extrapolate}
+# Females
+for(j in 1:length(theta_mu_extrapolate)) {
+  aut_prev_econ_post_f <- do_jags_rand_model(x = aut_prev_econ_adj_f,
+                                             feat = "school_fee",
+                                             model = rand_model,
+                                             theta_mu = theta_mu_extrapolate[j],
+                                             theta_sigma = theta_sigma_extrapolate[j],
+                                             pars = pars, 
+                                             convergence_checks = FALSE) %>%
+    rename("school_fee" = "Feat_names")
+  
+  plot_post_density(aut_prev_econ_post_f, 
+                    aut_prev_econ_adj_f, 
+                    feat = "school_fee", 
+                    theta_mu = theta_mu_extrapolate[j],
+                    theta_sigma = theta_sigma_extrapolate[j])
+  
+}
+
+# Males
+for(j in 1:length(theta_mu_extrapolate)) {
+  aut_prev_econ_post_m <- do_jags_rand_model(x = aut_prev_econ_adj_m,
+                                             feat = "school_fee",
+                                             model = rand_model,
+                                             theta_mu = theta_mu_extrapolate[j],
+                                             theta_sigma = theta_sigma_extrapolate[j],
+                                             pars = pars, 
+                                             convergence_checks = FALSE) %>%
+    rename("school_fee" = "Feat_names")
+  
+  plot_post_density(aut_prev_econ_post_m, 
+                    aut_prev_econ_adj_m, 
+                    feat = "school_fee", 
+                    theta_mu = theta_mu_extrapolate[j],
+                    theta_sigma = theta_sigma_extrapolate[j])
+  
+}
+
+```
+
+Could do random effect on sex and region together
 
 
 
