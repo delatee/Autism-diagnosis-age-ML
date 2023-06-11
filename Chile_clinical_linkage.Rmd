@@ -102,8 +102,8 @@ clinical <- clinical_raw %>%
                                                                 ifelse(apt_month == "dic", 12, apt_month)))))),
          apt_date = make_date(year = apt_year, month = apt_month_eng, day = apt_day),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year"))) %>%
-  select(id, gender, comuna, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) %>%
-  left_join(chile_communes, by = )
+  select(id, gender, comuna, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) #%>%
+  #left_join(chile_communes, by = )
 
 
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
