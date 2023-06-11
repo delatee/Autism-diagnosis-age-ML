@@ -70,7 +70,7 @@ chile_merged <- chile_merged_raw %>%
 
 ```{r import clinical data}
 clinical_raw <- read_excel("04_Data/dataset_ssas_2015_2021.xlsx") %>% clean_names
-describe(clinical_raw)
+#describe(clinical_raw)
 
 clinical <- clinical_raw %>%
   select(c(-procedence, -ethnicity, -education_level, -disability, -foster_care)) %>%
@@ -143,7 +143,14 @@ patients <- clinical %>%
 patients_small <- clinical_small %>%
   group_by(id, gender, comuna, dob, age_june30) %>%
   summarise(first_apt = min(apt_date)) %>%
-  ungroup()
+  ungroup() %>% 
+  rename("dob_full" = "dob") %>%
+  left_join(commune_region, by = "comuna") %>%
+  mutate(school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
+         dob = as.numeric(format(dob_full, "%Y%m")),
+         sex_desc = str_to_title(gender)) %>%
+  rename("school_commune_name" = "comuna") %>%
+  select(c(id, sex_desc, school_commune_name, age_june30, dob))
 
 ```
 
@@ -197,18 +204,25 @@ school <- chile_merged %>%
 
 ```
 
+
 ```{r pairs}
 # Generate pairs
-pairs <- pair_blocking(patients, school, on = "sex_desc") # Also try without the blocking
+# use smaller clinical data for now to get it working
+pairs <- pair_blocking(patients_small, school, on = "sex_desc") # Also try without the blocking
 
 # Compare pairs - takes a couple of minutes to run with blocking on sex
 compare_pairs(pairs, on = c("age_june30", "dob", "school_commune_name"), 
-              comparators = list(age_june30 = jaro_winkler(), dob = jaro_winkler(), school_commune_name = jaro_winkler()),
+              #comparators = list(age_june30 = jaro_winkler(), dob = jaro_winkler(), school_commune_name = jaro_winkler()),
               inplace = TRUE # Allows pairs to be modified in place - makes it more efficient when pairs is large
               )
+# No need to assign this to anything, it updates pairs with additional columns
+
+
 ```
 
+The Jaro-Winkler distance is a string metric for measuring the edit distance between two sequences. It is a variant of the Jaro distance metric proposed by William E. Winkler in 1990 1. The Jaro-Winkler distance uses a prefix scale which gives more favorable ratings to strings that match from the beginning for a set prefix length. The higher the Jaro-Winkler distance for two strings is, the less similar the strings are. The score is normalized such that 0 means an exact match and 1 means there is no similarity 1.
 
+Need to explore different comparator algorithms. Currently it's exact match.
 
 
 
