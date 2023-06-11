@@ -111,9 +111,9 @@ chile_communes <- chile_communes_raw %>%
                                                                                        ifelse(comuna_upper == "VICHUQUÉN", "VICHUQUEN", comuna_upper)))))))
 ))) %>%
   rename("health_service_name" = "servicio_de_salud") %>%
-  left_join(chile_merged %>% group_by(school_region_name_abr, school_commune_name) %>% summarise() %>% ungroup(), by = "school_commune_name") %>%
-  select(school_commune_name, health_service_name, school_region_name_abr)
-write_xlsx(chile_communes, path = "04_Data/Outputs/chile_communes.xlsx")
+  #left_join(chile_merged %>% group_by(school_region_name_abr, school_commune_name) %>% summarise() %>% ungroup(), by = "school_commune_name") %>%
+  select(school_commune_name, health_service_name) #, school_region_name_abr)
+#write_xlsx(chile_communes, path = "04_Data/Outputs/chile_communes.xlsx")
 
 ```
 

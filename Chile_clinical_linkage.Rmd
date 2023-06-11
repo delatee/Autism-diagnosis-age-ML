@@ -15,6 +15,7 @@ knitr::opts_knit$set(root.dir = "C:/Users/delat/OneDrive/MPhil Population Health
 library(janitor)
 library(Hmisc)
 library(readxl)
+library(reclin2)
 library(lubridate)
 library(tidyverse)
 
@@ -128,10 +129,15 @@ commune_region <- chile_merged %>%
 
 patients <- clinical %>%
   group_by(id, gender, comuna, dob, age_june30) %>%
-  summarise(first_apt = min(apt_date)) %>%
+  summarise() %>%
+  #summarise(first_apt = min(apt_date)) %>%
   ungroup() %>% 
+  rename("dob_full" = "dob",
+         "sex_desc" = "gender") %>%
   left_join(commune_region, by = "comuna") %>%
-  mutate(school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr))
+  mutate(school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
+         dob = as.numeric(format(dob_full, "%Y%m"))) %>%
+  rename("school_commune_name" = "comuna")
   # Some communes in the clinical data were not represented in the schools data but are also in Araucanía (ARAUC)
 
 patients_small <- clinical_small %>%
@@ -166,21 +172,24 @@ First try linkage using ML, as done by Jan van der Laan here https://cran.r-proj
 
 Only try to link clinical data to records in the schools data for the Araucanía (ARAUC) because that's where the clinical data is from.
 
-```{r}
+```{r set up data}
 school <- chile_merged %>%
   filter(school_region_name_abr == "ARAUC") %>%
   filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% # Could try without this filter to pick up edge cases just in case
   mutate(autism = ifelse(special_needs_code == 105, 1, 0)) %>%
-  select(school_region_name_abr,
-    sex,
+  filter(autism == 1) %>% # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
+  select(
+    #school_region_name_abr,
+    #sex,
     sex_desc,
+    dob,
     age_june30,
-    school_rurality_code,
-    school_fee,
-    ethnicity,
-    mapuche,
-    nationality,
-    ethnic_3_group,
+    #school_rurality_code,
+    #school_fee,
+    #ethnicity,
+    #mapuche,
+    #nationality,
+    #ethnic_3_group,
     autism,
     school_commune_name
     #health_service_name # need to join to chile_communes to have this
@@ -188,7 +197,16 @@ school <- chile_merged %>%
 
 ```
 
+```{r pairs}
+# Generate pairs
+pairs <- pair_blocking(patients, school, on = "sex_desc") # Also try without the blocking
 
+# Compare pairs - takes a couple of minutes to run with blocking on sex
+compare_pairs(pairs, on = c("age_june30", "dob", "school_commune_name"), 
+              comparators = list(age_june30 = jaro_winkler(), dob = jaro_winkler(), school_commune_name = jaro_winkler()),
+              inplace = TRUE # Allows pairs to be modified in place - makes it more efficient when pairs is large
+              )
+```
 
 
 
