@@ -18,6 +18,7 @@ library(nleqslv) # Only needed for robince bayesian prevalence
 library(janitor)
 library(gridExtra)
 library(readxl)
+library(writexl)
 library(viridis)
 library(wesanderson)
 library(psych)
@@ -110,8 +111,9 @@ chile_communes <- chile_communes_raw %>%
                                                                                        ifelse(comuna_upper == "VICHUQUÉN", "VICHUQUEN", comuna_upper)))))))
 ))) %>%
   rename("health_service_name" = "servicio_de_salud") %>%
-  select(school_commune_name, health_service_name)
-
+  left_join(chile_merged %>% group_by(school_region_name_abr, school_commune_name) %>% summarise() %>% ungroup(), by = "school_commune_name") %>%
+  select(school_commune_name, health_service_name, school_region_name_abr)
+write_xlsx(chile_communes, path = "04_Data/Outputs/chile_communes.xlsx")
 
 ```
 
@@ -178,6 +180,7 @@ chile_bayes_aut <- chile_merged %>%
     school_commune_name,
     health_service_name
   ) 
+
 
 # Prevalence of autism in Chile dataset
 sum(chile_bayes_aut$autism) / nrow(chile_bayes_aut) # 0.00476 = 0.476%, very low
@@ -533,6 +536,15 @@ ggplot(map_tab_df, aes(x = Var1, y = Var2, fill = Freq)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   scale_y_discrete(limits = rev(levels(map_tab_df$Var2))) +
   labs(x = "School region", y = "School health service", fill = "Freq")
+
+#map2_tab_df <- as.data.frame(table(chile_bayes_aut$school_commune_name, chile_bayes_aut$health_service_name))
+#ggplot(map2_tab_df, aes(x = Var1, y = Var2, fill = Freq)) +
+#  geom_tile() +
+#  #scale_fill_gradient(low = "white", high = "blue") +
+#  scale_fill_viridis_c(option = "rocket", direction = -1) +
+#  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+#  scale_y_discrete(limits = rev(levels(map2_tab_df$Var2))) +
+#  labs(x = "School commune", y = "School health service", fill = "Freq")
 
 ```
 
