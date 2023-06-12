@@ -17,6 +17,7 @@ library(Hmisc)
 library(readxl)
 library(reclin2)
 library(lubridate)
+library(fdm2id) # for predict that works for kmeans
 library(tidyverse)
 
 ```
@@ -111,12 +112,6 @@ clinical <- clinical_raw %>%
   select(id, gender, school_commune_name, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) #%>%
   #left_join(chile_communes, by = )
 
-clinical_communes <- clinical_small %>% group_by(school_commune_name) %>% summarise() %>% arrange() %>%
-  mutate(commune_in_school_data = ifelse(school_commune_name %in% unique(chile_merged$school_commune_name), 1, 0)) # Needs to all be 1's
-
-#chile_merged %>% filter(school_region_name_abr == "ARAUC") %>% group_by(school_commune_name) %>% summarise() %>% arrange()
-
-
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
 #colnames(clinical_small) <- colnames(clinical_raw)
 
@@ -135,6 +130,12 @@ clinical_small <- clinical_small_raw %>%
                                                                                        ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna)))))))))) %>%
   rename("type_appointment" = "appoinment", "codigo" = "cod_dg_1", "diagnosis" = "diagnostico_1") %>%
   select(id, gender, school_commune_name, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
+
+clinical_communes <- clinical_small %>% group_by(school_commune_name) %>% summarise() %>% arrange() %>%
+  mutate(commune_in_school_data = ifelse(school_commune_name %in% unique(chile_merged$school_commune_name), 1, 0)) # Needs to all be 1's
+
+#chile_merged %>% filter(school_region_name_abr == "ARAUC") %>% group_by(school_commune_name) %>% summarise() %>% arrange()
+
 
 
 ```
@@ -196,6 +197,7 @@ Assume this is because the big clinical dataset only has people with autism, not
 
 First try linkage using ML, as done by Jan van der Laan here https://cran.r-project.org/web/packages/reclin2/vignettes/record_linkage_using_machine_learning.html 
 
+
 Only try to link clinical data to records in the schools data for the Araucanía (ARAUC) because that's where the clinical data is from.
 
 ```{r set up data}
@@ -228,13 +230,7 @@ sort(unique(school$school_commune_name))
 
 ```
 
-
-```{r pairs}
-# Generate pairs
-# use smaller clinical data for now to get it working
-pairs <- pair_blocking(patients, school, on = "sex_desc") # Also try without the blocking
-
-
+```{r similarity functions}
 get_num_diff <- function(.x, .y) {
   diff_value <- data.frame(.x = .x, .y = .y, val = numeric(length(.x)))
   diff_value <- diff_value %>%
@@ -243,25 +239,66 @@ get_num_diff <- function(.x, .y) {
   
   return(diff_value)
 }
+
+```
+
+
+```{r pairs}
+
     
 get_num_diff(c(1, 2, 3), c(1, 1, 1))
+get_num_diff(1, 2)$val
+
+# Generate pairs
+# use smaller clinical data for now to get it working
+pairs <- #pair_blocking(patients_small[1:50, ], school[1:50, ], on = "sex_desc") %>% # Also try without the blocking 
+         pair_blocking(patients, school, on = "sex_desc") %>%
+  mutate(age_june30 = get_num_diff(patients$age_june30[.x], school$age_june30[.y])$val,
+         dob = get_num_diff(patients$dob[.x], school$dob[.y])$val,
+         school_commune_name = (patients$school_commune_name[.x] == school$school_commune_name[.y])) # will need a better commune similarity algorithm
+
+
+
+set.seed(123)
+k <- 3 # We know there are 2 classes: matched records and un-matched records, and we'd like a 3rd class for maybes
+kmeans_result <- kmeans(select(pairs, c(-.x, -.y)), k, nstart = 20)
+pairs$pred <- predict(kmeans_result, select(pairs, c(-.x, -.y)))
+table(pairs$pred)
+
+
+
+
 
 # Compare pairs - takes a couple of minutes to run with blocking on sex
-compare_pairs(pairs, on = c("age_june30", "dob", "school_commune_name"), 
-              comparators = list(#age_june30 = get_num_diff(.x, .y)#, # For now, require exact match on age
-                                 dob = jaro_winkler() #, 
-                                 #school_commune_name = jaro_winkler() # For now, require exact match on commune
-                                 ),
-              inplace = TRUE # Allows pairs to be modified in place - makes it more efficient when pairs is large
-              )
+#compare_pairs(pairs, on = c("age_june30", "dob", "school_commune_name"), 
+#              comparators = list(#age_june30 = get_num_diff(.x, .y)#, # For now, require exact match on age
+#                                 dob = jaro_winkler() #, 
+#                                 #school_commune_name = jaro_winkler() # For now, require exact match on commune
+#                                 ),
+#              inplace = TRUE # Allows pairs to be modified in place - makes it more efficient when pairs is large
+#              )
 # No need to assign this to anything, it updates pairs with additional columns
+# compare_pairs() works for patients_small + school (174,173 pairs) but doesn't work for patients + school (655,680 pairs)
+# Can't handle more than approx 400,000 pairs
 
 
 ```
 
+In reclin2 package, use ?identical() to see available matching algorithms.
+
 The Jaro-Winkler distance is a string metric for measuring the edit distance between two sequences. It is a variant of the Jaro distance metric proposed by William E. Winkler in 1990 1. The Jaro-Winkler distance uses a prefix scale which gives more favorable ratings to strings that match from the beginning for a set prefix length. The higher the Jaro-Winkler distance for two strings is, the less similar the strings are. The score is normalized such that 0 means an exact match and 1 means there is no similarity 1.
 
-Need to explore different comparator algorithms. Currently it's exact match.
+Need to explore different comparator algorithms. Currently it's exact match. Would be good to do communes that are neighbours and ages off by 1.
+
+
+# Try bayesian linkage
+
+Follow Thomas Stringham https://arxiv.org/pdf/2003.04238.pdf
+who followed Sadinle https://arxiv.org/abs/1601.06630
+
+
+
+
 
 
 
