@@ -101,9 +101,20 @@ clinical <- clinical_raw %>%
                                                          ifelse(apt_month == "sept", 9, 
                                                                 ifelse(apt_month == "dic", 12, apt_month)))))),
          apt_date = make_date(year = apt_year, month = apt_month_eng, day = apt_day),
-         age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year"))) %>%
-  select(id, gender, comuna, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) #%>%
+         age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
+         school_commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+                                      ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
+                                             ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
+                                                    ifelse(comuna == "PUCON", "PUCÓN", 
+                                                           ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                                                                  ifelse(comuna == "VILCUN", "VILCÚN", comuna))))))) %>%
+  select(id, gender, school_commune_name, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) #%>%
   #left_join(chile_communes, by = )
+
+clinical_communes <- clinical_small %>% group_by(school_commune_name) %>% summarise() %>% arrange() %>%
+  mutate(commune_in_school_data = ifelse(school_commune_name %in% unique(chile_merged$school_commune_name), 1, 0)) # Needs to all be 1's
+
+#chile_merged %>% filter(school_region_name_abr == "ARAUC") %>% group_by(school_commune_name) %>% summarise() %>% arrange()
 
 
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
@@ -112,7 +123,18 @@ clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_name
 clinical_small <- clinical_small_raw %>%
   rename("dob" = "fecha_nacimiento",
          "apt_date" = "fecha_ejecutada") %>%
-  mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")))
+  mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
+         school_commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+                                      ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
+                                             ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
+                                                    ifelse(comuna == "PUCON", "PUCÓN", 
+                                                           ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                                                                  ifelse(comuna == "VILCUN", "VILCÚN", 
+                                                                         ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
+                                                                                ifelse(comuna == "MACHALI", "MACHALÍ",
+                                                                                       ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna)))))))))) %>%
+  rename("type_appointment" = "appoinment", "codigo" = "cod_dg_1", "diagnosis" = "diagnostico_1") %>%
+  select(id, gender, school_commune_name, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
 
 
 ```
@@ -124,32 +146,29 @@ Get one row per person to make matching more efficient. Take the earliest appoin
 ```{r restructure data}
 commune_region <- chile_merged %>%
   group_by(school_region_name_abr, school_commune_name) %>%
-  summarise() %>%
-  rename("comuna" = "school_commune_name")
+  summarise()
 
 patients <- clinical %>%
-  group_by(id, gender, comuna, dob, age_june30) %>%
+  group_by(id, gender, school_commune_name, dob, age_june30) %>%
   summarise() %>%
   #summarise(first_apt = min(apt_date)) %>%
   ungroup() %>% 
   rename("dob_full" = "dob",
          "sex_desc" = "gender") %>%
-  left_join(commune_region, by = "comuna") %>%
-  mutate(school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
-         dob = as.numeric(format(dob_full, "%Y%m"))) %>%
-  rename("school_commune_name" = "comuna")
+  left_join(commune_region, by = "school_commune_name") %>%
+  mutate(#school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
+         dob = as.numeric(format(dob_full, "%Y%m")))
   # Some communes in the clinical data were not represented in the schools data but are also in Araucanía (ARAUC)
 
 patients_small <- clinical_small %>%
-  group_by(id, gender, comuna, dob, age_june30) %>%
+  group_by(id, gender, school_commune_name, dob, age_june30) %>%
   summarise(first_apt = min(apt_date)) %>%
   ungroup() %>% 
   rename("dob_full" = "dob") %>%
-  left_join(commune_region, by = "comuna") %>%
-  mutate(school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
+  left_join(commune_region, by = "school_commune_name") %>%
+  mutate(#school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
          dob = as.numeric(format(dob_full, "%Y%m")),
          sex_desc = str_to_title(gender)) %>%
-  rename("school_commune_name" = "comuna") %>%
   select(c(id, sex_desc, school_commune_name, age_june30, dob))
 
 ```
@@ -202,17 +221,37 @@ school <- chile_merged %>%
     #health_service_name # need to join to chile_communes to have this
   ) 
 
+# Do the commune names align well? Yes
+table(sort(unique(patients_small$school_commune_name, sort(unique(school$school_commune_name)))))
+sort(unique(patients_small$school_commune_name))
+sort(unique(school$school_commune_name))
+
 ```
 
 
 ```{r pairs}
 # Generate pairs
 # use smaller clinical data for now to get it working
-pairs <- pair_blocking(patients_small, school, on = "sex_desc") # Also try without the blocking
+pairs <- pair_blocking(patients, school, on = "sex_desc") # Also try without the blocking
+
+
+get_num_diff <- function(.x, .y) {
+  diff_value <- data.frame(.x = .x, .y = .y, val = numeric(length(.x)))
+  diff_value <- diff_value %>%
+    mutate(val = ifelse(abs(.x-.y) == 0, 1, 
+                        ifelse(abs(.x-.y) > 0 & abs(.x-.y) <= 1, 0.5, 0)))
+  
+  return(diff_value)
+}
+    
+get_num_diff(c(1, 2, 3), c(1, 1, 1))
 
 # Compare pairs - takes a couple of minutes to run with blocking on sex
 compare_pairs(pairs, on = c("age_june30", "dob", "school_commune_name"), 
-              #comparators = list(age_june30 = jaro_winkler(), dob = jaro_winkler(), school_commune_name = jaro_winkler()),
+              comparators = list(#age_june30 = get_num_diff(.x, .y)#, # For now, require exact match on age
+                                 dob = jaro_winkler() #, 
+                                 #school_commune_name = jaro_winkler() # For now, require exact match on commune
+                                 ),
               inplace = TRUE # Allows pairs to be modified in place - makes it more efficient when pairs is large
               )
 # No need to assign this to anything, it updates pairs with additional columns
