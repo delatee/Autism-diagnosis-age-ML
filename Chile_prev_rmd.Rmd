@@ -95,7 +95,9 @@ chile_stdpop <- chile_stdpop_raw %>%
   mutate(pop_prop = std_pop / sum(std_pop))
 
 chile_communes <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
-  clean_names()
+  clean_names() %>%
+  rename(school_region_name_abr = region_name,
+         school_commune_name = commune_name)
 
 ```
 

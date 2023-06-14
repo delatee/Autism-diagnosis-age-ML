@@ -23,6 +23,11 @@ library(tidyverse)
 
 ```
 
+```{r import commune lookup}
+commune_region_lookup <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>% clean_names()
+
+```
+
 ```{r import school data}
 chile_merged_raw <- read.csv("04_Data/Data_Chile_Merge.csv") %>% clean_names()
 
@@ -65,16 +70,8 @@ chile_merged <- chile_merged_raw %>%
          economic_specialty_code = cod_espe,
          economic_branch_code = cod_rama,
          economic_profspec_code = cod_men,
-         teaching_code_new = ens) 
+         teaching_code_new = ens)
 
-
-```
-
-```{r commune lookup}
-commune_region_lookup <- chile_merged %>%
-  group_by(school_region_name_abr, school_commune_name) %>%
-  summarise() #%>%
-  #rename("region" = "school_region_name_abr", "commune" = "school_commune_name")
 
 ```
 
@@ -112,7 +109,7 @@ clinical <- clinical_raw %>%
                                                                 ifelse(apt_month == "dic", 12, apt_month)))))),
          apt_date = make_date(year = apt_year, month = apt_month_eng, day = apt_day),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         school_commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+         commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
                                       ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
                                              ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
                                                     ifelse(comuna == "PUCON", "PUCÓN", 
@@ -124,18 +121,16 @@ clinical <- clinical_raw %>%
                                           ifelse(socio_economic_level == "FONASA - D", 4,
                                                  ifelse(socio_economic_level == "Private Health Insurance", 5, NA)))))
          ) %>%
-  left_join(commune_region_lookup, by = "school_commune_name") %>%
-  select(id, gender, school_commune_name, school_region_name_abr, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) #%>%
-  #left_join(chile_communes, by = )
+  left_join(commune_region_lookup, by = "commune_name") %>%
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
 
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
-#colnames(clinical_small) <- colnames(clinical_raw)
 
 clinical_small <- clinical_small_raw %>%
   rename("dob" = "fecha_nacimiento",
          "apt_date" = "fecha_ejecutada") %>%
   mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         school_commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+         commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
                                       ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
                                              ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
                                                     ifelse(comuna == "PUCON", "PUCÓN", 
@@ -151,11 +146,11 @@ clinical_small <- clinical_small_raw %>%
                                                  ifelse(socio_economic_level == "Private Health Insurance", 5, NA)))))
          ) %>%
   rename("type_appointment" = "appoinment", "codigo" = "cod_dg_1", "diagnosis" = "diagnostico_1") %>%
-  left_join(commune_region_lookup, by = "school_commune_name") %>%
-  select(id, gender, school_commune_name, school_region_name_abr, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
+  left_join(commune_region_lookup, by = "commune_name") %>%
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
 
-clinical_communes <- clinical_small %>% group_by(school_commune_name) %>% summarise() %>% arrange() %>%
-  mutate(commune_in_school_data = ifelse(school_commune_name %in% unique(chile_merged$school_commune_name), 1, 0)) # Needs to all be 1's
+clinical_communes <- clinical %>% group_by(commune_name) %>% summarise() %>% arrange() %>%
+  mutate(commune_in_school_data = ifelse(commune_name %in% unique(chile_merged$student_commune_name), 1, 0)) # Needs to all be 1's
 #clinical_communes <- clinical %>% group_by(student_commune_name) %>% summarise() %>% arrange() %>%
 #  mutate(commune_in_school_data = ifelse(student_commune_name %in% unique(chile_merged$student_commune_name), 1, 0)) # Needs to all be 1's
 
@@ -173,31 +168,31 @@ Get one row per person to make matching more efficient. Take the earliest appoin
 
 ```{r restructure clinical}
 patients <- clinical %>%
-  group_by(id, gender, school_commune_name, dob, socio_economic_level, ses_status, age_june30) %>%
+  group_by(id, gender, commune_name, dob, ses_status) %>%
   #group_by(id, gender, student_commune_name, dob, age_june30) %>%
   summarise() %>% 
   #summarise(first_apt = min(apt_date)) %>%
   ungroup() %>% 
   #rename("dob_full" = "dob",
   #       "sex_desc" = "gender") %>%
-  left_join(commune_region_lookup, by = "school_commune_name") %>%
-  rename("student_commune_name" = "school_commune_name",
-         "sex_desc" = "gender") #%>%
+  #left_join(commune_region_lookup, by = "school_commune_name") %>%
+  rename("student_commune_name" = "commune_name",
+         "sex_desc" = "gender")
   #mutate(#school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
   #       dob = as.numeric(format(dob_full, "%Y%m")))
   # Some communes in the clinical data were not represented in the schools data but are also in Araucanía (ARAUC)
 
 patients_small <- clinical_small %>%
-  group_by(id, gender, school_commune_name, dob, socio_economic_level, ses_status, age_june30) %>%
+  group_by(id, gender, commune_name, dob, ses_status) %>%
   summarise(first_apt = min(apt_date)) %>%
   ungroup() %>% 
   #rename("dob_full" = "dob") %>%
-  left_join(commune_region_lookup, by = "school_commune_name") %>%
+  left_join(commune_region_lookup, by = "commune_name") %>%
   mutate(#school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
          #dob = as.numeric(format(dob_full, "%Y%m")),
          sex_desc = str_to_title(gender)) %>%
-  rename("student_commune_name" = "school_commune_name") %>%
-  select(c(id, sex_desc, student_commune_name, age_june30, dob))
+  rename("student_commune_name" = "commune_name") %>%
+  select(c(id, sex_desc, dob, student_commune_name, ses_status))
 
 ```
 
@@ -224,8 +219,13 @@ Assume this is because the big clinical dataset only has people with autism, not
 
 ```{r manual linkage}
 patients_grouped <- patients %>%
-  group_by(sex_desc, dob, student_commune_name) %>%
+  group_by(sex_desc, 
+           dob, 
+           student_commune_name) %>%
   summarise(count = n())
+
+sort(unique(patients$student_commune_name))
+sort(unique(school$student_commune_name))
 
 ```
 
@@ -239,7 +239,9 @@ Only try to link clinical data to records in the schools data for the Araucanía
 
 ```{r set up data}
 school <- chile_merged %>%
-  filter(school_region_name_abr == "ARAUC") %>%
+  rename(commune_name = student_commune_name) %>%
+  left_join(commune_region_lookup, by = "commune_name") %>%
+  filter(health_service_name == "Servicio de Salud Araucanía Sur") %>% # This should be filtered either on the specific ARAUC communes in the clinical data or using student_commune_region not school_region.
   filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% # Could try without this filter to pick up edge cases just in case
   # filter only the communes represented in the clinical data here?
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
@@ -247,28 +249,22 @@ school <- chile_merged %>%
          ses_status = ifelse(school_fee == "", 0, 
                              ifelse(school_fee == "GRATUITO", 1, 
                                     ifelse(school_fee == "$1.000 A $10.000", 2,
-                                           ifelse(school_fee == "$10.001 A $25.000", 3, 
-                                                  ifelse(school_fee == "$25.001 A $50.000", 4,
-                                                         ifelse(school_fee == "$50.001 A $100.000", 5, 
-                                                                ifelse(school_fee == "MAS DE $100.000", 6, 
+                                           ifelse(school_fee == "$10.001 A $25.000", 2, 
+                                                  ifelse(school_fee == "$25.001 A $50.000", 2,
+                                                         ifelse(school_fee == "$50.001 A $100.000", 2, 
+                                                                ifelse(school_fee == "MAS DE $100.000", 2, 
                                                                        ifelse(school_fee == "SIN INFORMACION", 0, NA))))))))) %>%
   filter(autism == 1) %>% # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
-  select(
-    #school_region_name_abr,
-    #sex,
-    sex_desc,
+  rename(student_region_name = region_name, student_commune_name = commune_name) %>%
+  select(sex_desc,
     dob,
     age_june30,
-    #school_rurality_code,
     ses_status,
-    #ethnicity,
-    #mapuche,
-    #nationality,
-    #ethnic_3_group,
     autism,
-    school_commune_name,
-    student_commune_name
-    #health_service_name # need to join to chile_communes to have this
+    #school_commune_name,
+    student_region_name,
+    student_commune_name,
+    health_service_name # need to join to chile_communes to have this
   )
 
 # Do the commune names align well? Yes
@@ -283,7 +279,9 @@ get_num_diff <- function(.x, .y) {
   diff_value <- data.frame(.x = .x, .y = .y, val = numeric(length(.x)))
   diff_value <- diff_value %>%
     mutate(val = ifelse(abs(.x-.y) == 0, 1, 
-                        ifelse(abs(.x-.y) > 0 & abs(.x-.y) <= 1, 0.5, 0)))
+                        ifelse(abs(.x-.y) <= 1, 0.5,
+                               ifelse(abs(.x-.y) <= 2, 0.25, 
+                                      ifelse(abs(.x-.y) <= 3, 0.125, 0)))))
   
   return(diff_value)
 }
@@ -299,19 +297,21 @@ get_num_diff(1, 2)$val
 
 # Generate pairs
 # use smaller clinical data for now to get it working
-pairs <- #pair_blocking(patients_small[1:50, ], school[1:50, ], on = "sex_desc") %>% # Also try without the blocking 
-         #pair_blocking(patients, school, on = "sex_desc") %>%
-         pair(x = patients, y = school) %>%
+pairs <- # Also try without the blocking 
+         pair_blocking(patients, school, on = c("sex_desc", "dob")) %>%
+         #pair(x = patients, y = school) %>%
   mutate(#age_june30 = get_num_diff(patients$age_june30[.x], school$age_june30[.y])$val,
-         dob = get_num_diff(patients$dob[.x], school$dob[.y])$val,
+         #dob = get_num_diff(patients$dob[.x], school$dob[.y])$val,
          #dob = patients$dob[.x] == school$dob[.y],
          #school_commune_name = (patients$school_commune_name[.x] == school$school_commune_name[.y])# will need a better commune similarity algorithm
          student_commune_name = (patients$student_commune_name[.x] == school$student_commune_name[.y]),
          sex_desc = patients$sex_desc[.x] == school$sex_desc[.y],
-         ses_pat = patients$ses_status[.x],
-         ses_sch = school$ses_status[.y]) 
+         ses = get_num_diff(patients$ses_status[.x], school$ses_status[.y])$val
+         #ses_pat = patients$ses_status[.x],
+         #ses_sch = school$ses_status[.y]
+         ) 
 
-pairs_match <- pairs %>% filter(dob == 1 & student_commune_name == TRUE & sex_desc == TRUE)
+pairs_match <- pairs %>% filter(student_commune_name == TRUE & sex_desc == TRUE)
 # Vast majority of school records are free (1).
 
 # Try k-means clustering
@@ -321,7 +321,15 @@ kmeans_result <- kmeans(select(pairs, c(-.x, -.y)), k, nstart = 20)
 pairs$k_pred <- predict(kmeans_result, select(pairs, c(-.x, -.y)))
 #table(pairs$pred)
 #table(pairs$dob, pairs$student_commune_name, pairs$sex_desc, pairs$pred)
-pairs_grouped <- pairs %>% group_by(k_pred, sex_desc, student_commune_name, dob, ses_pat, ses_sch) %>% summarise()
+pairs_grouped <- pairs %>% group_by(k_pred, sex_desc, student_commune_name, 
+                                    #dob, 
+                                    ses
+                                    #ses_pat, ses_sch
+                                    ) %>% summarise()
+```
+
+```{r unsupervised ML}
+
 # Not very useful
 
 pairs %>% filter(k_pred == 1) %>% summary()
@@ -331,8 +339,10 @@ pairs %>% filter(k_pred == 2) %>% summary()
 
 # Try c-means clustering
 set.seed(123)
-c <- 3
-pairs_trues <- pairs %>% filter(dob == TRUE | student_commune_name == TRUE | sex_desc == TRUE) %>% select(-k_pred) # Remove clearly unmatched rows to help computation time
+c <- 2
+pairs_trues <- pairs %>% filter((dob == TRUE & student_commune_name == TRUE) |
+                                  (dob == TRUE & sex_desc == TRUE) |
+                                  (student_commune_name == TRUE & sex_desc == TRUE)) %>% select(-k_pred) # Remove clearly unmatched rows to help computation time
 v <- inaparc::kmpp(select(pairs_trues, c(-.x, -.y)), k = c)$v
 u <- inaparc::imembrand(nrow(pairs_trues), k = c)$u
 cmeans_result <- fcm(select(pairs_trues, c(-.x, -.y)),
@@ -340,10 +350,12 @@ cmeans_result <- fcm(select(pairs_trues, c(-.x, -.y)),
                      memberships = u,
                      m = 2, # Fuzziness, keep as 2
                      dmetric = "sqeuclidean", # Distance between points - may not be suitable for binary variables
-                     nstart = 5) # Number of repeats
-pairs_trues$c_pred <- re_class(cmeans_result$cluster)
+                     nstart = 1) # Number of repeats
+pairs_trues$c_pred <- cmeans_result$cluster
+cmeans_result$u
 
-
+pairs_trues %>% filter(c_pred == 1) %>% summary()
+pairs_trues %>% filter(c_pred == 2) %>% summary()
 
 # Compare pairs - takes a couple of minutes to run with blocking on sex
 #compare_pairs(pairs, on = c("age_june30", "dob", "school_commune_name"), 

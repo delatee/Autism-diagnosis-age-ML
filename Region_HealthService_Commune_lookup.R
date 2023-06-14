@@ -9,7 +9,7 @@ chile_communes_raw <- read_excel("04_Data/commune_by_health_service.xlsx") %>%
 
 chile_communes <- chile_communes_raw %>%
   mutate(comuna_upper = toupper(comuna)) %>%
-  mutate(school_commune_name = ifelse(comuna_upper == "AISÉN", "AYSÉN",
+  mutate(commune_name = ifelse(comuna_upper == "AISÉN", "AYSÉN",
                                       ifelse(comuna_upper == "LA CALERA", "CALERA", 
                                              ifelse(comuna_upper == "COIHAIQUE", "COYHAIQUE",
                                                     ifelse(comuna == "Isla de Pascua", "ISLA DE PASCUA", 
@@ -20,19 +20,19 @@ chile_communes <- chile_communes_raw %>%
                                                                                        ifelse(comuna_upper == "VICHUQUÉN", "VICHUQUEN", comuna_upper)))))))
                                       ))) %>%
   rename("health_service_name" = "servicio_de_salud") %>%
-  select(school_commune_name, health_service_name)
+  select(commune_name, health_service_name)
 
 
 chile_merged_raw <- read.csv("04_Data/Data_Chile_Merge.csv") %>% clean_names()
 
 chile_merged <- chile_merged_raw %>%
-  rename(school_region_name_abr = nom_reg_rbd_a,
-         school_commune_name = nom_com_rbd) %>%
-  group_by(school_region_name_abr, school_commune_name) %>%
+  rename(region_name = nom_reg_rbd_a,
+         commune_name = nom_com_rbd) %>%
+  group_by(region_name, commune_name) %>%
   summarise()
 
 region_service_commune_lookup <- chile_merged %>%
-  merge(chile_communes, by = "school_commune_name", all = TRUE) %>%
-  mutate(school_region_name_abr = ifelse(school_commune_name == "ANTÁRTICA", "MAG", school_region_name_abr))
+  merge(chile_communes, by = "commune_name", all = TRUE) %>%
+  mutate(region_name = ifelse(commune_name == "ANTÁRTICA", "MAG", region_name))
 
 write_xlsx(region_service_commune_lookup, path = "04_Data/Outputs/region_service_commune.xlsx")
