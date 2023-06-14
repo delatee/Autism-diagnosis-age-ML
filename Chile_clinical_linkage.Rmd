@@ -18,6 +18,7 @@ library(readxl)
 library(reclin2)
 library(lubridate)
 library(fdm2id) # for predict that works for kmeans
+library(ppclust) # for cmeans
 library(tidyverse)
 
 ```
@@ -53,7 +54,7 @@ chile_merged <- chile_merged_raw %>%
          course_descr = cod_des_cur, # Description of course (TP secondary education only). 0: Does not apply, 1: Only High School, 2: Dual, 3: Other
          student_id = mrun,
          sex = gen_alu, # 0 = no info, 1 = male, 2 = female
-         dob = fec_nac_alu,
+         dob = fec_nac_alu_2, # The second one has DD
          age_june30 = edad_alu, # age at 30th June 2021
          special_needs_status = int_alu, # integrated student indicator, 0 = no, 1 = yes. Mostly no
          special_needs_code = cod_int_alu, # ADHD, blindness, etc. 0 = none. 105 = autism, 203 = ADHD. See ER_Matricula_por_alumno_PUBL_MRUN annex 7
@@ -66,6 +67,14 @@ chile_merged <- chile_merged_raw %>%
          economic_profspec_code = cod_men,
          teaching_code_new = ens) 
 
+
+```
+
+```{r commune lookup}
+commune_region_lookup <- chile_merged %>%
+  group_by(school_region_name_abr, school_commune_name) %>%
+  summarise() #%>%
+  #rename("region" = "school_region_name_abr", "commune" = "school_commune_name")
 
 ```
 
@@ -108,8 +117,15 @@ clinical <- clinical_raw %>%
                                              ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
                                                     ifelse(comuna == "PUCON", "PUCÓN", 
                                                            ifelse(comuna == "TOLTEN", "TOLTÉN", 
-                                                                  ifelse(comuna == "VILCUN", "VILCÚN", comuna))))))) %>%
-  select(id, gender, school_commune_name, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) #%>%
+                                                                  ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
+         ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
+                            ifelse(socio_economic_level == "FONASA - B", 2,
+                                   ifelse(socio_economic_level == "FONASA - C", 3, 
+                                          ifelse(socio_economic_level == "FONASA - D", 4,
+                                                 ifelse(socio_economic_level == "Private Health Insurance", 5, NA)))))
+         ) %>%
+  left_join(commune_region_lookup, by = "school_commune_name") %>%
+  select(id, gender, school_commune_name, school_region_name_abr, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) #%>%
   #left_join(chile_communes, by = )
 
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
@@ -127,12 +143,21 @@ clinical_small <- clinical_small_raw %>%
                                                                   ifelse(comuna == "VILCUN", "VILCÚN", 
                                                                          ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
                                                                                 ifelse(comuna == "MACHALI", "MACHALÍ",
-                                                                                       ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna)))))))))) %>%
+                                                                                       ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
+         ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
+                            ifelse(socio_economic_level == "FONASA - B", 2,
+                                   ifelse(socio_economic_level == "FONASA - C", 3, 
+                                          ifelse(socio_economic_level == "FONASA - D", 4,
+                                                 ifelse(socio_economic_level == "Private Health Insurance", 5, NA)))))
+         ) %>%
   rename("type_appointment" = "appoinment", "codigo" = "cod_dg_1", "diagnosis" = "diagnostico_1") %>%
-  select(id, gender, school_commune_name, socio_economic_level, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
+  left_join(commune_region_lookup, by = "school_commune_name") %>%
+  select(id, gender, school_commune_name, school_region_name_abr, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
 
 clinical_communes <- clinical_small %>% group_by(school_commune_name) %>% summarise() %>% arrange() %>%
   mutate(commune_in_school_data = ifelse(school_commune_name %in% unique(chile_merged$school_commune_name), 1, 0)) # Needs to all be 1's
+#clinical_communes <- clinical %>% group_by(student_commune_name) %>% summarise() %>% arrange() %>%
+#  mutate(commune_in_school_data = ifelse(student_commune_name %in% unique(chile_merged$student_commune_name), 1, 0)) # Needs to all be 1's
 
 #chile_merged %>% filter(school_region_name_abr == "ARAUC") %>% group_by(school_commune_name) %>% summarise() %>% arrange()
 
@@ -144,33 +169,35 @@ Fixed the date columns because they were in English and Spanish. Redefined the a
 
 Get one row per person to make matching more efficient. Take the earliest appointment for each person.
 
-```{r restructure data}
-commune_region <- chile_merged %>%
-  group_by(school_region_name_abr, school_commune_name) %>%
-  summarise()
 
+
+```{r restructure clinical}
 patients <- clinical %>%
-  group_by(id, gender, school_commune_name, dob, age_june30) %>%
-  summarise() %>%
+  group_by(id, gender, school_commune_name, dob, socio_economic_level, ses_status, age_june30) %>%
+  #group_by(id, gender, student_commune_name, dob, age_june30) %>%
+  summarise() %>% 
   #summarise(first_apt = min(apt_date)) %>%
   ungroup() %>% 
-  rename("dob_full" = "dob",
-         "sex_desc" = "gender") %>%
-  left_join(commune_region, by = "school_commune_name") %>%
-  mutate(#school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
-         dob = as.numeric(format(dob_full, "%Y%m")))
+  #rename("dob_full" = "dob",
+  #       "sex_desc" = "gender") %>%
+  left_join(commune_region_lookup, by = "school_commune_name") %>%
+  rename("student_commune_name" = "school_commune_name",
+         "sex_desc" = "gender") #%>%
+  #mutate(#school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
+  #       dob = as.numeric(format(dob_full, "%Y%m")))
   # Some communes in the clinical data were not represented in the schools data but are also in Araucanía (ARAUC)
 
 patients_small <- clinical_small %>%
-  group_by(id, gender, school_commune_name, dob, age_june30) %>%
+  group_by(id, gender, school_commune_name, dob, socio_economic_level, ses_status, age_june30) %>%
   summarise(first_apt = min(apt_date)) %>%
   ungroup() %>% 
-  rename("dob_full" = "dob") %>%
-  left_join(commune_region, by = "school_commune_name") %>%
+  #rename("dob_full" = "dob") %>%
+  left_join(commune_region_lookup, by = "school_commune_name") %>%
   mutate(#school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
-         dob = as.numeric(format(dob_full, "%Y%m")),
+         #dob = as.numeric(format(dob_full, "%Y%m")),
          sex_desc = str_to_title(gender)) %>%
-  select(c(id, sex_desc, school_commune_name, age_june30, dob))
+  rename("student_commune_name" = "school_commune_name") %>%
+  select(c(id, sex_desc, student_commune_name, age_june30, dob))
 
 ```
 
@@ -193,6 +220,16 @@ patients %>% filter(id %in% patients_small$id)
 Assume this is because the big clinical dataset only has people with autism, not ADHD.
 
 
+# Try manual linkage
+
+```{r manual linkage}
+patients_grouped <- patients %>%
+  group_by(sex_desc, dob, student_commune_name) %>%
+  summarise(count = n())
+
+```
+
+
 # Record linkage using machine learning
 
 First try linkage using ML, as done by Jan van der Laan here https://cran.r-project.org/web/packages/reclin2/vignettes/record_linkage_using_machine_learning.html 
@@ -204,7 +241,17 @@ Only try to link clinical data to records in the schools data for the Araucanía
 school <- chile_merged %>%
   filter(school_region_name_abr == "ARAUC") %>%
   filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% # Could try without this filter to pick up edge cases just in case
-  mutate(autism = ifelse(special_needs_code == 105, 1, 0)) %>%
+  # filter only the communes represented in the clinical data here?
+  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
+         dob = ymd(dob),
+         ses_status = ifelse(school_fee == "", 0, 
+                             ifelse(school_fee == "GRATUITO", 1, 
+                                    ifelse(school_fee == "$1.000 A $10.000", 2,
+                                           ifelse(school_fee == "$10.001 A $25.000", 3, 
+                                                  ifelse(school_fee == "$25.001 A $50.000", 4,
+                                                         ifelse(school_fee == "$50.001 A $100.000", 5, 
+                                                                ifelse(school_fee == "MAS DE $100.000", 6, 
+                                                                       ifelse(school_fee == "SIN INFORMACION", 0, NA))))))))) %>%
   filter(autism == 1) %>% # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
   select(
     #school_region_name_abr,
@@ -213,20 +260,21 @@ school <- chile_merged %>%
     dob,
     age_june30,
     #school_rurality_code,
-    #school_fee,
+    ses_status,
     #ethnicity,
     #mapuche,
     #nationality,
     #ethnic_3_group,
     autism,
-    school_commune_name
+    school_commune_name,
+    student_commune_name
     #health_service_name # need to join to chile_communes to have this
-  ) 
+  )
 
 # Do the commune names align well? Yes
-table(sort(unique(patients_small$school_commune_name, sort(unique(school$school_commune_name)))))
-sort(unique(patients_small$school_commune_name))
-sort(unique(school$school_commune_name))
+table(sort(unique(patients$student_commune_name, sort(unique(school$student_commune_name)))))
+sort(unique(patients$student_commune_name))
+sort(unique(school$student_commune_name))
 
 ```
 
@@ -252,20 +300,48 @@ get_num_diff(1, 2)$val
 # Generate pairs
 # use smaller clinical data for now to get it working
 pairs <- #pair_blocking(patients_small[1:50, ], school[1:50, ], on = "sex_desc") %>% # Also try without the blocking 
-         pair_blocking(patients, school, on = "sex_desc") %>%
-  mutate(age_june30 = get_num_diff(patients$age_june30[.x], school$age_june30[.y])$val,
+         #pair_blocking(patients, school, on = "sex_desc") %>%
+         pair(x = patients, y = school) %>%
+  mutate(#age_june30 = get_num_diff(patients$age_june30[.x], school$age_june30[.y])$val,
          dob = get_num_diff(patients$dob[.x], school$dob[.y])$val,
-         school_commune_name = (patients$school_commune_name[.x] == school$school_commune_name[.y])) # will need a better commune similarity algorithm
+         #dob = patients$dob[.x] == school$dob[.y],
+         #school_commune_name = (patients$school_commune_name[.x] == school$school_commune_name[.y])# will need a better commune similarity algorithm
+         student_commune_name = (patients$student_commune_name[.x] == school$student_commune_name[.y]),
+         sex_desc = patients$sex_desc[.x] == school$sex_desc[.y],
+         ses_pat = patients$ses_status[.x],
+         ses_sch = school$ses_status[.y]) 
 
+pairs_match <- pairs %>% filter(dob == 1 & student_commune_name == TRUE & sex_desc == TRUE)
+# Vast majority of school records are free (1).
 
-
+# Try k-means clustering
 set.seed(123)
-k <- 3 # We know there are 2 classes: matched records and un-matched records, and we'd like a 3rd class for maybes
+k <- 2 # We know there are 2 classes: matched records and un-matched records, and we'd like a 3rd class for maybes
 kmeans_result <- kmeans(select(pairs, c(-.x, -.y)), k, nstart = 20)
-pairs$pred <- predict(kmeans_result, select(pairs, c(-.x, -.y)))
-table(pairs$pred)
+pairs$k_pred <- predict(kmeans_result, select(pairs, c(-.x, -.y)))
+#table(pairs$pred)
+#table(pairs$dob, pairs$student_commune_name, pairs$sex_desc, pairs$pred)
+pairs_grouped <- pairs %>% group_by(k_pred, sex_desc, student_commune_name, dob, ses_pat, ses_sch) %>% summarise()
+# Not very useful
+
+pairs %>% filter(k_pred == 1) %>% summary()
+pairs %>% filter(k_pred == 2) %>% summary()
+#pairs %>% filter(k_pred == 3) %>% summary()
 
 
+# Try c-means clustering
+set.seed(123)
+c <- 3
+pairs_trues <- pairs %>% filter(dob == TRUE | student_commune_name == TRUE | sex_desc == TRUE) %>% select(-k_pred) # Remove clearly unmatched rows to help computation time
+v <- inaparc::kmpp(select(pairs_trues, c(-.x, -.y)), k = c)$v
+u <- inaparc::imembrand(nrow(pairs_trues), k = c)$u
+cmeans_result <- fcm(select(pairs_trues, c(-.x, -.y)),
+                     centers = v, # Starting centers to trial
+                     memberships = u,
+                     m = 2, # Fuzziness, keep as 2
+                     dmetric = "sqeuclidean", # Distance between points - may not be suitable for binary variables
+                     nstart = 5) # Number of repeats
+pairs_trues$c_pred <- re_class(cmeans_result$cluster)
 
 
 
