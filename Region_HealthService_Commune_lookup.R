@@ -32,6 +32,7 @@ chile_merged <- chile_merged_raw %>%
   summarise()
 
 region_service_commune_lookup <- chile_merged %>%
-  merge(chile_communes, by = "school_commune_name", all = TRUE)
+  merge(chile_communes, by = "school_commune_name", all = TRUE) %>%
+  mutate(school_region_name_abr = ifelse(school_commune_name == "ANTÁRTICA", "MAG", school_region_name_abr))
 
 write_xlsx(region_service_commune_lookup, path = "04_Data/Outputs/region_service_commune.xlsx")
