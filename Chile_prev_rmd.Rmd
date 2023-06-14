@@ -18,7 +18,6 @@ library(nleqslv) # Only needed for robince bayesian prevalence
 library(janitor)
 library(gridExtra)
 library(readxl)
-library(writexl)
 library(viridis)
 library(wesanderson)
 library(psych)
@@ -74,7 +73,7 @@ chile_merged <- chile_merged_raw %>%
          course_descr = cod_des_cur, # Description of course (TP secondary education only). 0: Does not apply, 1: Only High School, 2: Dual, 3: Other
          student_id = mrun,
          sex = gen_alu, # 0 = no info, 1 = male, 2 = female
-         dob = fec_nac_alu,
+         dob = fec_nac_alu_2, # The second one has DD
          age_june30 = edad_alu, # age at 30th June 2021
          special_needs_status = int_alu, # integrated student indicator, 0 = no, 1 = yes. Mostly no
          special_needs_code = cod_int_alu, # ADHD, blindness, etc. 0 = none. 105 = autism, 203 = ADHD. See ER_Matricula_por_alumno_PUBL_MRUN annex 7
@@ -95,25 +94,8 @@ chile_stdpop <- chile_stdpop_raw %>%
   rename("std_pop" = "pop_2021") %>%
   mutate(pop_prop = std_pop / sum(std_pop))
 
-chile_communes_raw <- read_excel("04_Data/commune_by_health_service.xlsx") %>%
+chile_communes <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
   clean_names()
-
-chile_communes <- chile_communes_raw %>%
-  mutate(comuna_upper = toupper(comuna)) %>%
-  mutate(school_commune_name = ifelse(comuna_upper == "AISÉN", "AYSÉN",
-                                      ifelse(comuna_upper == "LA CALERA", "CALERA", 
-                                             ifelse(comuna_upper == "COIHAIQUE", "COYHAIQUE",
-                                                    ifelse(comuna == "Isla de Pascua", "ISLA DE PASCUA", 
-                                                           ifelse(comuna_upper == "MAULLÍN" , "MAULLIN",
-                                                                  ifelse(comuna == "Pedro Aguirre Cerda", "PEDRO AGUIRRE CERDA", 
-                                                                         ifelse(comuna_upper == "RÁNQUIL", "RANQUIL",
-                                                                                ifelse(comuna_upper == "TREGUACO", "TREHUACO",
-                                                                                       ifelse(comuna_upper == "VICHUQUÉN", "VICHUQUEN", comuna_upper)))))))
-))) %>%
-  rename("health_service_name" = "servicio_de_salud") %>%
-  #left_join(chile_merged %>% group_by(school_region_name_abr, school_commune_name) %>% summarise() %>% ungroup(), by = "school_commune_name") %>%
-  select(school_commune_name, health_service_name) #, school_region_name_abr)
-#write_xlsx(chile_communes, path = "04_Data/Outputs/chile_communes.xlsx")
 
 ```
 
@@ -154,7 +136,7 @@ chile_bayes_aut <- chile_merged %>%
                                           ifelse(school_fee == "$100,001+", "High", 
                                                  ifelse(school_fee == "No information", "No information", NA)))),
          school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "High", "No information"))) %>% 
-  left_join(chile_communes, by = "school_commune_name") %>%
+  left_join(chile_communes, by = c("school_commune_name", "school_region_name_abr")) %>%
             
   select(school_region_name_abr,
     sex,
