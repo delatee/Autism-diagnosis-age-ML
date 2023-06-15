@@ -117,9 +117,9 @@ clinical <- clinical_raw %>%
                                                                   ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
          ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
                             ifelse(socio_economic_level == "FONASA - B", 2,
-                                   ifelse(socio_economic_level == "FONASA - C", 3, 
-                                          ifelse(socio_economic_level == "FONASA - D", 4,
-                                                 ifelse(socio_economic_level == "Private Health Insurance", 5, NA)))))
+                                   ifelse(socio_economic_level == "FONASA - C", 2, 
+                                          ifelse(socio_economic_level == "FONASA - D", 2,
+                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, NA)))))
          ) %>%
   left_join(commune_region_lookup, by = "commune_name") %>%
   select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
@@ -141,9 +141,9 @@ clinical_small <- clinical_small_raw %>%
                                                                                        ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
          ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
                             ifelse(socio_economic_level == "FONASA - B", 2,
-                                   ifelse(socio_economic_level == "FONASA - C", 3, 
-                                          ifelse(socio_economic_level == "FONASA - D", 4,
-                                                 ifelse(socio_economic_level == "Private Health Insurance", 5, NA)))))
+                                   ifelse(socio_economic_level == "FONASA - C", 2, 
+                                          ifelse(socio_economic_level == "FONASA - D", 2,
+                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, NA)))))
          ) %>%
   rename("type_appointment" = "appoinment", "codigo" = "cod_dg_1", "diagnosis" = "diagnostico_1") %>%
   left_join(commune_region_lookup, by = "commune_name") %>%
@@ -181,6 +181,7 @@ patients <- clinical %>%
   #mutate(#school_region_name_abr = ifelse(comuna %in% c("CHOL CHOL", "CURACAUTIN", "PITRUFQUEN", "PUCON", "TOLTEN", "VILCUN"), "ARAUC", school_region_name_abr),
   #       dob = as.numeric(format(dob_full, "%Y%m")))
   # Some communes in the clinical data were not represented in the schools data but are also in Araucanía (ARAUC)
+write_xlsx(patients, "04_Data/Outputs/patients.xlsx")
 
 patients_small <- clinical_small %>%
   group_by(id, gender, commune_name, dob, ses_status) %>%
@@ -193,6 +194,8 @@ patients_small <- clinical_small %>%
          sex_desc = str_to_title(gender)) %>%
   rename("student_commune_name" = "commune_name") %>%
   select(c(id, sex_desc, dob, student_commune_name, ses_status))
+
+write_xlsx(patients_small, "04_Data/Outputs/patients_small.xlsx")
 
 ```
 
@@ -214,20 +217,6 @@ patients %>% filter(id %in% patients_small$id)
 
 Assume this is because the big clinical dataset only has people with autism, not ADHD.
 
-
-# Try manual linkage
-
-```{r manual linkage}
-patients_grouped <- patients %>%
-  group_by(sex_desc, 
-           dob, 
-           student_commune_name) %>%
-  summarise(count = n())
-
-sort(unique(patients$student_commune_name))
-sort(unique(school$student_commune_name))
-
-```
 
 
 # Record linkage using machine learning
@@ -273,6 +262,36 @@ sort(unique(patients$student_commune_name))
 sort(unique(school$student_commune_name))
 
 ```
+
+
+
+# Try manual linkage
+
+```{r manual linkage}
+patients_grouped <- patients %>%
+  group_by(sex_desc, 
+           dob, 
+           student_commune_name) %>%
+  summarise(count = n(),
+            ids = list(id))
+
+school_grouped <- school %>%
+  group_by(sex_desc, 
+           dob, 
+           student_commune_name) %>%
+  summarise(count = n(),
+            #ids = list(rowid)
+            ses = list(ses_status))
+
+
+sort(unique(patients$student_commune_name))
+sort(unique(school$student_commune_name))
+
+```
+All the students that can't be uniquely identified (6) are males in Temuco and SES status doesn't help distinguish them.
+
+
+# Try ML matching
 
 ```{r similarity functions}
 get_num_diff <- function(.x, .y) {
