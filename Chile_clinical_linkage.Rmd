@@ -175,12 +175,13 @@ Get one row per person per commune to make matching more efficient. Take the ear
 
 ```{r restructure clinical}
 patients <- clinical %>%
-  group_by(id, gender, commune_name, dob, ses_status) %>%
+  group_by(id, gender, commune_name, region_name, dob, ses_status) %>%
   summarise(count = n()) %>%  # Might be better to take min(ses_status) here
   ungroup() %>% 
   rename("student_commune_name" = "commune_name",
+         "student_region_name" = "region_name",
          "sex_desc" = "gender") %>%
-  select(id, dob, sex_desc, student_commune_name, ses_status) #, count)
+  select(id, dob, sex_desc, student_commune_name, ses_status) #, student_region_name) #, count)
   
 write_xlsx(patients, "04_Data/Outputs/patients.xlsx")
 
@@ -239,7 +240,8 @@ school <- chile_merged %>%
   select(dob,
          sex_desc,
          student_commune_name,
-         ses_status
+         ses_status#,
+         #student_region_name
   ) %>%
   rowid_to_column("id")
 
@@ -287,7 +289,7 @@ https://rpubs.com/ahmademad/RecordLinkage
 https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/problinkage.pdf
 https://cran.r-project.org/web/packages/diyar/vignettes/links.html
 
-```{r probabilistic}
+```{r probabilistic EM}
 a <- compare.linkage(school,
                      #select(school, -ses_status), 
                      patients,
@@ -299,12 +301,21 @@ a <- compare.linkage(school,
                      exclude = c(1) # Exclude the id column in both datasets
                      )
 a_pairs <- a$pairs
-b <- emWeights(a, cutoff = c(0.99, 0.99, 0.85, 0.6))
+b <- emWeights(a, cutoff = c(0.99, 0.99, 0.85, 0.6)) # We don't mind some mismatching on commune and ses
 summary(b)
 allPairs <- getPairs(b)
 head(allPairs, n = 20)
 
+finalPairs <- getPairs(b, max.weight = 14, min.weight = 2) # Take all with perfect match on dob
+head(finalPairs)
+
+```
+
+Mismatch on ses is slightly higher weighted than match on everything. Unclear why and doesn't occur for epiWeights() below.
+
+```{r probabilistic W}
 # Try supplying error information. Works better when sex_desc and dob are both in blocking as otherwise allows dob mismatches too easily
+# Still quick for whole school dataset
 a2 <- compare.linkage(school,
                      #select(school, -ses_status), 
                      patients,
@@ -316,10 +327,25 @@ a2 <- compare.linkage(school,
                      exclude = c(1) # Exclude the id column in both datasets
                      )
 a2_pairs <- a2$pairs
-b2 <- epiWeights(a2, e = c(0.01, 0.01, 0.01, 0.3)) # Have more error for ses_status. 0.01 is default
+b2 <- epiWeights(a2, e = c(0.01, 0.01, 0.01, 0.3)) #, 0.01)) # Have more error for ses_status. 0.01 is default
 summary(b2)
 allPairs2 <- getPairs(b2)
 head(allPairs2, n = 20)
+
+finalPairs2 <- getPairs(b2, max.weight = 1, min.weight = 0) # Take them all when blocked on sex_desc and dob together
+head(finalPairs)
+
+kmeansRes2 <- classifyUnsup(a2, method = "kmeans")
+a2_pairs$pred <- kmeansRes2$prediction
+
+```
+
+finalPairs2 is the same size as finalPairs and probably contains the same matches but was much quicker to run because of the blocking.
+Assume in kmeansRes2, N = not a match, L = likely a match.
+
+
+```{r map matches}
+
 
 ```
 
