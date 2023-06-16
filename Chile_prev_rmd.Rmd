@@ -178,6 +178,25 @@ n_std_pop <- sum(chile_stdpop$std_pop)
 
 ```{r functions}
 
+get_grouped_prev_plot <- function(x, grouping_vars) {
+  # Calculates sample prevalence and its confidence intervals for supplied feature grouping
+  # x = chile_bayes_aut, needs columns called autism, count
+  # grouping_vars = variables in x to group by
+  
+  x_grouped <- x %>% 
+    group_by(across(all_of(grouping_vars))) %>%
+    summarise(count = n()) %>%
+    pivot_wider(names_from = autism, values_from = count) %>%
+    rename("n_noautism" = "0", "n_autism" = "1") %>% #, "age" = "age_june30") %>%
+    mutate(n_autism = ifelse(is.na(n_autism), 0, n_autism), # If there are no cases of autism in the group, input 0
+           sample_pop_size = n_noautism + n_autism, # Total sample population is autism cases + not cases
+           sample_prevalence = n_autism / sample_pop_size, # Prevalence of autism in the group
+           ci_lower = sample_prevalence - (1.96 * sqrt(sample_prevalence * (1 - sample_prevalence) / sample_pop_size)),
+           ci_upper = sample_prevalence + (1.96 * sqrt(sample_prevalence * (1 - sample_prevalence) / sample_pop_size))) %>%
+    ungroup()
+  return(x_grouped)
+}
+
 get_grouped_prev <- function(x, stdpop, grouping_vars) {
   # Calculates sample prevalence, age- and sex-standardised prevalence and group weighting for supplied feature grouping
   # x = chile_bayes_aut, needs columns called autism, count
@@ -422,11 +441,11 @@ See https://github.com/Dpananos/bayes_multiple_measures/blob/master/analysis/sen
 
 ```{r region plot}
 
-aut_prev_region <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("school_region_name_abr", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
+aut_prev_region.agecat <- get_grouped_prev_plot(x = chile_bayes_aut, c("school_region_name_abr", "age_cat_name", "autism"))
 
-ggplot(data = aut_prev_region) +
-  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+ggplot(data = aut_prev_region.agecat) +
+  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = position_dodge()) +
+  geom_errorbar(aes(x = school_region_name_abr, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
   scale_fill_viridis_d() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Autism prevalence",
@@ -434,8 +453,11 @@ ggplot(data = aut_prev_region) +
        y = "Sample prevalence",
        fill = "Age category")
 
-ggplot(data = aut_prev_region) +
-  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age, fill = as.factor(age)), position = "dodge") +
+aut_prev_region.age <- get_grouped_prev_plot(x = chile_bayes_aut, c("school_region_name_abr", "age_june30", "autism"))
+
+ggplot(data = aut_prev_region.age) +
+  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_june30, fill = as.factor(age_june30)), position = "dodge") +
+  geom_errorbar(aes(x = school_region_name_abr, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
   scale_fill_viridis_d() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Autism prevalence",
@@ -443,8 +465,11 @@ ggplot(data = aut_prev_region) +
        y = "Sample prevalence",
        fill = "Age")
 
-ggplot(data = aut_prev_region) +
+aut_prev_region.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut, c("school_region_name_abr", "age_cat_name", "sex_desc", "autism"))
+
+ggplot(data = aut_prev_region.agecat.sex) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = school_region_name_abr, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
   scale_fill_viridis_d() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   facet_wrap(~sex_desc) +
@@ -453,9 +478,12 @@ ggplot(data = aut_prev_region) +
        y = "Sample prevalence",
        fill = "Age category")
 
-ggplot(data = aut_prev_region) +
-  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = sex, fill = as.factor(sex)), position = "dodge") +
+aut_prev_region.sex <- get_grouped_prev_plot(x = chile_bayes_aut, c("school_region_name_abr", "sex_desc", "autism"))
+
+ggplot(data = aut_prev_region.sex) +
+  geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = sex_desc, fill = as.factor(sex_desc)), position = "dodge") +
     # 1 is male, 2 is female
+  geom_errorbar(aes(x = school_region_name_abr, ymin = ci_lower, ymax = ci_upper, group = sex_desc), width = 0.2, position = position_dodge(width = 0.9)) +
   #scale_fill_manual(values = wes_palette("GrandBudapest1")) +
   scale_fill_manual(values = c("#03CEA4", "#802392")) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -466,7 +494,19 @@ ggplot(data = aut_prev_region) +
 ```
 
 ```{r region}
+
+aut_prev_region <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                                    grouping_vars = c("school_region_name_abr", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
+
 aut_prev_region_adj <- get_adjusted_prev(aut_prev_region, grouping_vars = "school_region_name_abr")
+
+ggplot(data = aut_prev_region_adj) +
+  geom_col(aes(x = school_region_name_abr, y = adjusted_rate), fill = "lightblue", position = "dodge") +
+  geom_errorbar(aes(x = school_region_name_abr, ymin = ci_lower, ymax = ci_upper), width = 0.2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Age- and sex-adjusted autism prevalence",
+       x = "School region",
+       y = "Sample prevalence")
 
 aut_prev_region_post <- do_jags_rand_model(x = aut_prev_region_adj,
                               feat = "school_region_name_abr",
@@ -572,6 +612,14 @@ ggplot(data = aut_prev_health) +
 ```{r health}
 aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "health_service_name")
 
+ggplot(data = aut_prev_health_adj) +
+  geom_col(aes(x = health_service_name, y = adjusted_rate), fill = "lightblue", position = "dodge") +
+  geom_errorbar(aes(x = health_service_name, ymin = ci_lower, ymax = ci_upper), width = 0.2) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "Age- and sex-adjusted autism prevalence",
+       x = "School health service",
+       y = "Sample prevalence")
+
 aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
                               feat = "health_service_name",
                               model = rand_model,
@@ -649,6 +697,14 @@ ggplot(data = aut_prev_rural) +
 
 ```{r rurality}
 aut_prev_rural_adj <- get_adjusted_prev(aut_prev_rural, grouping_vars = "school_rurality_code")
+
+ggplot(data = aut_prev_rural_adj) +
+  geom_col(aes(x = school_rurality_code, y = adjusted_rate), fill = "lightblue", position = "dodge") +
+  geom_errorbar(aes(x = school_rurality_code, ymin = ci_lower, ymax = ci_upper), width = 0.2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Age- and sex-adjusted autism prevalence",
+       x = "Rurality status",
+       y = "Sample prevalence")
 
 aut_prev_rural_post <- do_jags_rand_model(x = aut_prev_rural_adj,
                               feat = "school_rurality_code",
@@ -732,6 +788,14 @@ ggplot(data = aut_prev_ethnic) +
 ```{r ethnicity}
 aut_prev_ethnic_adj <- get_adjusted_prev(aut_prev_ethnic, grouping_vars = "ethnic_2_group")
 
+ggplot(data = aut_prev_ethnic_adj) +
+  geom_col(aes(x = ethnic_2_group, y = adjusted_rate), fill = "lightblue", position = "dodge") +
+  geom_errorbar(aes(x = ethnic_2_group, ymin = ci_lower, ymax = ci_upper), width = 0.2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Age- and sex-adjusted autism prevalence",
+       x = "Ethnicity",
+       y = "Sample prevalence")
+
 aut_prev_ethnic_post <- do_jags_rand_model(x = aut_prev_ethnic_adj,
                               feat = "ethnic_2_group",
                               model = rand_model,
@@ -813,6 +877,14 @@ ggplot(data = aut_prev_econ) +
 
 aut_prev_econ_adj <- get_adjusted_prev(aut_prev_econ, grouping_vars = "school_fee")
 
+ggplot(data = aut_prev_econ_adj) +
+  geom_col(aes(x = school_fee, y = adjusted_rate), fill = "lightblue", position = "dodge") +
+  geom_errorbar(aes(x = school_fee, ymin = ci_lower, ymax = ci_upper), width = 0.2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Age- and sex-adjusted autism prevalence",
+       x = "Economic status (all)",
+       y = "Sample prevalence")
+
 aut_prev_econ_post <- do_jags_rand_model(x = aut_prev_econ_adj,
                               feat = "school_fee",
                               model = rand_model,
@@ -887,6 +959,14 @@ ggplot(data = aut_prev_econ) +
 ```{r economicGroup}
 
 aut_prev_econG_adj <- get_adjusted_prev(aut_prev_econ, grouping_vars = "school_fee_group")
+
+ggplot(data = aut_prev_econG_adj) +
+  geom_col(aes(x = school_fee_group, y = adjusted_rate), fill = "lightblue", position = "dodge") +
+  geom_errorbar(aes(x = school_fee_group, ymin = ci_lower, ymax = ci_upper), width = 0.2) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(title = "Age- and sex-adjusted autism prevalence",
+       x = "Economic status (grouped)",
+       y = "Sample prevalence")
 
 aut_prev_econG_post <- do_jags_rand_model(x = aut_prev_econG_adj,
                               feat = "school_fee_group",
