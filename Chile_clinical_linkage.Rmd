@@ -332,11 +332,20 @@ summary(b2)
 allPairs2 <- getPairs(b2)
 head(allPairs2, n = 20)
 
-finalPairs2 <- getPairs(b2, max.weight = 1, min.weight = 0) # Take them all when blocked on sex_desc and dob together
-head(finalPairs)
+classifyPairs2 <- emClassify(b2, threshold.upper = 1, threshold.lower = 0.8)
+a2_pairs$weight <- classifyPairs2$Wdata
+a2_pairs$pred <- classifyPairs2$prediction
 
-kmeansRes2 <- classifyUnsup(a2, method = "kmeans")
-a2_pairs$pred <- kmeansRes2$prediction
+a2_pairs_clean <- a2_pairs %>%
+  rename(".x" = id1, ".y" = id2) %>%
+  select(-is_match)
+
+finalPairs2 <- getPairs(b2, max.weight = 1, min.weight = 0, single.rows = TRUE) # Take them all when blocked on sex_desc and dob together
+
+#kmeansRes2 <- classifyUnsup(a2, method = "kmeans")
+#a2_pairs$pred <- kmeansRes2$prediction
+# Works but prioritises ses over commune and doesn't use epiWeights found above so not that useful.
+
 
 ```
 
@@ -346,6 +355,21 @@ Assume in kmeansRes2, N = not a match, L = likely a match.
 
 ```{r map matches}
 
+# reclin has a 1-1 matching fuction so regenerate the pairs using reclin so they're a pairs
+# type object and can be passed to select_n_to_m
+
+pairs <- pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
+         mutate(student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y]),
+         ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
+         ) %>%
+  left_join(a2_pairs_clean, by = c(".x", ".y")) %>%
+  select(c(-student_commune_name.x, -ses)) %>%
+  rename("student_commune_name" = "student_commune_name.y")
+
+
+matches <- select_n_to_m(pairs, threshold = 0.5, score = "weight", n = 1, m = 1, var = "match")
+
+# In the case of tied fully-perfect matches, might be better to choose the clinical record with autism as a more primary diagnosis.
 
 ```
 
@@ -378,15 +402,15 @@ get_num_diff(1, 2)$val
 # Generate pairs
 # use smaller clinical data for now to get it working
 pairs <- # Also try without the blocking 
-         pair_blocking(patients, school, on = c("sex_desc", "dob")) %>%
+         pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
          #pair(x = patients, y = school) %>%
   mutate(#age_june30 = get_num_diff(patients$age_june30[.x], school$age_june30[.y])$val,
          #dob = get_num_diff(patients$dob[.x], school$dob[.y])$val,
          #dob = patients$dob[.x] == school$dob[.y],
          #school_commune_name = (patients$school_commune_name[.x] == school$school_commune_name[.y])# will need a better commune similarity algorithm
-         student_commune_name = (patients$student_commune_name[.x] == school$student_commune_name[.y]),
+         student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y]),
          #sex_desc = patients$sex_desc[.x] == school$sex_desc[.y],
-         ses = get_num_diff(patients$ses_status[.x], school$ses_status[.y])$val
+         ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
          #ses_pat = patients$ses_status[.x],
          #ses_sch = school$ses_status[.y]
          ) 
@@ -401,7 +425,9 @@ kmeans_result <- kmeans(select(pairs, c(-.x, -.y)), k, nstart = 20)
 pairs$k_pred <- predict(kmeans_result, select(pairs, c(-.x, -.y)))
 #table(pairs$pred)
 #table(pairs$dob, pairs$student_commune_name, pairs$sex_desc, pairs$pred)
-pairs_grouped <- pairs %>% group_by(k_pred, sex_desc, student_commune_name, 
+pairs_grouped <- pairs %>% group_by(#k_pred, 
+                                    #sex_desc, 
+                                    student_commune_name, 
                                     #dob, 
                                     ses
                                     #ses_pat, ses_sch
