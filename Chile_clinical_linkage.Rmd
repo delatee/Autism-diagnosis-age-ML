@@ -403,6 +403,8 @@ school_matched <- school %>%
          weight) %>%
   arrange(desc(weight))
 
+write_csv(school_matched, "04_Data/Outputs/school_matched.csv")
+
 school_matched_yes <- school_matched %>% filter(!is.na(weight))
 school_matched_no <- school_matched %>% filter(is.na(weight))
 
