@@ -181,7 +181,8 @@ patients <- clinical %>%
   rename("student_commune_name" = "commune_name",
          "student_region_name" = "region_name",
          "sex_desc" = "gender") %>%
-  select(id, dob, sex_desc, student_commune_name, ses_status) #, student_region_name) #, count)
+  rowid_to_column("row_id") %>%
+  select(row_id, id, dob, sex_desc, student_commune_name, ses_status) #, student_region_name) #, count)
   
 write_xlsx(patients, "04_Data/Outputs/patients.xlsx")
 
@@ -292,7 +293,7 @@ https://cran.r-project.org/web/packages/diyar/vignettes/links.html
 ```{r probabilistic EM}
 a <- compare.linkage(school,
                      #select(school, -ses_status), 
-                     patients,
+                     select(patients, -row_id),
                      #select(patients, -ses_status), 
                      blockfld = c("sex_desc"), # Block on sex because we really want it to be the same and help computation time
                      #blockfld = FALSE,
@@ -318,7 +319,7 @@ Mismatch on ses is slightly higher weighted than match on everything. Unclear wh
 # Still quick for whole school dataset
 a2 <- compare.linkage(school,
                      #select(school, -ses_status), 
-                     patients,
+                     select(patients, -row_id),
                      #select(patients, -ses_status), 
                      blockfld = c("sex_desc", "dob"), # Block on sex because we really want it to be the same and help computation time
                      #blockfld = FALSE,
@@ -367,9 +368,43 @@ pairs <- pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
   rename("student_commune_name" = "student_commune_name.y")
 
 
-matches <- select_n_to_m(pairs, threshold = 0.5, score = "weight", n = 1, m = 1, var = "match")
+matches <- select_n_to_m(pairs, threshold = 0.5, score = "weight", n = 1, m = 1, var = "match") %>%
+  filter(match == TRUE) %>%
+  rename("id" = ".x")
 
 # In the case of tied fully-perfect matches, might be better to choose the clinical record with autism as a more primary diagnosis.
+
+# Now add the matched clinical records to the school records
+school_matched <- school %>%
+  left_join(matches, by = "id") %>%
+  rename(id.school = id,
+         dob.school = dob.x,
+         sex_desc.school = sex_desc.x,
+         student_commune_name.school = student_commune_name.x,
+         ses_status.school = ses_status.x,
+         row_id = .y,
+         dob.matched = dob.y,
+         sex_desc.matched = sex_desc.y,
+         student_commune_name.matched = student_commune_name.y,
+         ses_status.matched = ses_status.y) %>%
+  select(c(-pred, -match)) %>%
+  left_join(patients, by = "row_id") %>%
+  rename(id.patient = row_id,
+         patient_id = id,
+         dob.patient = dob,
+         sex_desc.patient = sex_desc,
+         student_commune_name.patient = student_commune_name,
+         ses_status.patient = ses_status) %>%
+  select(id.school, id.patient, patient_id,
+         dob.school, dob.patient, dob.matched,
+         sex_desc.school, sex_desc.patient, sex_desc.matched,
+         student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
+         ses_status.school, ses_status.patient, ses_status.matched,
+         weight) %>%
+  arrange(desc(weight))
+
+school_matched_yes <- school_matched %>% filter(!is.na(weight))
+school_matched_no <- school_matched %>% filter(is.na(weight))
 
 ```
 
@@ -489,7 +524,7 @@ Need to explore different comparator algorithms. Currently it's exact match. Wou
 
 Follow Thomas Stringham https://arxiv.org/pdf/2003.04238.pdf
 who followed Sadinle https://arxiv.org/abs/1601.06630
-
+Not doing this as limited value when not matching strings.
 
 
 
