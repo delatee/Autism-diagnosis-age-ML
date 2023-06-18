@@ -411,7 +411,7 @@ regions_lookup <- communes_lookup %>%
 chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp") #%>%
   #st_transform(crs = 32629)
 
-region_geoms_demog <- chile.adm1 %>%
+demog_geom <- chile.adm1 %>%
   left_join(regions_lookup, by = "ADM1_PCODE") %>%
   left_join(chile_regionpop, by = "nombre_region") %>%
   left_join(chile_regionincome, by = "nombre_region") %>%
@@ -426,7 +426,7 @@ region_geoms_demog <- chile.adm1 %>%
 #  select(-region)
 
 # Population
-ggplot(region_geoms_demog) + 
+ggplot(demog_geom) + 
   geom_sf(mapping = aes(geometry = geometry, fill = youth_pop_2021), linewidth = 0.01) +
   geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
   scale_fill_viridis(option = "viridis", direction = -1, name = "Population") +
@@ -436,7 +436,7 @@ ggplot(region_geoms_demog) +
   coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
 
 # Income
-ggplot(region_geoms_demog) + 
+ggplot(demog_geom) + 
   geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.01) +
   geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
   scale_fill_viridis(option = "viridis", direction = -1, name = "Median income (Peso)") +
@@ -575,7 +575,7 @@ aut_prev_region.agecat <- get_grouped_prev_plot(x = chile_bayes_aut, c("school_r
 ggplot(data = aut_prev_region.agecat) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = position_dodge()) +
   geom_errorbar(aes(x = school_region_name_abr, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_d() +
+  scale_fill_viridis_d(option = "plasma") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Autism prevalence",
        x = "School region",
@@ -587,7 +587,7 @@ aut_prev_region.age <- get_grouped_prev_plot(x = chile_bayes_aut, c("school_regi
 ggplot(data = aut_prev_region.age) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_june30, fill = as.factor(age_june30)), position = "dodge") +
   geom_errorbar(aes(x = school_region_name_abr, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_d() +
+  scale_fill_viridis_d(option = "plasma") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(title = "Autism prevalence",
        x = "School region",
@@ -599,7 +599,7 @@ aut_prev_region.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut, c("scho
 ggplot(data = aut_prev_region.agecat.sex) +
   geom_col(aes(x = school_region_name_abr, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
   geom_errorbar(aes(x = school_region_name_abr, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_d() +
+  scale_fill_viridis_d(option = "plasma") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   facet_wrap(~sex_desc) +
   labs(title = "Autism prevalence by sex",
@@ -621,18 +621,35 @@ ggplot(data = aut_prev_region.sex) +
        y = "Sample prevalence",
        fill = "Sex")
 
-region_geoms.sex <- aut_prev_region.sex %>%
+aut_prev_region.geom.f <- aut_prev_region.sex %>%
+  filter(sex_desc == "Female") %>%
   left_join(regions_lookup, by = "school_region_name_abr") %>%
-  left_join(region_geoms, by = c("nombre_region", "codigo_region"))
+  left_join(demog_geom, by = c("nombre_region", "codigo_region"))
 
-ggplot(region_geoms) + 
-  geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.01) +
+ggplot(aut_prev_region.geom.f) + 
+  geom_sf(mapping = aes(geometry = geometry, fill = sample_prevalence), linewidth = 0.01) +
   geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
-  scale_fill_viridis(option = "viridis", direction = -1, name = "Median income (Peso)") +
-  labs(title = "Net income from main job (2021)") +
+  scale_fill_viridis(option = "plasma", name = "Prevalence") +
+  labs(title = "Autism prevalence") +
   xlab("Longitude") +
   ylab("Latitude") +
   coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
+
+aut_prev_region.geom.m <- aut_prev_region.sex %>%
+  filter(sex_desc == "Male") %>%
+  left_join(regions_lookup, by = "school_region_name_abr") %>%
+  left_join(demog_geom, by = c("nombre_region", "codigo_region"))
+
+ggplot(aut_prev_region.geom.m) + 
+  geom_sf(mapping = aes(geometry = geometry, fill = sample_prevalence), linewidth = 0.01) +
+  geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
+  scale_fill_viridis(option = "plasma", name = "Prevalence") +
+  labs(title = "Autism prevalence") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
+
+# Need to add standardised scale to both f and m
 ```
 
 ```{r region}
