@@ -382,15 +382,51 @@ plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigm
 
 commune_geoms <- data.frame(mapa_comunas)
 communes_lookup <- data.frame(codigos_territoriales)
-regions_lookup <- communes_lookup %>% group_by(codigo_region, nombre_region) %>% summarise()
+regions_lookup <- communes_lookup %>% 
+  group_by(codigo_region, nombre_region) %>% 
+  summarise() %>%
+  mutate(school_region_name_abr = ifelse(nombre_region == "Antofagasta", "ANTOF",
+                                  ifelse(nombre_region == "Arica y Parinacota", "AYP",
+                                  ifelse(nombre_region == "Atacama", "ATCMA",
+                                  ifelse(nombre_region == "Aysen del General Carlos Ibanez del Campo", "AYSEN",
+                                  ifelse(nombre_region == "Biobio", "BBIO",
+                                  ifelse(nombre_region == "Coquimbo", "COQ",
+                                  ifelse(nombre_region == "La Araucania", "ARAUC",
+                                  ifelse(nombre_region == "Libertador General Bernardo OHiggins", "LGBO",
+                                  ifelse(nombre_region == "Los Lagos", "LAGOS",
+                                  ifelse(nombre_region == "Los Rios", "RIOS",
+                                  ifelse(nombre_region == "Magallanes y de la Antartica Chilena", "MAG",
+                                  ifelse(nombre_region == "Maule", "MAULE",
+                                  ifelse(nombre_region == "Metropolitana de Santiago", "RM",
+                                  ifelse(nombre_region == "Nuble", "NUBLE",
+                                  ifelse(nombre_region == "Tarapaca", "TPCA",
+                                  ifelse(nombre_region == "Valparaiso", "VALPO", NA)))))))))))))))),
+         ADM1_PCODE = paste0("CL", codigo_region))
+  
 
-region_geoms <- generar_circunscripciones(mapa = chilemapas::mapa_comunas) %>%
-  left_join(regions_lookup, by = "codigo_region") %>%
+#region_geoms <- generar_circunscripciones(mapa = chilemapas::mapa_comunas) %>% # This has Nuble for all of Biobio + Nuble.
+#  full_join(regions_lookup, by = "codigo_region")
+
+# https://data.humdata.org/dataset/cod-ab-chl
+chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp") #%>%
+  #st_transform(crs = 32629)
+
+region_geoms_demog <- chile.adm1 %>%
+  left_join(regions_lookup, by = "ADM1_PCODE") %>%
   left_join(chile_regionpop, by = "nombre_region") %>%
   left_join(chile_regionincome, by = "nombre_region") %>%
   select(-region)
 
-ggplot(region_geoms) + 
+#chile.adm2 <- st_read("04_Data/CHL_adm/CHL_adm2.shp") # Also doesn't have Biobio
+#chile.adm2 <- st_transform(chile.adm2, crs = 32629)
+
+#region_geoms_demog <- region_geoms %>%
+#  left_join(chile_regionpop, by = "nombre_region") %>%
+#  left_join(chile_regionincome, by = "nombre_region") %>%
+#  select(-region)
+
+# Population
+ggplot(region_geoms_demog) + 
   geom_sf(mapping = aes(geometry = geometry, fill = youth_pop_2021), linewidth = 0.01) +
   geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
   scale_fill_viridis(option = "viridis", direction = -1, name = "Population") +
@@ -399,7 +435,8 @@ ggplot(region_geoms) +
   ylab("Latitude") +
   coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
 
-ggplot(region_geoms) + 
+# Income
+ggplot(region_geoms_demog) + 
   geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.01) +
   geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
   scale_fill_viridis(option = "viridis", direction = -1, name = "Median income (Peso)") +
@@ -408,6 +445,7 @@ ggplot(region_geoms) +
   ylab("Latitude") +
   coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
 
+# ARAUC communes
 arauc <- commune_geoms %>% filter(codigo_region == "09")
 ggplot(arauc) +
   geom_sf(mapping = aes(geometry = geometry)) +
@@ -582,6 +620,19 @@ ggplot(data = aut_prev_region.sex) +
        x = "School region",
        y = "Sample prevalence",
        fill = "Sex")
+
+region_geoms.sex <- aut_prev_region.sex %>%
+  left_join(regions_lookup, by = "school_region_name_abr") %>%
+  left_join(region_geoms, by = c("nombre_region", "codigo_region"))
+
+ggplot(region_geoms) + 
+  geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.01) +
+  geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
+  scale_fill_viridis(option = "viridis", direction = -1, name = "Median income (Peso)") +
+  labs(title = "Net income from main job (2021)") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
 ```
 
 ```{r region}
