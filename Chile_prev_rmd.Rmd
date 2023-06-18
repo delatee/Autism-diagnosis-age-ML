@@ -20,6 +20,13 @@ library(gridExtra)
 library(readxl)
 library(viridis)
 library(wesanderson)
+library(rgbif)
+library(chilemapas) # For commune maps
+library(leaflet)
+library(plotly)
+library(sf)
+library(sp)
+library(broom)
 library(psych)
 library(Hmisc)
 library(poolr)
@@ -98,6 +105,45 @@ chile_communes <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
   clean_names() %>%
   rename(school_region_name_abr = region_name,
          school_commune_name = commune_name)
+
+# https://www.ine.gob.cl/estadisticas/sociales/demografia-y-vitales/proyecciones-de-poblacion
+chile_regionpop_raw <- read_excel("04_Data/ine_estimaciones-y-proyecciones-2002-2035_base-2017_region_area_tabulados.xlsx", sheet = "Region summary 2021") %>%
+  clean_names()
+
+chile_regionpop <- chile_regionpop_raw %>%
+  mutate(nombre_region = ifelse(region == "Aysén", "Aysen del General Carlos Ibanez del Campo",
+                                ifelse(region == "Biobío", "Biobio",
+                                       ifelse(region == "La Araucanía", "La Araucania",
+                                              ifelse(region == "Los Ríos", "Los Rios",
+                                                     ifelse(region == "Magallanes", "Magallanes y de la Antartica Chilena",
+                                                            ifelse(region == "Metropolitana", "Metropolitana de Santiago",
+                                                                   ifelse(region == "Ñuble", "Nuble",
+                                                                          ifelse(region == "OHiggins", "Libertador General Bernardo OHiggins",
+                                                                                 ifelse(region == "Tarapacá", "Tarapaca",
+                                                                                        ifelse(region == "Valparaíso", "Valparaiso", region)))))))))))
+
+# https://www.ine.gob.cl/estadisticas/sociales/ingresos-y-gastos/encuesta-suplementaria-de-ingresos
+# Income is from Supplementary Income Survey (ESI) (2021), data is from Instituto Nacional de Estadística (INE).
+chile_regionincome_raw <- read_excel("04_Data/ingreso-medio-mensual-por-región-2010---2021.xlsx", skip = 2) %>%
+  clean_names()
+
+chile_regionincome <- chile_regionincome_raw %>%
+  filter(ano == 2021,
+         region != "Nacional") %>%
+  mutate(region_short = ifelse(grepl("Región de ", region), substr(region, start = 11, stop = nchar(region)), 
+                               ifelse(grepl("Región del ", region), substr(region, start = 12, stop = nchar(region)),
+                                      ifelse(region == "Región Metropolitana", "Metropolitana", NA))),
+         nombre_region = ifelse(region_short == "Aysén", "Aysen del General Carlos Ibanez del Campo",
+                                ifelse(region_short == "Biobío", "Biobio",
+                                       ifelse(region_short == "La Araucanía", "La Araucania",
+                                              ifelse(region_short == "Los Ríos", "Los Rios",
+                                                     ifelse(region_short == "Magallanes", "Magallanes y de la Antartica Chilena",
+                                                            ifelse(region_short == "Metropolitana", "Metropolitana de Santiago",
+                                                                   ifelse(region_short == "Ñuble", "Nuble",
+                                                                          ifelse(region_short == "O’Higgins", "Libertador General Bernardo OHiggins",
+                                                                                 ifelse(region_short == "Tarapacá", "Tarapaca",
+                                                                                        ifelse(region_short == "Valparaíso", "Valparaiso", region_short))))))))))) %>%
+  select(nombre_region, ingreso_medio_nominal)
 
 ```
 
@@ -330,6 +376,49 @@ plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigm
 ```
 
 
+# Set up Chile maps
+
+```{r map}
+
+commune_geoms <- data.frame(mapa_comunas)
+communes_lookup <- data.frame(codigos_territoriales)
+regions_lookup <- communes_lookup %>% group_by(codigo_region, nombre_region) %>% summarise()
+
+region_geoms <- generar_circunscripciones(mapa = chilemapas::mapa_comunas) %>%
+  left_join(regions_lookup, by = "codigo_region") %>%
+  left_join(chile_regionpop, by = "nombre_region") %>%
+  left_join(chile_regionincome, by = "nombre_region") %>%
+  select(-region)
+
+ggplot(region_geoms) + 
+  geom_sf(mapping = aes(geometry = geometry, fill = youth_pop_2021), linewidth = 0.01) +
+  geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
+  scale_fill_viridis(option = "viridis", direction = -1, name = "Population") +
+  labs(title = "Population aged 0-14 (2021 projections)") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
+
+ggplot(region_geoms) + 
+  geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.01) +
+  geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
+  scale_fill_viridis(option = "viridis", direction = -1, name = "Median income (Peso)") +
+  labs(title = "Net income from main job (2021)") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
+
+arauc <- commune_geoms %>% filter(codigo_region == "09")
+ggplot(arauc) +
+  geom_sf(mapping = aes(geometry = geometry)) +
+  coord_sf(xlim = c(-74, -70.5), ylim = c(-40, -37.5)) +
+  labs(title = "Communes in La Araucania") +
+  xlab("Longitude") +
+  ylab("Latitude")
+
+```
+
+
 # Bayesian prevalence analysis
 
 Set global parameters
@@ -430,6 +519,8 @@ plot(density(extract_variable(common_sam, "theta")), xlim = c(0.004,0.0055))
 
 ## Random effects analysis
 
+# 95% CIs for aggregate data visualisations using:
+https://openstax.org/books/introductory-business-statistics/pages/8-3-a-confidence-interval-for-a-population-proportion
 
 Standardise prevalence by Chile's age and sex based population sizes using https://seer.cancer.gov/seerstat/WebHelp/Rate_Algorithms.htm and https://wonder.cdc.gov/wonder/help/cancer/fayfeuerconfidenceintervals.pdf 
 
