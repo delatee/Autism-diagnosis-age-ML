@@ -121,19 +121,20 @@ clinical_large <- clinical_large_raw %>%
                                    ifelse(socio_economic_level == "FONASA - C", 2, 
                                           ifelse(socio_economic_level == "FONASA - D", 2,
                                                  ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 0, NA)))))),
+                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), NA, NA)))))),
          autism = 1,
-         intdisab = 0
+         intdisab = 0,
+         aut_rank = 1
          ) %>%
   left_join(commune_region_lookup, by = "commune_name") %>%
-  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab) 
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
 
-clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
-
-sort(unique(clinical_large$codigo))
+aut_codes <- unique(clinical_large$codigo)
 intdisab_codes <- unique(c(clinical_small_raw$cod_dg_1, clinical_small_raw$cod_dg_2, clinical_small_raw$cod_dg_3)) %>%
   str_subset("F7") %>%
   sort() 
+
+clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
 
 clinical_small <- clinical_small_raw %>%
   rename("dob" = "fecha_nacimiento",
@@ -142,12 +143,15 @@ clinical_small <- clinical_small_raw %>%
          "codigo" = "cod_dg_1", 
          "diagnosis" = "diagnostico_1") %>%
   mutate(gender = str_to_title(gender),
-         autism = ifelse(codigo %in% unique(clinical_large$codigo) | 
-                           cod_dg_2 %in% unique(clinical_large$codigo) | 
-                           cod_dg_3 %in% unique(clinical_large$codigo), 1, 0),
+         autism = ifelse(codigo %in% aut_codes | 
+                           cod_dg_2 %in% aut_codes | 
+                           cod_dg_3 %in% aut_codes, 1, 0),
          intdisab = ifelse(codigo %in% intdisab_codes |
                              cod_dg_2 %in% intdisab_codes | 
                              cod_dg_3 %in% intdisab_codes, 1, 0),
+         aut_rank = ifelse(codigo %in% aut_codes, 1,
+                           ifelse(cod_dg_2 %in% aut_codes, 2,
+                                  ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
          commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
                                       ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
@@ -163,11 +167,11 @@ clinical_small <- clinical_small_raw %>%
                                    ifelse(socio_economic_level == "FONASA - C", 2, 
                                           ifelse(socio_economic_level == "FONASA - D", 2,
                                                  ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 0, NA))))))
+                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), NA, NA))))))
          ) %>%
   left_join(commune_region_lookup, by = "commune_name") %>%
   #filter(autism == 1) %>%
-  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab) 
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
 
 clinical <- rbind(clinical_large, clinical_small)
 
@@ -183,15 +187,30 @@ Get one row per person per commune to make matching more efficient. Take the ear
 
 
 ```{r restructure clinical}
+
+get.min.na <- function(x) ifelse( !all(is.na(x)), min(x, na.rm = TRUE), NA)
+get.max.na <- function(x) ifelse( !all(is.na(x)), max(x, na.rm = TRUE), NA)
+
 patients <- clinical %>%
-  group_by(id, gender, commune_name, region_name, dob, ses_status, autism, intdisab) %>%
-  summarise(count = n()) %>%  # Might be better to take min(ses_status) here
+  group_by(id, gender, dob, commune_name, region_name, ses_status) %>% # Maybe move SES back to here
+  summarise(#ses_status = get.min.na(ses_status),
+            autism = get.max.na(autism),
+            #intdisab = get.max.na(intdisab),
+            aut_rank = get.min.na(aut_rank)) %>%
   ungroup() %>% 
   rename("student_commune_name" = "commune_name",
          "student_region_name" = "region_name",
          "sex_desc" = "gender") %>%
   rowid_to_column("row_id") %>%
-  select(row_id, id, dob, sex_desc, student_commune_name, ses_status, autism, intdisab) #, student_region_name) #, count)
+  select(row_id, 
+         id,
+         dob, 
+         sex_desc,
+         student_commune_name,
+         autism,
+         ses_status,
+         #intdisab,
+         aut_rank) #, student_region_name) #, count)
   
 write_xlsx(patients, "04_Data/Outputs/patients.xlsx")
 
@@ -236,7 +255,8 @@ school <- chile_merged %>%
   filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% # Could try without this filter to pick up edge cases just in case
   # filter only the communes represented in the clinical data here?
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         intdisab = 0,
+         #intdisab = 0,
+         aut_rank = 1,
          dob = ymd(dob),
          ses_status = ifelse(school_fee == "", NA, 
                              ifelse(school_fee == "GRATUITO", 1, 
@@ -251,9 +271,10 @@ school <- chile_merged %>%
   select(dob,
          sex_desc,
          student_commune_name,
-         ses_status,
          autism,
-         intdisab#,
+         ses_status,
+         #intdisab,
+         aut_rank#,
          #student_region_name
   ) %>%
   rowid_to_column("id")
@@ -302,25 +323,25 @@ https://rpubs.com/ahmademad/RecordLinkage
 https://www.bristol.ac.uk/media-library/sites/cmm/migrated/documents/problinkage.pdf
 https://cran.r-project.org/web/packages/diyar/vignettes/links.html
 
-```{r probabilistic EM}
-a <- compare.linkage(school,
-                     #select(school, -ses_status), 
-                     select(patients, -row_id),
-                     #select(patients, -ses_status), 
-                     blockfld = c("sex_desc"), # Block on sex because we really want it to be the same and help computation time
-                     #blockfld = FALSE,
-                     phonetic = FALSE,
-                     strcmp = c(2), # Do string comparison on DOB
-                     exclude = c(1) # Exclude the id column in both datasets
-                     )
-a_pairs <- a$pairs
-b <- emWeights(a, cutoff = c(0.99, 0.99, 0.85, 0.6)) # We don't mind some mismatching on commune and ses
-summary(b)
-allPairs <- getPairs(b)
-head(allPairs, n = 20)
-
-finalPairs <- getPairs(b, max.weight = 14, min.weight = 2) # Take all with perfect match on dob
-head(finalPairs)
+```{r probabilistic EM, include = FALSE}
+# a <- compare.linkage(school,
+#                      #select(school, -ses_status), 
+#                      select(patients, -row_id),
+#                      #select(patients, -ses_status), 
+#                      blockfld = c("sex_desc"), # Block on sex because we really want it to be the same and help computation time
+#                      #blockfld = FALSE,
+#                      phonetic = FALSE,
+#                      strcmp = c(2), # Do string comparison on DOB
+#                      exclude = c(1) # Exclude the id column in both datasets
+#                      )
+# a_pairs <- a$pairs
+# b <- emWeights(a, cutoff = c(0.99, 0.99, 0.85, 0.6)) # We don't mind some mismatching on commune and ses
+# summary(b)
+# allPairs <- getPairs(b)
+# head(allPairs, n = 20)
+# 
+# finalPairs <- getPairs(b, max.weight = 14, min.weight = 2) # Take all with perfect match on dob
+# head(finalPairs)
 
 ```
 
@@ -333,14 +354,21 @@ a2 <- compare.linkage(school,
                      #select(school, -ses_status), 
                      select(patients, -row_id),
                      #select(patients, -ses_status), 
-                     blockfld = c("sex_desc", "dob"), # Block on sex because we really want it to be the same and help computation time
+                     blockfld = c("sex_desc", "dob"), # Block on sex and dob because we really want them to be the same and help computation time
                      #blockfld = FALSE,
                      phonetic = FALSE,
                      strcmp = c(2), # Do string comparison on DOB
                      exclude = c(1) # Exclude the id column in both datasets
                      )
-a2_pairs <- a2$pairs
-b2 <- epiWeights(a2, e = c(0.01, 0.01, 0.01, 0.3)) #, 0.01)) # Have more error for ses_status. 0.01 is default
+a2_pairs <- a2$pairs # Issue with ses matching here
+b2 <- epiWeights(a2, e = c(0.01, # Default for DOB
+                           0.01, # Default for sex
+                           0.01, # Default for commune because we want a good match
+                           0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
+                           0.6, # Have more error for ses_status because it is loosely defined 
+                           #0.3, # Allow more mismatch intellectual disability status so that autism matches in preference
+                           0.1 # Allow some mismatch on whether autism is the primary diagnosis so we take record with higher placed autism diagnosis when there are multiple clinical record options for a single school record
+))
 summary(b2)
 allPairs2 <- getPairs(b2)
 head(allPairs2, n = 20)
@@ -372,11 +400,11 @@ Assume in kmeansRes2, N = not a match, L = likely a match.
 # type object and can be passed to select_n_to_m
 
 pairs <- pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
-         mutate(student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y]),
-         ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
+         mutate(student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y])#,
+         #ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
          ) %>%
   left_join(a2_pairs_clean, by = c(".x", ".y")) %>%
-  select(c(-student_commune_name.x, -ses)) %>%
+  select(c(-student_commune_name.x)) %>%
   rename("student_commune_name" = "student_commune_name.y")
 
 
@@ -421,6 +449,11 @@ school_matched_yes <- school_matched %>% filter(!is.na(weight))
 school_matched_no <- school_matched %>% filter(is.na(weight))
 
 ```
+
+
+Now analyse the matched and unmatched school records and see if they are fundamentally different. ?Cohen test?
+
+Then quantify clinical records for ARAUC Sur that haven't been matched.
 
 
 # Record linkage using machine learning
