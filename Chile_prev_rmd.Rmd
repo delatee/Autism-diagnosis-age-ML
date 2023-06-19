@@ -629,7 +629,7 @@ aut_prev_region.geom.f <- aut_prev_region.sex %>%
 ggplot(aut_prev_region.geom.f) + 
   geom_sf(mapping = aes(geometry = geometry, fill = sample_prevalence), linewidth = 0.01) +
   geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
-  scale_fill_viridis(option = "plasma", name = "Prevalence") +
+  scale_fill_viridis(option = "plasma", name = "Prevalence", limits = c(0, 0.025)) +
   labs(title = "Autism prevalence") +
   xlab("Longitude") +
   ylab("Latitude") +
@@ -643,7 +643,7 @@ aut_prev_region.geom.m <- aut_prev_region.sex %>%
 ggplot(aut_prev_region.geom.m) + 
   geom_sf(mapping = aes(geometry = geometry, fill = sample_prevalence), linewidth = 0.01) +
   geom_sf_text(mapping = aes(geometry = geometry, label = nombre_region), nudge_x = 8, size = 3) +
-  scale_fill_viridis(option = "plasma", name = "Prevalence") +
+  scale_fill_viridis(option = "plasma", name = "Prevalence", limits = c(0, 0.025)) +
   labs(title = "Autism prevalence") +
   xlab("Longitude") +
   ylab("Latitude") +

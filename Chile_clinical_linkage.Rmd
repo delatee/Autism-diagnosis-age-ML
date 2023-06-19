@@ -120,15 +120,20 @@ clinical_large <- clinical_large_raw %>%
                             ifelse(socio_economic_level == "FONASA - B", 2,
                                    ifelse(socio_economic_level == "FONASA - C", 2, 
                                           ifelse(socio_economic_level == "FONASA - D", 2,
-                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, NA)))))
+                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, 
+                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 0, NA)))))),
+         autism = 1,
+         intdisab = 0
          ) %>%
   left_join(commune_region_lookup, by = "commune_name") %>%
-  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab) 
 
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
 
 sort(unique(clinical_large$codigo))
-#sort(unique(c(clinical_small$codigo, clinical_small$cod_dg_2, clinical_small$cod_dg_3)))
+intdisab_codes <- unique(c(clinical_small_raw$cod_dg_1, clinical_small_raw$cod_dg_2, clinical_small_raw$cod_dg_3)) %>%
+  str_subset("F7") %>%
+  sort() 
 
 clinical_small <- clinical_small_raw %>%
   rename("dob" = "fecha_nacimiento",
@@ -140,6 +145,9 @@ clinical_small <- clinical_small_raw %>%
          autism = ifelse(codigo %in% unique(clinical_large$codigo) | 
                            cod_dg_2 %in% unique(clinical_large$codigo) | 
                            cod_dg_3 %in% unique(clinical_large$codigo), 1, 0),
+         intdisab = ifelse(codigo %in% intdisab_codes |
+                             cod_dg_2 %in% intdisab_codes | 
+                             cod_dg_3 %in% intdisab_codes, 1, 0),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
          commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
                                       ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
@@ -154,11 +162,12 @@ clinical_small <- clinical_small_raw %>%
                             ifelse(socio_economic_level == "FONASA - B", 2,
                                    ifelse(socio_economic_level == "FONASA - C", 2, 
                                           ifelse(socio_economic_level == "FONASA - D", 2,
-                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, NA)))))
+                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, 
+                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 0, NA))))))
          ) %>%
   left_join(commune_region_lookup, by = "commune_name") %>%
-  filter(autism == 1) %>%
-  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis) 
+  #filter(autism == 1) %>%
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab) 
 
 clinical <- rbind(clinical_large, clinical_small)
 
@@ -175,14 +184,14 @@ Get one row per person per commune to make matching more efficient. Take the ear
 
 ```{r restructure clinical}
 patients <- clinical %>%
-  group_by(id, gender, commune_name, region_name, dob, ses_status) %>%
+  group_by(id, gender, commune_name, region_name, dob, ses_status, autism, intdisab) %>%
   summarise(count = n()) %>%  # Might be better to take min(ses_status) here
   ungroup() %>% 
   rename("student_commune_name" = "commune_name",
          "student_region_name" = "region_name",
          "sex_desc" = "gender") %>%
   rowid_to_column("row_id") %>%
-  select(row_id, id, dob, sex_desc, student_commune_name, ses_status) #, student_region_name) #, count)
+  select(row_id, id, dob, sex_desc, student_commune_name, ses_status, autism, intdisab) #, student_region_name) #, count)
   
 write_xlsx(patients, "04_Data/Outputs/patients.xlsx")
 
@@ -227,6 +236,7 @@ school <- chile_merged %>%
   filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% # Could try without this filter to pick up edge cases just in case
   # filter only the communes represented in the clinical data here?
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
+         intdisab = 0,
          dob = ymd(dob),
          ses_status = ifelse(school_fee == "", NA, 
                              ifelse(school_fee == "GRATUITO", 1, 
@@ -241,7 +251,9 @@ school <- chile_merged %>%
   select(dob,
          sex_desc,
          student_commune_name,
-         ses_status#,
+         ses_status,
+         autism,
+         intdisab#,
          #student_region_name
   ) %>%
   rowid_to_column("id")
