@@ -459,6 +459,28 @@ ggplot(arauc) +
 
 # Bayesian prevalence analysis
 
+Find age- and sex-adjusted sample prevalence
+
+```{r adj prev}
+
+aut_prev <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                             grouping_vars = c("age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
+
+aut_prev_adj <- aut_prev %>% 
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_autism) / sum(sample_pop_size),
+            crude_count = sum(n_autism),
+            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
+
+```
+
 Set global parameters
 
 ```{r global params}
@@ -467,8 +489,8 @@ nIter <- 1000
 nBurn <- 1000
 pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
 
-theta_mu_prior <- 0.0046
-theta_sigma_prior <- (0.0047-0.0045) / (2*1.96)
+theta_mu_prior <- aut_prev_adj$adjusted_rate
+theta_sigma_prior <- (aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96)
 theta_mu_extrapolate <- c(0.005, 0.01, 0.015, 0.3) # 0.5%, 1%, 1.5%, 3% prevalence
 theta_sigma_extrapolate <- c(rep(0.0001/1.96, 4)) # Same as chosen prior
 #theta_mu <- c(theta_mu_prior, theta_mu_sens)
@@ -486,9 +508,11 @@ rand_model <- "model {
 ```
 
 
-## Common effects model with unadjusted sample prevalence
+## Common effects model with unadjusted or age- and sex-adjusted sample prevalence
 
-```{r common effects, include = FALSE}
+Do age- and sex-adjustment (same as below for random effect models)
+
+```{r common effects, include = TRUE}
 # Uniform prior
 theta_a_common <- 1
 theta_b_common <- 1
@@ -518,7 +542,8 @@ common_model <- "model {
 common_data <- list(theta_a = theta_a_common, 
                     theta_b = theta_b_common,
                     nObs = nObs,
-                    aut_sample = sum(chile_bayes_aut$autism) #,
+                    #aut_sample = sum(chile_bayes_aut$autism) # unadjusted sample prevalence
+                    aut_sample = aut_prev_adj$adjusted_count # age- and sex- adjusted sample prevalence
                     #spec_mu = 0.996,
                     #spec_sd = (1.00-0.99) / (2*1.96),
                     #sens_mu = 0.62,
