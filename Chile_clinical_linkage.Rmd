@@ -15,9 +15,11 @@ knitr::opts_knit$set(root.dir = "C:/Users/delat/OneDrive/MPhil Population Health
 library(janitor)
 library(Hmisc)
 library(readxl)
+library(writexl)
 library(reclin2)
 library(lubridate)
 library(RecordLinkage)
+library(dgof) # for statistical testing
 library(fdm2id) # for predict that works for kmeans
 library(ppclust) # for cmeans
 library(tidyverse)
@@ -450,10 +452,33 @@ school_matched_no <- school_matched %>% filter(is.na(weight))
 
 ```
 
+## Consider whether the matched and unmatched school records are different
+
+We hope they are not different
+
+```{r kolmogorov tests}
+data1 <- school_matched_yes$ses_status.school
+data2 <- school_matched_no$ses_status.school
+ks.test(data1, data2)
+
+```
+
+Probably not suitable to use K-S because data are not continuous. Try Chi2 instead. Or simulated K-S to choose our own p-value threshold.
+
 
 Now analyse the matched and unmatched school records and see if they are fundamentally different. ?Cohen test?
 
 Then quantify clinical records for ARAUC Sur that haven't been matched.
+
+
+
+
+
+
+
+
+
+# Dumping ground, don't use below here.
 
 
 # Record linkage using machine learning

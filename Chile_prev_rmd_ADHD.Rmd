@@ -1624,5 +1624,5 @@ for(j in 1:length(theta_mu_extrapolate)) {
 
 ## Could do random effect on sex and region together
 
-
+## Rerun features that are most interesting using prevalence from clinical data, with sexes separate. Then graph prevalences and see if CI's overlap.
 
