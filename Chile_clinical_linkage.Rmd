@@ -123,7 +123,7 @@ clinical_large <- clinical_large_raw %>%
                                    ifelse(socio_economic_level == "FONASA - C", 2, 
                                           ifelse(socio_economic_level == "FONASA - D", 2,
                                                  ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), NA, NA)))))),
+                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA)))))),
          autism = 1,
          intdisab = 0,
          aut_rank = 1
@@ -169,7 +169,7 @@ clinical_small <- clinical_small_raw %>%
                                    ifelse(socio_economic_level == "FONASA - C", 2, 
                                           ifelse(socio_economic_level == "FONASA - D", 2,
                                                  ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), NA, NA))))))
+                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA))))))
          ) %>%
   left_join(commune_region_lookup, by = "commune_name") %>%
   #filter(autism == 1) %>%
@@ -450,18 +450,79 @@ write_csv(school_matched, "04_Data/Outputs/school_matched.csv")
 school_matched_yes <- school_matched %>% filter(!is.na(weight))
 school_matched_no <- school_matched %>% filter(is.na(weight))
 
+school_matched_small <- school_matched %>%
+  mutate(matched = ifelse(is.na(patient_id), 0, 1),
+         sex.school = ifelse(sex_desc.school == "Male", 1, ifelse(sex_desc.school == "Female", 2, NA))) %>%
+  select(id.school, dob.school, sex_desc.school, sex.school, student_commune_name.school, ses_status.school, matched)
+
 ```
 
 ## Consider whether the matched and unmatched school records are different
 
 We hope they are not different
 
-```{r kolmogorov tests}
-data1 <- school_matched_yes$ses_status.school
-data2 <- school_matched_no$ses_status.school
-ks.test(data1, data2)
+```{r kolmogorov explore, warning = TRUE}
+library(coin)
+
+# Explore distributions across matched/non-matched
+# Sex
+data1 <- school_matched_small %>% filter(matched == 1) #%>% select(sex.school)
+data2 <- school_matched_small %>% filter(matched == 0) #%>% select(sex.school)
+#hist(data1$sex.school)
+#hist(data2$sex.school)
+data1 %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count))
+data2 %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count))
+ks.sex <- ks.test(data1$sex.school, data2$sex.school, alternative = "two.sided", simulate.p.value = TRUE)
+ks.sex
+
+pt.sex <- oneway_test(sex.school ~ as.factor(matched), data = school_matched_small, distribution = approximate(nresample = 2000))
+confint(pt.sex)
+
+ks.ses <- ks.test(data1$ses_status.school, data2$ses_status.school, alternative = "two.sided", simulate.p.value = TRUE)
+ks.ses
+
+# SES
+#data1 <- school_matched_yes %>% select(ses_status.school)
+#data2 <- school_matched_no %>% select(ses_status.school)
+#hist(data1$ses_status.school, breaks = 10)
+#hist(data2$ses_status.school, breaks = 10)
+data1 %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count))
+data2 %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count))
 
 ```
+
+```{r kolmogorov tests, warning = FALSE}
+
+# Kolmogorov tests with permutation distributions
+
+set.seed(123)
+nPerm <- 2000
+ks_pvals <- data.frame(sex = numeric(nPerm),
+                       ses = numeric(nPerm))
+
+school_matched_small_perm <- school_matched_small
+
+for (i in 1:nPerm) {
+  #print(i)
+  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
+  datayes <- school_matched_small_perm %>% filter(matched == 1)
+  datano <- school_matched_small_perm %>% filter(matched == 0)
+  ks.sex <- ks.test(datayes$sex.school, datano$sex.school, alternative = "two.sided")
+  ks.ses <- ks.test(datayes$ses_status.school, datano$ses_status.school, alternative = "two.sided")
+  ks_pvals$sex[i] <- ks.sex$p.value
+  ks_pvals$ses[i] <- ks.ses$p.value
+}
+
+plot(density(ks_pvals$sex))
+#hist(ks_pvals$sex, breaks = 30)
+plot(density(ks_pvals$ses))
+#hist(ks_pvals$ses, breaks = 30)
+
+
+```
+
+Our matched/non-matched are not different by sex (p-value in Kolmog is same as most of distribution of permuted pvals) but are different by ses status
+
 
 Probably not suitable to use K-S because data are not continuous. Try Chi2 instead. Or simulated K-S to choose our own p-value threshold.
 
