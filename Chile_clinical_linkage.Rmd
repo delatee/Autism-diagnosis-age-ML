@@ -132,9 +132,6 @@ clinical_large <- clinical_large_raw %>%
   select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
 
 aut_codes <- unique(clinical_large$codigo)
-intdisab_codes <- unique(c(clinical_small_raw$cod_dg_1, clinical_small_raw$cod_dg_2, clinical_small_raw$cod_dg_3)) %>%
-  str_subset("F7") %>%
-  sort() 
 
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
 
@@ -142,16 +139,12 @@ clinical_small <- clinical_small_raw %>%
   rename("dob" = "fecha_nacimiento",
          "apt_date" = "fecha_ejecutada",
          "type_appointment" = "appoinment",
-         "codigo" = "cod_dg_1", 
          "diagnosis" = "diagnostico_1") %>%
   mutate(gender = str_to_title(gender),
-         autism = ifelse(codigo %in% aut_codes | 
+         autism = ifelse(cod_dg_1 %in% aut_codes | 
                            cod_dg_2 %in% aut_codes | 
                            cod_dg_3 %in% aut_codes, 1, 0),
-         intdisab = ifelse(codigo %in% intdisab_codes |
-                             cod_dg_2 %in% intdisab_codes | 
-                             cod_dg_3 %in% intdisab_codes, 1, 0),
-         aut_rank = ifelse(codigo %in% aut_codes, 1,
+         aut_rank = ifelse(cod_dg_1 %in% aut_codes, 1,
                            ifelse(cod_dg_2 %in% aut_codes, 2,
                                   ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
@@ -173,7 +166,18 @@ clinical_small <- clinical_small_raw %>%
          ) %>%
   left_join(commune_region_lookup, by = "commune_name") %>%
   #filter(autism == 1) %>%
-  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, cod_dg_1, cod_dg_2, cod_dg_3, diagnosis, autism, aut_rank) 
+
+intdisab_codes <- unique(c(clinical_small_raw$cod_dg_1, clinical_small_raw$cod_dg_2, clinical_small_raw$cod_dg_3)) %>%
+  str_subset("F7") %>%
+  sort() 
+
+clinical_small <- clinical_small %>% 
+  mutate(intdisab = ifelse(cod_dg_1 %in% intdisab_codes |
+                             cod_dg_2 %in% intdisab_codes | 
+                             cod_dg_3 %in% intdisab_codes, 1, 0)) %>%
+  rename("codigo" = "cod_dg_1") %>%
+  select(c(-cod_dg_2, -cod_dg_3))
 
 clinical <- rbind(clinical_large, clinical_small)
 
@@ -234,13 +238,6 @@ Are all the records in the small dataset in the big one? No
 
 ```{r}
 clinical %>% filter(id %in% clinical_small$id)
-
-```
-
-Are all the people in the small dataset in the big one? No
-
-```{r}
-patients %>% filter(id %in% patients_small$id)
 
 ```
 
@@ -313,7 +310,7 @@ sort(unique(patients$student_commune_name))
 sort(unique(school$student_commune_name))
 
 merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name"), all = TRUE)
-merged %>% filter(!is.na(id.x) & !is.na(id.y)) # 85 matches
+merged %>% filter(!is.na(id.x) & !is.na(id.y)) # 205 matches
 
 ```
 All the students that can't be uniquely identified (6) are males in Temuco and SES status doesn't help distinguish them.
@@ -476,7 +473,7 @@ ks.sex <- ks.test(data1$sex.school, data2$sex.school, alternative = "two.sided",
 ks.sex
 
 pt.sex <- oneway_test(sex.school ~ as.factor(matched), data = school_matched_small, distribution = approximate(nresample = 2000))
-confint(pt.sex)
+#confint(pt.sex)
 
 ks.ses <- ks.test(data1$ses_status.school, data2$ses_status.school, alternative = "two.sided", simulate.p.value = TRUE)
 ks.ses
@@ -546,91 +543,92 @@ Then quantify clinical records for ARAUC Sur that haven't been matched.
 
 Try linkage using ML, as done by Jan van der Laan here https://cran.r-project.org/web/packages/reclin2/vignettes/record_linkage_using_machine_learning.html 
 
-```{r similarity functions}
-get_num_diff <- function(.x, .y) {
-  diff_value <- data.frame(.x = .x, .y = .y, val = numeric(length(.x)))
-  diff_value <- diff_value %>%
-    mutate(val = ifelse(abs(.x-.y) == 0, 1, 
-                        ifelse(abs(.x-.y) <= 1, 0.5,
-                               ifelse(abs(.x-.y) <= 2, 0.25, 
-                                      ifelse(abs(.x-.y) <= 3, 0.125, 0)))))
-  
-  return(diff_value)
-}
+```{r similarity functions, include = FALSE}
+# get_num_diff <- function(.x, .y) {
+#   diff_value <- data.frame(.x = .x, .y = .y, val = numeric(length(.x)))
+#   diff_value <- diff_value %>%
+#     mutate(val = ifelse(abs(.x-.y) == 0, 1, 
+#                         ifelse(abs(.x-.y) <= 1, 0.5,
+#                                ifelse(abs(.x-.y) <= 2, 0.25, 
+#                                       ifelse(abs(.x-.y) <= 3, 0.125, 0)))))
+#   
+#   return(diff_value)
+# }
 
 ```
 
 
-```{r pairs}
+```{r pairs, include = FALSE}
 
     
-get_num_diff(c(1, 2, 3), c(1, 1, 1))
-get_num_diff(1, 2)$val
+# get_num_diff(c(1, 2, 3), c(1, 1, 1))
+# get_num_diff(1, 2)$val
+# 
+# # Generate pairs
+# # use smaller clinical data for now to get it working
+# pairs <- # Also try without the blocking 
+#          pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
+#          #pair(x = patients, y = school) %>%
+#   mutate(#age_june30 = get_num_diff(patients$age_june30[.x], school$age_june30[.y])$val,
+#          #dob = get_num_diff(patients$dob[.x], school$dob[.y])$val,
+#          #dob = patients$dob[.x] == school$dob[.y],
+#          #school_commune_name = (patients$school_commune_name[.x] == school$school_commune_name[.y])# will need a better commune similarity algorithm
+#          student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y]),
+#          #sex_desc = patients$sex_desc[.x] == school$sex_desc[.y],
+#          ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
+#          #ses_pat = patients$ses_status[.x],
+#          #ses_sch = school$ses_status[.y]
+#          ) 
+# 
+# pairs_match <- pairs %>% filter(student_commune_name == TRUE)
+# # Vast majority of school records are free (1).
+# 
+# # Try k-means clustering
+# set.seed(123)
+# k <- 2 # We know there are 2 classes: matched records and un-matched records, and we'd like a 3rd class for maybes
+# kmeans_result <- kmeans(select(pairs, c(-.x, -.y)), k, nstart = 20)
+# pairs$k_pred <- predict(kmeans_result, select(pairs, c(-.x, -.y)))
+# #table(pairs$pred)
+# #table(pairs$dob, pairs$student_commune_name, pairs$sex_desc, pairs$pred)
+# pairs_grouped <- pairs %>% group_by(#k_pred, 
+#                                     #sex_desc, 
+#                                     student_commune_name, 
+#                                     #dob, 
+#                                     ses
+#                                     #ses_pat, ses_sch
+#                                     ) %>% summarise()
 
-# Generate pairs
-# use smaller clinical data for now to get it working
-pairs <- # Also try without the blocking 
-         pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
-         #pair(x = patients, y = school) %>%
-  mutate(#age_june30 = get_num_diff(patients$age_june30[.x], school$age_june30[.y])$val,
-         #dob = get_num_diff(patients$dob[.x], school$dob[.y])$val,
-         #dob = patients$dob[.x] == school$dob[.y],
-         #school_commune_name = (patients$school_commune_name[.x] == school$school_commune_name[.y])# will need a better commune similarity algorithm
-         student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y]),
-         #sex_desc = patients$sex_desc[.x] == school$sex_desc[.y],
-         ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
-         #ses_pat = patients$ses_status[.x],
-         #ses_sch = school$ses_status[.y]
-         ) 
-
-pairs_match <- pairs %>% filter(student_commune_name == TRUE)
-# Vast majority of school records are free (1).
-
-# Try k-means clustering
-set.seed(123)
-k <- 2 # We know there are 2 classes: matched records and un-matched records, and we'd like a 3rd class for maybes
-kmeans_result <- kmeans(select(pairs, c(-.x, -.y)), k, nstart = 20)
-pairs$k_pred <- predict(kmeans_result, select(pairs, c(-.x, -.y)))
-#table(pairs$pred)
-#table(pairs$dob, pairs$student_commune_name, pairs$sex_desc, pairs$pred)
-pairs_grouped <- pairs %>% group_by(#k_pred, 
-                                    #sex_desc, 
-                                    student_commune_name, 
-                                    #dob, 
-                                    ses
-                                    #ses_pat, ses_sch
-                                    ) %>% summarise()
 ```
 
-```{r unsupervised ML}
+```{r unsupervised ML, include = FALSE}
 
 # Not very useful
 
-pairs %>% filter(k_pred == 1) %>% summary()
-pairs %>% filter(k_pred == 2) %>% summary()
-#pairs %>% filter(k_pred == 3) %>% summary()
-
-
-# Try c-means clustering
-set.seed(123)
-c <- 2
-pairs_trues <- pairs %>% filter((dob == TRUE & student_commune_name == TRUE) |
-                                  (dob == TRUE & sex_desc == TRUE) |
-                                  (student_commune_name == TRUE & sex_desc == TRUE)) %>% select(-k_pred) # Remove clearly unmatched rows to help computation time
-v <- inaparc::kmpp(select(pairs_trues, c(-.x, -.y)), k = c)$v
-u <- inaparc::imembrand(nrow(pairs_trues), k = c)$u
-cmeans_result <- fcm(select(pairs_trues, c(-.x, -.y)),
-                     centers = v, # Starting centers to trial
-                     memberships = u,
-                     m = 2, # Fuzziness, keep as 2
-                     dmetric = "sqeuclidean", # Distance between points - may not be suitable for binary variables
-                     nstart = 1) # Number of repeats
-pairs_trues$c_pred <- cmeans_result$cluster
-cmeans_result$u
-
-pairs_trues %>% filter(c_pred == 1) %>% summary()
-pairs_trues %>% filter(c_pred == 2) %>% summary()
-
+# pairs %>% filter(k_pred == 1) %>% summary()
+# pairs %>% filter(k_pred == 2) %>% summary()
+# #pairs %>% filter(k_pred == 3) %>% summary()
+# 
+# 
+# # Try c-means clustering
+# set.seed(123)
+# c <- 2
+# pairs_trues <- pairs %>% filter((dob == TRUE & student_commune_name == TRUE) |
+#                                   (dob == TRUE & sex_desc == TRUE) |
+#                                   (student_commune_name == TRUE & sex_desc == TRUE)) %>% select(-k_pred) # Remove clearly unmatched rows to help computation time
+# v <- inaparc::kmpp(select(pairs_trues, c(-.x, -.y)), k = c)$v
+# u <- inaparc::imembrand(nrow(pairs_trues), k = c)$u
+# cmeans_result <- fcm(select(pairs_trues, c(-.x, -.y)),
+#                      centers = v, # Starting centers to trial
+#                      memberships = u,
+#                      m = 2, # Fuzziness, keep as 2
+#                      dmetric = "sqeuclidean", # Distance between points - may not be suitable for binary variables
+#                      nstart = 1) # Number of repeats
+# pairs_trues$c_pred <- cmeans_result$cluster
+# cmeans_result$u
+# 
+# pairs_trues %>% filter(c_pred == 1) %>% summary()
+# pairs_trues %>% filter(c_pred == 2) %>% summary()
+# 
 # Compare pairs - takes a couple of minutes to run with blocking on sex
 #compare_pairs(pairs, on = c("age_june30", "dob", "school_commune_name"), 
 #              comparators = list(#age_june30 = get_num_diff(.x, .y)#, # For now, require exact match on age
@@ -653,7 +651,7 @@ The Jaro-Winkler distance is a string metric for measuring the edit distance bet
 Need to explore different comparator algorithms. Currently it's exact match. Would be good to do communes that are neighbours and ages off by 1.
 
 
-# Try bayesian linkage
+# Try bayesian linkage?
 
 Follow Thomas Stringham https://arxiv.org/pdf/2003.04238.pdf
 who followed Sadinle https://arxiv.org/abs/1601.06630
