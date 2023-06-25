@@ -124,7 +124,7 @@ chile_regionpop <- chile_regionpop_raw %>%
 
 # https://www.ine.gob.cl/estadisticas/sociales/ingresos-y-gastos/encuesta-suplementaria-de-ingresos
 # Income is from Supplementary Income Survey (ESI) (2021), data is from Instituto Nacional de Estadística (INE).
-chile_regionincome_raw <- read_excel("04_Data/ingreso-medio-mensual-por-región-2010---2021.xlsx", skip = 2) %>%
+chile_regionincome_raw <- read_excel("04_Data/ingreso-medio-mensual-por-region-2010---2021.xlsx", skip = 2) %>%
   clean_names()
 
 chile_regionincome <- chile_regionincome_raw %>%
