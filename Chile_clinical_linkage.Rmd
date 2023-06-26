@@ -123,11 +123,12 @@ clinical_large <- clinical_large_raw %>%
          apt_date = make_date(year = apt_year, month = apt_month_eng, day = apt_day),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
          commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
-                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
-                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
-                        ifelse(comuna == "PUCON", "PUCÓN", 
-                        ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN",
+                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN",
+                        ifelse(comuna == "PUCON", "PUCÓN",
+                        ifelse(comuna == "TOLTEN", "TOLTÉN",
                         ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
+         #commune_name_upper = comuna,
          ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
                       ifelse(socio_economic_level == "FONASA - B", 2,
                       ifelse(socio_economic_level == "FONASA - C", 2, 
@@ -139,7 +140,7 @@ clinical_large <- clinical_large_raw %>%
          aut_rank = 1
          ) %>%
   left_join(commune_region_lookup, by = "commune_name_upper") %>%
-  select(id, gender, commune_name, commune_name_upper, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
+  select(id, gender, commune_code, commune_name, commune_name_upper, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
 
 aut_codes <- unique(clinical_large$codigo)
 
