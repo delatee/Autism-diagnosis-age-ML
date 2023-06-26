@@ -24,16 +24,17 @@ chile_communes <- chile_communes_raw %>%
   #                                                                               ifelse(comuna_upper == "TREGUACO", "TREHUACO",
   #                                                                                      ifelse(comuna_upper == "VICHUQUÉN", "VICHUQUEN", comuna_upper)))))))
   #                                     ))) %>%
-  mutate(commune_name = ifelse(comuna == "Aisén", "Aysén",
+  mutate(commune_name = #ifelse(comuna == "Aisén", "Aysén", # Doesn't work
                         ifelse(comuna == "La Calera", "Calera",
                         ifelse(comuna == "Coihaique", "Coyhaique",
                         #ifelse(comuna == "Isla de Pascua", "Isla de Pascua",
-                        ifelse(comuna == "Los Álamos" , "Los Alamos",
-                        ifelse(comuna == "Los Ángeles", "Los Angeles",
-                        ifelse(comuna == "Marchihue", "Marchigüe",
+                        #ifelse(comuna == "Los Álamos" , "Los Alamos", # Doesn't work
+                        #ifelse(comuna == "Los Ángeles", "Los Angeles", # Doesn't work
+                        #ifelse(comuna == "Marchihue", "Marchigüe",
                         ifelse(comuna == "Paiguano", "Paihuano",
                         ifelse(comuna == "Pedro Aguirre Cerda", "Pedro Aguirre Cerda",
-                        ifelse(comuna == "Ránquil", "Ranquil", comuna)))))))))) %>%
+                        #ifelse(comuna == "Ránquil", "Ranquil",
+                        comuna))))) %>%
 rename("health_service_name" = "servicio_de_salud") %>%
   select(commune_name, health_service_name)
 
@@ -48,7 +49,17 @@ rename("health_service_name" = "servicio_de_salud") %>%
 #   summarise()
 
 region_service_commune_lookup <- chile.adm3 %>%
-  merge(chile_communes, by = "commune_name", all = TRUE) #%>%
-  #mutate(region_name = ifelse(commune_name == "ANTÁRTICA", "MAG", region_name))
+  merge(chile_communes, by = "commune_name", all.x = TRUE) %>%
+  mutate(health_service_name = ifelse(ADM3_PCODE == "CL11201", "Servicio de Salud Aisén",
+                               ifelse(commune_name == "Isla de Pascua", "Servicio de Salud Metropolitano Oriente",
+                               ifelse(commune_name == "Los Alamos", "Servicio de Salud Arauco",
+                               ifelse(commune_name == "Los Angeles", "Servicio de Salud Biobío",
+                               ifelse(ADM3_PCODE == "CL06204", "Servicio de Salud Del Libertador B.O'Higgins",
+                               ifelse(commune_name == "Pedro Aguirre Cerda", "Servicio de Salud Metropolitano Sur",
+                               ifelse(commune_name == "Ranquil", "Servicio de Salud Ñuble", 
+                                      health_service_name))))))),
+         region_code = str_sub(ADM1_PCODE, start = 3, end = -1)) %>%
+  rename(region_name = ADM1_ES) %>%
+  select(region_name, region_code, commune_name, commune_code, health_service_name, geometry)
 
 write_xlsx(region_service_commune_lookup, path = "04_Data/Outputs/region_service_commune.xlsx")
