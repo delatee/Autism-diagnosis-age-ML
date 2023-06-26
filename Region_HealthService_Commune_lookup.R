@@ -58,8 +58,11 @@ region_service_commune_lookup <- chile.adm3 %>%
                                ifelse(commune_name == "Pedro Aguirre Cerda", "Servicio de Salud Metropolitano Sur",
                                ifelse(commune_name == "Ranquil", "Servicio de Salud Ñuble", 
                                       health_service_name))))))),
-         region_code = str_sub(ADM1_PCODE, start = 3, end = -1)) %>%
+         region_code = str_sub(ADM1_PCODE, start = 3, end = -1),
+         commune_name_upper = toupper(commune_name)) %>%
   rename(region_name = ADM1_ES) %>%
-  select(region_name, region_code, commune_name, commune_code, health_service_name, geometry)
+  select(region_name, region_code, commune_name, commune_name_upper, commune_code, health_service_name, geometry)
+# We lost commune Antartica but we don't need it because there is no school data for it.
+# Can't de-select geometry column here but that doesn't matter
 
 write_xlsx(region_service_commune_lookup, path = "04_Data/Outputs/region_service_commune.xlsx")

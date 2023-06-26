@@ -27,10 +27,16 @@ library(tidyverse)
 ```
 
 ```{r import commune lookup}
-#commune_region_lookup <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>% clean_names()
-chile.adm3 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm3_bcn_20211008.shp") %>%
-  mutate(commune_code = str_sub(ADM3_PCODE, start = 3, end = -1))
+commune_region_lookup <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
+  clean_names() %>%
+  select(-geometry)
+#chile.adm3 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm3_bcn_20211008.shp") %>%
+#  mutate(commune_code = str_sub(ADM3_PCODE, start = 3, end = -1))
 
+araucnorte_communes <- commune_region_lookup %>%
+  filter(str_detect(health_service_name, "a Norte"))
+araucsur_communes <- commune_region_lookup %>%
+  filter(str_detect(health_service_name, "a Sur"))
 
 ```
 
@@ -88,51 +94,52 @@ clinical_large_raw <- read_excel("04_Data/dataset_ssas_2015_2021.xlsx") %>% clea
 clinical_large <- clinical_large_raw %>%
   select(c(-procedence, -ethnicity, -education_level, -disability, -foster_care)) %>%
   # Fix the date columns
-  mutate(dob_eng = ifelse(str_detect(date_of_birth, "/"), 1, ifelse(str_detect(date_of_birth, "-"), 0, NA)),
+  mutate(dob_eng = ifelse(str_detect(date_of_birth, "/"), 1,
+                   ifelse(str_detect(date_of_birth, "-"), 0, NA)),
          apt_eng = ifelse(str_detect(date_appointment, "/"), 1, ifelse(str_detect(date_appointment, "-"), 0, NA)),
          dob_day = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "^\\d+")), 
-                          ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "^\\d+")), NA)),
+                   ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "^\\d+")), NA)),
          dob_month = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "(?<=/)\\d+(?=/)")), 
-                            ifelse(dob_eng == 0, str_extract(date_of_birth, "(?<=-)\\w+(?=-)"), NA)),
+                     ifelse(dob_eng == 0, str_extract(date_of_birth, "(?<=-)\\w+(?=-)"), NA)),
          dob_year = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "\\d+$")), 
-                           ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "\\d+$")) + 2000, NA)),
+                    ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "\\d+$")) + 2000, NA)),
          dob_month_eng = as.integer(ifelse(dob_month == "ene", 1,
-                                           ifelse(dob_month == "abr", 4, 
-                                                  ifelse(dob_month == "ago", 8, 
-                                                         ifelse(dob_month == "sept", 9, 
-                                                                ifelse(dob_month == "dic", 12, dob_month)))))),
+                                    ifelse(dob_month == "abr", 4, 
+                                    ifelse(dob_month == "ago", 8, 
+                                    ifelse(dob_month == "sept", 9, 
+                                    ifelse(dob_month == "dic", 12, dob_month)))))),
          dob = make_date(year = dob_year, month = dob_month_eng, day = dob_day),
          apt_day = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "^\\d+")), 
-                          ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "^\\d+")), NA)),
+                   ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "^\\d+")), NA)),
          apt_month = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "(?<=/)\\d+(?=/)")), 
-                            ifelse(apt_eng == 0, str_extract(date_appointment, "(?<=-)\\w+(?=-)"), NA)),
+                     ifelse(apt_eng == 0, str_extract(date_appointment, "(?<=-)\\w+(?=-)"), NA)),
          apt_year = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "\\d+$")), 
-                           ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "\\d+$")) + 2000, NA)),
+                    ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "\\d+$")) + 2000, NA)),
          apt_month_eng = as.integer(ifelse(apt_month == "ene", 1,
-                                           ifelse(apt_month == "abr", 4, 
-                                                  ifelse(apt_month == "ago", 8, 
-                                                         ifelse(apt_month == "sept", 9, 
-                                                                ifelse(apt_month == "dic", 12, apt_month)))))),
+                                    ifelse(apt_month == "abr", 4, 
+                                    ifelse(apt_month == "ago", 8, 
+                                    ifelse(apt_month == "sept", 9, 
+                                    ifelse(apt_month == "dic", 12, apt_month)))))),
          apt_date = make_date(year = apt_year, month = apt_month_eng, day = apt_day),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
-                                      ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
-                                             ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
-                                                    ifelse(comuna == "PUCON", "PUCÓN", 
-                                                           ifelse(comuna == "TOLTEN", "TOLTÉN", 
-                                                                  ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
+         commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
+                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
+                        ifelse(comuna == "PUCON", "PUCÓN", 
+                        ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                        ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
          ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
-                            ifelse(socio_economic_level == "FONASA - B", 2,
-                                   ifelse(socio_economic_level == "FONASA - C", 2, 
-                                          ifelse(socio_economic_level == "FONASA - D", 2,
-                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA)))))),
+                      ifelse(socio_economic_level == "FONASA - B", 2,
+                      ifelse(socio_economic_level == "FONASA - C", 2, 
+                      ifelse(socio_economic_level == "FONASA - D", 2,
+                      ifelse(socio_economic_level == "Private Health Insurance", 3, 
+                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA)))))),
          autism = 1,
          intdisab = 0,
          aut_rank = 1
          ) %>%
-  left_join(commune_region_lookup, by = "commune_name") %>%
-  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
+  left_join(commune_region_lookup, by = "commune_name_upper") %>%
+  select(id, gender, commune_name, commune_name_upper, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
 
 aut_codes <- unique(clinical_large$codigo)
 
@@ -148,26 +155,26 @@ clinical_small <- clinical_small_raw %>%
                            cod_dg_2 %in% aut_codes | 
                            cod_dg_3 %in% aut_codes, 1, 0),
          aut_rank = ifelse(cod_dg_1 %in% aut_codes, 1,
-                           ifelse(cod_dg_2 %in% aut_codes, 2,
-                                  ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
+                    ifelse(cod_dg_2 %in% aut_codes, 2,
+                    ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
          commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
-                                      ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
-                                             ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
-                                                    ifelse(comuna == "PUCON", "PUCÓN", 
-                                                           ifelse(comuna == "TOLTEN", "TOLTÉN", 
-                                                                  ifelse(comuna == "VILCUN", "VILCÚN", 
-                                                                         ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
-                                                                                ifelse(comuna == "MACHALI", "MACHALÍ",
-                                                                                       ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
+                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
+                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
+                        ifelse(comuna == "PUCON", "PUCÓN", 
+                        ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                        ifelse(comuna == "VILCUN", "VILCÚN", 
+                        ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
+                        ifelse(comuna == "MACHALI", "MACHALÍ",
+                        ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
          ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
-                            ifelse(socio_economic_level == "FONASA - B", 2,
-                                   ifelse(socio_economic_level == "FONASA - C", 2, 
-                                          ifelse(socio_economic_level == "FONASA - D", 2,
-                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA))))))
+                      ifelse(socio_economic_level == "FONASA - B", 2,
+                      ifelse(socio_economic_level == "FONASA - C", 2, 
+                      ifelse(socio_economic_level == "FONASA - D", 2,
+                      ifelse(socio_economic_level == "Private Health Insurance", 3, 
+                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA))))))
          ) %>%
-  left_join(commune_region_lookup, by = "commune_name") %>%
+  left_join(commune_region_lookup, by = "commune_code") %>%
   #filter(autism == 1) %>%
   select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, cod_dg_1, cod_dg_2, cod_dg_3, diagnosis, autism, aut_rank) 
 
@@ -187,8 +194,6 @@ clinical <- rbind(clinical_large, clinical_small)
 clinical_communes <- clinical %>% group_by(commune_name) %>% summarise() %>% arrange() %>%
   mutate(commune_in_school_data = ifelse(commune_name %in% unique(chile_merged$student_commune_name), 1, 0)) # Needs to all be 1's
 
-araucnorte_communes <- commune_region_lookup %>%
-  filter(health_service_name == "Servicio de Salud Araucanía Norte")
 
 ```
 
@@ -204,7 +209,7 @@ get.min.na <- function(x) ifelse( !all(is.na(x)), min(x, na.rm = TRUE), NA)
 get.max.na <- function(x) ifelse( !all(is.na(x)), max(x, na.rm = TRUE), NA)
 
 patients <- clinical %>%
-  filter(health_service_name %in% araucnorte_communes) %>%
+  filter(commune_code %in% araucnorte_communes$commune_code) %>%
   group_by(id, gender, dob, commune_name, region_name, ses_status) %>% # Maybe move SES back to here
   summarise(#ses_status = get.min.na(ses_status),
             autism = get.max.na(autism),
@@ -255,9 +260,13 @@ Only try to link clinical data to records in the schools data for the Southern h
 
 ```{r set up data}
 school <- chile_merged %>%
-  rename(commune_code = student_commune_code) %>%
-  left_join(chile.adm3, by = "commune_code") %>%
-  filter(health_service_name == "Servicio de Salud Araucanía Sur") %>% # This should be filtered either on the specific ARAUC communes in the clinical data or using student_commune_region not school_region.
+  mutate(commune_code = ifelse(nchar(as.character(student_commune_code)) == 4,
+                               paste0("0", as.character(student_commune_code)),
+                               as.character(student_commune_code))) %>%
+  select(-student_commune_name) %>%
+  left_join(commune_region_lookup, by = "commune_code") %>%
+  filter(commune_code %in% araucsur_communes$commune_code) %>%
+  #filter(health_service_name == "Servicio de Salud Araucanía Sur") %>% # This should be filtered either on the specific ARAUC communes in the clinical data or using student_commune_region not school_region.
   filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% # Could try without this filter to pick up edge cases just in case
   # filter only the communes represented in the clinical data here?
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
@@ -265,18 +274,20 @@ school <- chile_merged %>%
          aut_rank = 1,
          dob = ymd(dob),
          ses_status = ifelse(school_fee == "", NA, 
-                             ifelse(school_fee == "GRATUITO", 1, 
-                                    ifelse(school_fee == "$1.000 A $10.000", 2,
-                                           ifelse(school_fee == "$10.001 A $25.000", 2, 
-                                                  ifelse(school_fee == "$25.001 A $50.000", 2,
-                                                         ifelse(school_fee == "$50.001 A $100.000", 2, 
-                                                                ifelse(school_fee == "MAS DE $100.000", 2, 
-                                                                       ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
+                      ifelse(school_fee == "GRATUITO", 1, 
+                      ifelse(school_fee == "$1.000 A $10.000", 2,
+                      ifelse(school_fee == "$10.001 A $25.000", 2, 
+                      ifelse(school_fee == "$25.001 A $50.000", 2,
+                      ifelse(school_fee == "$50.001 A $100.000", 2, 
+                      ifelse(school_fee == "MAS DE $100.000", 2, 
+                      ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
   filter(autism == 1) %>% # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
-  rename(student_region_name = region_name, student_commune_name = commune_name) %>%
+  rename(student_commune_name = commune_name) %>%
   select(dob,
          sex_desc,
          student_commune_name,
+         #commune_name, 
+         health_service_name,
          autism,
          ses_status,
          #intdisab,
