@@ -143,9 +143,15 @@ clinical_large <- clinical_large_raw %>%
          aut_rank = 1
          ) %>%
   left_join(commune_region_lookup, by = "commune_name_upper") %>%
-  select(id, gender, commune_code, commune_name, commune_name_upper, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
+  select(id, gender, 
+         commune_code, commune_name, commune_name_upper, 
+         health_service_name, region_name, 
+         socio_economic_level, ses_status, 
+         dob, age_june30, 
+         apt_date, hospital, medical_specialty, type_appointment,
+         autism, intdisab, aut_rank) 
 
-aut_codes <- unique(clinical_large$codigo)
+aut_codes <- unique(clinical_large_raw$codigo)
 
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
 
@@ -191,8 +197,8 @@ clinical_small <- clinical_small %>%
   mutate(intdisab = ifelse(cod_dg_1 %in% intdisab_codes |
                              cod_dg_2 %in% intdisab_codes | 
                              cod_dg_3 %in% intdisab_codes, 1, 0)) %>%
-  rename("codigo" = "cod_dg_1") %>%
-  select(c(-cod_dg_2, -cod_dg_3))
+  #rename("codigo" = "cod_dg_1") %>%
+  select(c(-cod_dg_1, -cod_dg_2, -cod_dg_3, -diagnosis))
 
 clinical <- rbind(clinical_large, clinical_small)
 
