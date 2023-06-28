@@ -106,10 +106,14 @@ chile_stdpop <- chile_stdpop_raw %>%
   rename("std_pop" = "pop_2021") %>%
   mutate(pop_prop = std_pop / sum(std_pop))
 
-chile_communes <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
-  clean_names() #%>%
+commune_region_lookup <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
+  clean_names() %>%
+  select(-geometry)
+
+#chile_communes <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
+#  clean_names() #%>%
   #rename(#school_region_name_abr = region_name,
-         school_commune_name = commune_name)
+#         school_commune_name = commune_name)
 
 # https://www.ine.gob.cl/estadisticas/sociales/demografia-y-vitales/proyecciones-de-poblacion
 chile_regionpop_raw <- read_excel("04_Data/ine_estimaciones-y-proyecciones-2002-2035_base-2017_region_area_tabulados.xlsx", sheet = "Region summary 2021") %>%
@@ -167,6 +171,9 @@ https://jamanetwork.com/journals/jamanetworkopen/fullarticle/2789926
 
 ```{r restructure data}
 chile_bayes_aut <- chile_merged %>%
+  select(-student_commune_name) %>%
+  left_join(commune_region_lookup, by = "commune_code") %>%
+  filter(commune_code %in% araucsur_communes$commune_code) %>%
   filter(age_june30 >= 6 & age_june30 <= 18,
          #special_needs_status == 1,
          sex != 0) %>%
@@ -191,7 +198,7 @@ chile_bayes_aut <- chile_merged %>%
                             ifelse(school_fee == "$100,001+", "Medium", 
                             ifelse(school_fee == "No information", "No information", NA)))),
          school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium", "No information"))) %>% 
-  left_join(chile_communes, by = c("commune_code")) %>%
+  left_join(commune_region_lookup, by = c("commune_code")) %>%
   #rename(school_commune_code = commune_code) %>%          
   select(school_region_name_abr,
     sex,
