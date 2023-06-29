@@ -61,8 +61,26 @@ region_service_commune_lookup <- chile.adm3 %>%
          region_code = str_sub(ADM1_PCODE, start = 3, end = -1),
          commune_name_upper = toupper(commune_name)) %>%
   rename(region_name = ADM1_ES) %>%
-  select(region_name, region_code, commune_name, commune_name_upper, commune_code, health_service_name, geometry)
+  select(region_name, region_code, 
+         commune_name, commune_name_upper, commune_code, 
+         health_service_name,
+         geometry)
 # We lost commune Antartica but we don't need it because there is no school data for it.
 # Can't de-select geometry column here but that doesn't matter
+
+# Create a number for each health service
+health_service_lookup <- chile_communes %>%
+  group_by(health_service_name) %>%
+  summarise() %>% 
+  arrange(health_service_name) %>%
+  rowid_to_column("health_service_code") %>%
+  rename(health_service_name_long = health_service_name) %>%
+  mutate(health_service_name = str_sub(health_service_name_long, start = 19, end = -1))
+
+
+region_service_commune_lookup <- merge(region_service_commune_lookup, health_service_lookup,
+                                       by = "health_service_name", all = TRUE) %>%
+  relocate(health_service_name, .before = health_service_code)
+
 
 write_xlsx(region_service_commune_lookup, path = "04_Data/Outputs/region_service_commune.xlsx")
