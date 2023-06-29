@@ -73,14 +73,14 @@ health_service_lookup <- chile_communes %>%
   group_by(health_service_name) %>%
   summarise() %>% 
   arrange(health_service_name) %>%
-  rowid_to_column("health_service_code") %>%
-  rename(health_service_name_long = health_service_name) %>%
-  mutate(health_service_name = str_sub(health_service_name_long, start = 19, end = -1))
+  rowid_to_column("health_service_code")
 
 
 region_service_commune_lookup <- merge(region_service_commune_lookup, health_service_lookup,
                                        by = "health_service_name", all = TRUE) %>%
-  relocate(health_service_name, .before = health_service_code)
+  relocate(health_service_name, .before = health_service_code)  %>%
+  rename(health_service_name_long = health_service_name) %>%
+  mutate(health_service_name = str_sub(health_service_name_long, start = 19, end = -1))
 
 
 write_xlsx(region_service_commune_lookup, path = "04_Data/Outputs/region_service_commune.xlsx")

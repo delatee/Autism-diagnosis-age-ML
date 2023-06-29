@@ -110,6 +110,8 @@ commune_region_lookup <- read_excel("04_Data/Outputs/region_service_commune.xlsx
   clean_names() %>%
   select(-geometry)
 
+health_service_lookup <- commune_region_lookup %>% group_by(health_service_code, health_service_name) %>% summarise()
+
 #chile_communes <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
 #  clean_names() #%>%
   #rename(#school_region_name_abr = region_name,
@@ -204,6 +206,7 @@ chile_bayes_aut <- chile_merged %>%
          commune_code,
          school_commune_name,
          commune_name,
+         health_service_code,
          health_service_name,
          sex,
          sex_desc,
@@ -228,7 +231,7 @@ chile_bayes_aut <- chile_merged %>%
   ) 
 
 chile_bayes_group_temp <- chile_bayes_aut %>%
-  group_by(commune_code, school_commune_name, commune_name, health_service_name) %>%
+  group_by(commune_code, school_commune_name, commune_name, health_service_code, health_service_name) %>%
   summarise(count = n())
 
 # Prevalence of autism in Chile dataset
@@ -950,9 +953,10 @@ ggplot(data = aut_prev_health.age.sex) +
 
 ```{r health}
 aut_prev_health <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("health_service_name", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
+                                    grouping_vars = c("health_service_code", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
 
-aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "health_service_name")
+aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "health_service_code") %>%
+  merge(health_service_lookup, by = "health_service_code")
 
 # ggplot(data = aut_prev_health_adj) +
 #   geom_col(aes(x = health_service_name, y = adjusted_rate), fill = "lightblue", position = "dodge") +
@@ -963,13 +967,14 @@ aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "healt
 #        y = "Sample prevalence")
 
 aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
-                              feat = "health_service_name",
+                              feat = "health_service_code",
                               model = rand_model,
                               theta_mu = theta_mu_prior,
                               theta_sigma = theta_sigma_prior,
                               pars = pars, 
                               convergence_checks = FALSE) %>%
-  rename("health_service_name" = "Feat_names")
+  rename("health_service_code" = "Feat_names") %>%
+  merge(health_service_lookup, by = "health_service_code")
 
 plot_post_density(aut_prev_health_post, aut_prev_health_adj, feat = "health_service_name", theta_mu = theta_mu_prior, theta_sigma = theta_sigma_prior)
 
@@ -982,13 +987,14 @@ Predictions for higher population prevalence - increase prior mean
 
 for(j in 1:length(theta_mu_proj)) {
   aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
-                                             feat = "health_service_name",
+                                             feat = "health_service_code",
                                              model = rand_model,
                                              theta_mu = theta_mu_proj[j],
                                              theta_sigma = theta_sigma_proj[j],
                                              pars = pars, 
                                              convergence_checks = FALSE) %>%
-    rename("health_service_name" = "Feat_names")
+    rename("health_service_code" = "Feat_names") %>%
+  merge(health_service_lookup, by = "health_service_code")
   
   plot_post_density(aut_prev_health_post, 
                     aut_prev_health_adj, 
@@ -999,6 +1005,136 @@ for(j in 1:length(theta_mu_proj)) {
 
 ```
 
+
+```{r new prev arauc}
+
+araucS_lower_prev <- aut_prev_health_adj %>%
+  filter(health_service_name == "Araucanía Sur") %>%
+  select(adjusted_rate) %>% as.numeric
+araucS_upper_prev <- 1688 / aut_prev_health_adj %>%
+  filter(health_service_name == "Araucanía Sur") %>%
+  select(sum_sample_pop_size) %>% as.numeric
+prev_delta <- araucS_upper_prev - araucS_lower_prev
+
+araucS_lower <- aut_prev_health_adj %>%
+  filter(health_service_name == "Araucanía Sur") %>%
+  select(adjusted_count) %>% as.numeric
+araucS_upper <- 1688
+araucS_mean <- (aracuS_upper + araucS_lower) / 2
+araucS_sd <- (aracuS_upper - araucS_lower) / (2*1.96)
+
+aut_prev_health_adj$new_rate <- numeric(nrow(aut_prev_health_adj))
+aut_prev_health_adj$new_count <- numeric(nrow(aut_prev_health_adj))
+
+for(i in 1:nrow(aut_prev_health_adj)) {
+  if(aut_prev_health_adj$health_service_name[i] == "Servicio de Salud Araucanía Sur") {
+    aut_prev_health_adj$new_rate[i] <- araucS_upper_prev
+    aut_prev_health_adj$new_count[i] <- araucS_upper
+  }
+  else {
+    aut_prev_health_adj$new_rate[i] <- aut_prev_health_adj$adjusted_rate[i] + prev_delta
+    aut_prev_health_adj$new_count[i] <- round(aut_prev_health_adj$new_rate[i] * aut_prev_health_adj$sum_sample_pop_size[i], 0)
+  }
+}
+
+```
+
+```{r new prev health}
+
+####### Need to do all by health service code not name because name sorts in different orders.
+
+# Now have health service specific priors so need to provide them as vectors and index each as needed
+rand_model_new <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dbeta(theta_a[i], theta_b[i])
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+nFeat <- length(unique(aut_prev_health_adj$health_service_code))
+FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
+#FeatNames
+#aut_prev_health_adj$health_service_code
+
+
+  # Define beta prior
+theta_mu <- (aut_prev_health_adj$new_rate + aut_prev_health_adj$adjusted_rate) / 2
+#theta_mu <- rep(0.0046, times = nFeat)
+theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
+#theta_sigma <- rep(0.00003975, times = nFeat)
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+  # Initial values for model chains
+rand_ini <- list(list(theta = rep(0.001, nFeat)), #, spec = 0.5, sens = 0.5),
+                   list(theta = rep(0.01, nFeat))) #, spec = 0.9, sens = 0.9))
+
+  # Run JAGS model
+  rand_data <- list(theta_a = theta_a,
+                    theta_b = theta_b,
+                    nObs = aut_prev_health_adj$sum_sample_pop_size,
+                    aut_sample = aut_prev_health_adj$adjusted_count,
+                    nFeat = nFeat)
+  rand_jag <- jags.model(textConnection(rand_model_new),
+                         data = rand_data,
+                         inits = rand_ini,
+                         n.chains = 2,
+                         quiet = TRUE)
+  update(rand_jag, n.iter = nBurn)
+  rand_sam <- coda.samples(model = rand_jag,
+                           variable.names = pars,
+                           n.iter = nIter)
+
+
+print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+print(mcmc_trace(rand_sam, paste0("aut_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                         ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                         ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                         "rhat") %>%
+      arrange(desc(rhat))
+print(rand_summ)
+
+aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "health_service_code",
+                 values_to = "predicted_prev") %>%
+    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
+    select(Iteration, Feat_names, predicted_prev) %>%
+  rename(health_service_code = Feat_names) %>%
+  merge(health_service_lookup, by = "health_service_code")
+  
+
+# 
+# aut_prev_health_post_new <- do_jags_rand_model(x = aut_prev_health_adj,
+#                               feat = "health_service_name",
+#                               model = rand_model_new,
+#                               theta_mu = (aut_prev_health_adj$new_rate +
+#                                             aut_prev_health_adj$adjusted_rate) / 2,
+#                               theta_sigma = (aut_prev_health_adj$new_rate -
+#                                                aut_prev_health_adj$adjusted_rate) / (2*1.96),
+#                               pars = pars, 
+#                               convergence_checks = TRUE) %>%
+#   rename("health_service_name" = "Feat_names")
+
+# Plot manually because we need different CI's now
+aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
+  group_by(health_service_name) %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+ggplot() +
+  geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev)) +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "red", linetype = "dashed") +
+  facet_wrap(~health_service_name) +
+  labs(title = "Region specific priors informed by clinical data from Servicio de Salud Araucanía Sur")
+
+```
 
 ## Random effect on rurality
 
