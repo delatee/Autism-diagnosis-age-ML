@@ -1647,4 +1647,49 @@ for(j in 1:length(theta_mu_proj)) {
 ## Could do random effect on sex and region together
 
 
+# ML on who has autism
+
+Use school data? Or some hybrid of school and clinical?
+
+```{r regress autism, include = FALSE}
+
+#fit_log <- glm(autism ~ school_region_name_abr + commune_name + sex + age_june30 + school_rurality_code + school_fee_group + ethnic_2_group, data = chile_bayes_aut)
+
+```
+
+Regression takes waaaay too long to fit.
+
+```{r test train split}
+# set.seed(123)
+# trainIndex <- createDataPartition(y = chile_bayes_aut, times = 1, p = 0.8, list=F)
+# classTrain <- as.factor(cuomoType[trainIndex])
+# dataTrain <- cuomoData[trainIndex, ]
+# classTest <- as.factor(cuomoType[-trainIndex])
+# dataTest <- cuomoData[-trainIndex, ]
+# 
+# dim(dataTrain)
+# dim(dataTest)
+# 
+# table(classTrain)
+# table(classTest)
+
+```
+
+```{r dt autism}
+
+
+set.seed(42)
+# Fit decision tree
+dtFit <- train(classTrain ~., data = cbind(dataTrain, classTrain),
+               method = "rpart",
+               parms = list(split = "gini"), # could also try "information"
+               preProcess = c("nzv", "corr"),
+               trControl=train_ctrl,
+               tuneLength = 10)
+
+```
+
+
+
+
 

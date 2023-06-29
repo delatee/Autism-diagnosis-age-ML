@@ -221,8 +221,8 @@ get.max.na <- function(x) ifelse( !all(is.na(x)), max(x, na.rm = TRUE), NA)
 
 patients <- clinical %>%
   filter(commune_code %in% araucsur_communes$commune_code) %>%
-  group_by(id, gender, dob, commune_name, region_name, ses_status) %>% # Maybe move SES back to here
-  summarise(#ses_status = get.min.na(ses_status),
+  group_by(id, gender, dob, commune_name, region_name) %>% # Maybe move SES back to here
+  summarise(ses_status = get.min.na(ses_status),
             autism = get.max.na(autism),
             #intdisab = get.max.na(intdisab),
             aut_rank = get.min.na(aut_rank)) %>%
@@ -536,7 +536,20 @@ patients_matched_small <- patients_matched %>%
   mutate(matched = ifelse(is.na(id.school), 0, 1),
          sex.patient = ifelse(sex_desc.patient == "Male", 1, ifelse(sex_desc.patient == "Female", 2, NA))) %>%
   merge(commune_region_lookup, by.x = "student_commune_name.patient", by.y = "commune_name") %>%
-  select(id.patient, dob.patient, sex_desc.patient, sex.patient, student_commune_name.patient, commune_code, ses_status.patient, matched)
+  select(patient_id, id.patient, dob.patient, sex_desc.patient, sex.patient, student_commune_name.patient, commune_code, ses_status.patient, matched)
+
+```
+
+
+Check patients that lived in different communes therefore were in the patient dataset twice aren't matched to multiple school records
+
+```{r patients unique}
+patients_matched_unique <- patients_matched_small %>%
+  group_by(matched, patient_id) %>%
+  summarise(count = n())
+
+patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% select(patient_id)
+# No patient is inadvertently matched to two school records
 
 ```
 
@@ -632,7 +645,7 @@ school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
 ggplot(school_match.sex) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~sex_desc) +
-  labs(title = "Matching of school record to clinical record by feature (sex)",
+  labs(title = "Matching of school record to clinical record by sex",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -659,7 +672,7 @@ ggplot(school_match.student_commune_name) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~student_commune_name.school, scales = "fixed") +
   #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of school record to clinical record by feature (commune)",
+  labs(title = "Matching of school record to clinical record by commune",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -679,7 +692,7 @@ school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.se
 ggplot(school_match.ses_status) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~ses_status.school) +
-  labs(title = "Matching of school record to clinical record by feature (SES status)",
+  labs(title = "Matching of school record to clinical record by SES status",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -760,7 +773,7 @@ patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
 ggplot(patients_match.sex) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~sex_desc) +
-  labs(title = "Matching of clinical record to school record by feature (sex)",
+  labs(title = "Matching of clinical record to school record by sex",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -787,7 +800,7 @@ ggplot(patients_match.student_commune_name) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~student_commune_name.patient, scales = "fixed") +
   #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of clinical record to school record by feature (commune)",
+  labs(title = "Matching of clinical record to school record by commune",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -807,7 +820,7 @@ patients_match.ses_status <- rbind(patients_match_yes.ses_status, patients_match
 ggplot(patients_match.ses_status) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~ses_status.patient) +
-  labs(title = "Matching of clinical record to school record by feature (SES status)",
+  labs(title = "Matching of clinical record to school record by SES status",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -819,9 +832,51 @@ ggplot(ks_perm.patients.pvals, aes(x = ses_status, y = after_stat(density))) +
 
 ```
 
-Then quantify clinical records for ARAUC Sur that haven't been matched.
 
-Need to bring in the missing communes so that ks test is better.
+# New prevalence estimates
+
+```{r new prev}
+n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) # Use this version because accounts for non-unique patients with both match and non-match
+#n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
+#  dim(patients_matched_small %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
+
+
+```
+
+
+# CFA for clinical data
+
+```{r cfa}
+clinical_fa <- clinical %>%
+  mutate(sex_desc = ifelse(gender == "Male", 1, ifelse(gender == "Female", 2, NA)),
+         appt_type = ifelse(type_appointment == "New", 1,
+                            ifelse(type_appointment == "Control" | type_appointment == "CONTROL", 2,
+                                   ifelse(type_appointment == "Discharge", 3, NA))),
+         commune_code = as.numeric(commune_code),
+         ses_detailed = ifelse(socio_economic_level == "FONASA - A", 1, 
+                      ifelse(socio_economic_level == "FONASA - B", 2,
+                      ifelse(socio_economic_level == "FONASA - C", 3, 
+                      ifelse(socio_economic_level == "FONASA - D", 4,
+                      ifelse(socio_economic_level == "Private Health Insurance", 5, 
+                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 5, NA))))))) %>%
+  select(id, sex_desc, age_june30, ses_detailed, appt_type)
+# would like to have medical specialty here too
+
+# Using all sn categories together isn't really legit
+clinical_cor <- cor(select(clinical_fa, c(-id)), use = "pairwise")
+clinical_cor
+corrplot(clinical_cor)
+clinical_eigen <- eigen(clinical_cor)
+clinical_eigen$values
+scree(clinical_cor) # , factors = FALSE) # PC is principle components, FA is factors
+# Only keep the factors that have eigenvalue above 1. Will use PC results for now https://www.researchgate.net/post/Both-PC-and-FA-in-scree-plot-which-to-use-in-an-EFA
+# There are 4 such factors.
+
+clinical_efa <- fa(select(clinical_fa, c(-id)), nfactors = 2)
+clinical_efa
+
+
+```
 
 
 
