@@ -1027,7 +1027,188 @@ fviz_contrib(res_mca_patients, choice = "var", axes = 1:2, top = 15)
 
 ```
 
+```{r MCA patients small}
+patients_mca_small <- clinical_small_raw %>% 
+  rename("rurality" = "procedence",
+         "dob" = "fecha_nacimiento",
+         "apt_date" = "fecha_ejecutada",
+         "type_appointment" = "appoinment") %>%
+  mutate(gender = str_to_title(gender),
+         autism = ifelse(cod_dg_1 %in% aut_codes | 
+                           cod_dg_2 %in% aut_codes | 
+                           cod_dg_3 %in% aut_codes, 1, 0),
+         aut_rank = ifelse(cod_dg_1 %in% aut_codes, 1,
+                    ifelse(cod_dg_2 %in% aut_codes, 2,
+                    ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
+         age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
+         commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
+                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
+                        ifelse(comuna == "PUCON", "PUCÓN", 
+                        ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                        ifelse(comuna == "VILCUN", "VILCÚN", 
+                        ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
+                        ifelse(comuna == "MACHALI", "MACHALÍ",
+                        ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
+         ses_status = ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level),
+         ethnicity = ifelse(ethnicity == "CHILENO", "Chilean",
+                     ifelse(ethnicity == "MAPUCHE", "Mapuche",
+                     ifelse(ethnicity == "EXTRANJERO", "Foreign", "No ethnicity information"))),
+         ethnicity = ifelse(is.na(ethnicity), "No ethnicity information", ethnicity), # for some reason the NA fix doesn't work in preceding line
+         disability = ifelse(is.na(disability), "No disability information", disability),
+         foster_care = ifelse(is.na(foster_care), "No foster care information", foster_care),
+         medical_specialty_english = ifelse(medical_specialty == "Physiatry", "Psychiatry",
+                                     ifelse(medical_specialty == "PEDIATRIA", "Paediatrics",
+                                     ifelse(medical_specialty == "PSIQUIATRIA", "Psychiatry",
+                                     ifelse(medical_specialty == "NEUROLOGIA", "Neurology", medical_specialty)))),
+         medical_specialty_grouped = ifelse(medical_specialty_english %in% c("Psychiatry", "Child Psychiatry"), "Psychiatry",
+                                     ifelse(medical_specialty_english %in% c("Neurology", "Pediatric Neurology"), "Neurology",
+                                     ifelse(medical_specialty_english == "Paediatrics", "Paediatrics", "Other specialty"))),
+         ) %>%
+  left_join(commune_region_lookup, by = "commune_name_upper") %>%
+  group_by(id, gender, dob, commune_name) %>%
+  summarise(ses_status = get.min.na(ses_status), # Fortunately the available values are in alphabetical order by status
+            autism = get.max.na(autism),
+            medical_specialty_grouped = get.mode(medical_specialty_grouped), # Most common medical specialty across visits
+            hospital = hospital[which.max(apt_date)], # most recent hospital
+            age = age_june30[which.max(apt_date)], # Age should be the same for all appts because it's based on dob
+            rurality = get.mode(rurality),
+            ethnicity = get.mode(ethnicity),
+            disability = get.mode(disability), # change to if any are yes
+            foster_care = get.mode(foster_care) # change to if any are yes
+            ) %>%
+  ungroup() %>% 
+  rename("sex_desc" = "gender") %>%
+  mutate(sex_desc = as.factor(sex_desc),
+         age_group = as.factor(ifelse(age <= 2, "Age 0-2", 
+                               ifelse(age >= 3 & age <= 5, "Age 3-5",
+                               ifelse(age >=6 & age <= 8, "Age 6-8", 
+                               ifelse(age >=9 & age <=11, "Age 9-11", 
+                               ifelse(age >=12 & age <= 14, "Age 12-14", 
+                               ifelse(age >= 15 & age <= 18, "Age 15-18", "Adult"))))))), # Shouldn't be any adults in this dataset
+         age = as.factor(age),
+         commune_name = as.factor(commune_name),
+         ses_status = as.factor(ses_status),
+         rurality = as.factor(rurality),
+         ethnicity = as.factor(ethnicity),
+         disability = as.factor(disability),
+         foster_care = as.factor(foster_care),
+         autism = as.factor(autism),
+         medical_specialty_grouped = as.factor(medical_specialty_grouped),
+         hospital = as.factor(hospital)) %>%
+   select(sex_desc,
+          #age,
+          age_group,
+          commune_name,
+          #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
+          #medical_specialty_grouped,
+          #autism,
+          ses_status,
+          rurality,
+          ethnicity,
+          disability,
+          foster_care
+          )
+# Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
+# We have 416 rows and 406 patients
+  
 
+res_mca_patients_small <- FactoMineR::MCA(patients_mca_small, # Can only take categorical variables and they have to be cast to factors
+                                    ncp = 8, # Needs to match number of features
+                                    graph = TRUE) 
+
+# Plot features
+fviz_mca_var(res_mca_patients_small, choice = "mca.cor", 
+            repel = TRUE, # Avoid text overlapping
+            ggtheme = theme_minimal())
+
+# Plot categories
+fviz_mca_var(res_mca_patients_small,
+             col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE, # Avoid text overlapping (slow if many points)
+             ggtheme = theme_minimal())
+
+# Plot individual patients
+fviz_mca_ind(res_mca_patients_small, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = FALSE, # Graphs is not meaningful if this is TRUE
+             ggtheme = theme_minimal())
+# OR
+fviz_mca_ind(res_mca_patients_small, 
+             label = "none", # hide individual labels
+             habillage = "sex_desc", # color by groups 
+             palette = c("green", "blue"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by sex",
+             ggtheme = theme_minimal()) 
+fviz_mca_ind(res_mca_patients_small, 
+             label = "none", # hide individual labels
+             habillage = "age_group", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by age",
+             ggtheme = theme_minimal()) 
+fviz_mca_ind(res_mca_patients_small, 
+             label = "none", # hide individual labels
+             habillage = "commune_name", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by commune of residence",
+             ggtheme = theme_minimal()) # Really not meaningful
+fviz_mca_ind(res_mca_patients_small, 
+             label = "none", # hide individual labels
+             habillage = "ses_status", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by SES status",
+             ggtheme = theme_minimal()) 
+fviz_mca_ind(res_mca_patients_small, 
+             label = "none", # hide individual labels
+             habillage = "rurality", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by rurality",
+             ggtheme = theme_minimal())
+fviz_mca_ind(res_mca_patients_small, 
+             label = "none", # hide individual labels
+             habillage = "ethnicity", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by ethnicity",
+             ggtheme = theme_minimal())
+fviz_mca_ind(res_mca_patients_small, 
+             label = "none", # hide individual labels
+             habillage = "disability", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by disability status",
+             ggtheme = theme_minimal())
+fviz_mca_ind(res_mca_patients_small, 
+             label = "none", # hide individual labels
+             habillage = "foster_care", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by foster care status",
+             ggtheme = theme_minimal())
+
+#fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
+#fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
+#fviz_ellipses(res_mca_patients, 1, geom = "point")
+
+fviz_cos2(res_mca_patients, choice = "var", axes = 1:2)
+round(res_mca_patients$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
+
+# Contributions of variable categories to dimension 1
+fviz_contrib(res_mca_patients, choice = "var", axes = 1, top = 15) 
+# Contributions of variable categories to dimension 2
+fviz_contrib(res_mca_patients, choice = "var", axes = 2, top = 15)
+# Total contribution to dimension 1 and 2
+fviz_contrib(res_mca_patients, choice = "var", axes = 1:2, top = 15)
+# "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
+
+
+```
 
 # CFA for clinical data
 
