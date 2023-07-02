@@ -852,7 +852,7 @@ https://ladal.edu.au/clust.html
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3810057/
 http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/
 
-```{r MCA}
+```{r MCA clinical}
 
 clinical_mca <- clinical %>%
   mutate(gender = as.factor(gender),
@@ -883,23 +883,26 @@ fviz_mca_var(res_mca_clinical, choice = "mca.cor",
             repel = TRUE, # Avoid text overlapping (slow)
             ggtheme = theme_minimal())
 
-# Probably better to do MCA on patient-level data because there will be a substructure of clusters of the patients' appointments.
-# Especially as there are some duplicates in the clinical data, seemingly as a result of translating the medical_specialty vales
+```
 
+Probably better to do MCA on patient-level data because there will be a substructure of clusters of the patients' appointments.
+Especially as there are some duplicates in the clinical data, seemingly as a result of translating the medical_specialty vales
+
+```{r MCA patients}
 get.mode <- function(x) {
   ux <- unique(x)
   ux[which.max(tabulate(match(x, ux)))]
 }
 
 patients_mca <- clinical %>% 
-  filter(commune_code %in% araucsur_communes$commune_code) %>%
+  #filter(commune_code %in% araucsur_communes$commune_code) %>%
   mutate(medical_specialty_english = ifelse(medical_specialty == "Physiatry", "Psychiatry",
                                      ifelse(medical_specialty == "PEDIATRIA", "Paediatrics",
                                      ifelse(medical_specialty == "PSIQUIATRIA", "Psychiatry",
                                      ifelse(medical_specialty == "NEUROLOGIA", "Neurology", medical_specialty)))),
          medical_specialty_grouped = ifelse(medical_specialty_english %in% c("Psychiatry", "Child Psychiatry"), "Psychiatry",
                                      ifelse(medical_specialty_english %in% c("Neurology", "Pediatric Neurology"), "Neurology",
-                                     ifelse(medical_specialty_english == "Paediatrics", "Paediatrics", "Other"))),
+                                     ifelse(medical_specialty_english == "Paediatrics", "Paediatrics", "Other specialty"))),
          ses_status = ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level)) %>%
   group_by(id, gender, dob, commune_name) %>%
   summarise(ses_status = get.min.na(ses_status), # Fortunately the available values are in alphabetical order by status
@@ -911,12 +914,12 @@ patients_mca <- clinical %>%
   ungroup() %>% 
   rename("sex_desc" = "gender") %>%
   mutate(sex_desc = as.factor(sex_desc),
-         age_group = as.factor(ifelse(age <= 2, "0-2", 
-                               ifelse(age >= 3 & age <= 5, "3-5",
-                               ifelse(age >=6 & age <= 8, "6-8", 
-                               ifelse(age >=9 & age <=11, "9-11", 
-                               ifelse(age >=12 & age <= 14, "12-14", 
-                               ifelse(age >= 15 & age <= 18, "15-18", "Adult"))))))),
+         age_group = as.factor(ifelse(age <= 2, "Age 0-2", 
+                               ifelse(age >= 3 & age <= 5, "Age 3-5",
+                               ifelse(age >=6 & age <= 8, "Age 6-8", 
+                               ifelse(age >=9 & age <=11, "Age 9-11", 
+                               ifelse(age >=12 & age <= 14, "Age 12-14", 
+                               ifelse(age >= 15 & age <= 18, "Age 15-18", "Adult"))))))), # Shouldn't be any adults in this dataset
          age = as.factor(age),
          commune_name = as.factor(commune_name),
          ses_status = as.factor(ses_status),
@@ -928,23 +931,99 @@ patients_mca <- clinical %>%
          age_group,
          commune_name,
          hospital,
-         ses_status)#,
-         #autism,
-         #medical_specialty_grouped)
+         ses_status,
+         autism,
+         medical_specialty_grouped)
 # Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
   
 
 res_mca_patients <- FactoMineR::MCA(patients_mca, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 5, # Needs to match number of features
+                                    ncp = 7, # Needs to match number of features
                                     graph = TRUE) 
+
+# Plot features
 fviz_mca_var(res_mca_patients, choice = "mca.cor", 
-            repel = TRUE, # Avoid text overlapping (slow)
+            repel = TRUE, # Avoid text overlapping
             ggtheme = theme_minimal())
+
+# Plot categories
 fviz_mca_var(res_mca_patients,
              col.var = "cos2",
              gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE, # Avoid text overlapping (slow)
+             repel = TRUE, # Avoid text overlapping (slow if many points)
              ggtheme = theme_minimal())
+
+# Plot individual patients
+fviz_mca_ind(res_mca_patients, col.ind = "cos2", 
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = FALSE, # Graphs is not meaningful if this is TRUE
+             ggtheme = theme_minimal())
+# OR
+fviz_mca_ind(res_mca_patients, 
+             label = "none", # hide individual labels
+             habillage = "sex_desc", # color by groups 
+             palette = c("green", "blue"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by sex",
+             ggtheme = theme_minimal()) 
+fviz_mca_ind(res_mca_patients, 
+             label = "none", # hide individual labels
+             habillage = "age_group", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by age",
+             ggtheme = theme_minimal()) 
+fviz_mca_ind(res_mca_patients, 
+             label = "none", # hide individual labels
+             habillage = "commune_name", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by commune of residence",
+             ggtheme = theme_minimal()) # Really not meaningful
+fviz_mca_ind(res_mca_patients, 
+             label = "none", # hide individual labels
+             habillage = "ses_status", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by SES status",
+             ggtheme = theme_minimal()) 
+fviz_mca_ind(res_mca_patients, 
+             label = "none", # hide individual labels
+             habillage = "hospital", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by hospital",
+             ggtheme = theme_minimal())
+fviz_mca_ind(res_mca_patients, 
+             label = "none", # hide individual labels
+             habillage = "autism", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by autism status",
+             ggtheme = theme_minimal())
+fviz_mca_ind(res_mca_patients, 
+             label = "none", # hide individual labels
+             habillage = "medical_specialty_grouped", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by most common medical specialty",
+             ggtheme = theme_minimal())
+
+#fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
+#fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
+#fviz_ellipses(res_mca_patients, 1, geom = "point")
+
+fviz_cos2(res_mca_patients, choice = "var", axes = 1:2)
+round(res_mca_patients$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
+
+# Contributions of variable categories to dimension 1
+fviz_contrib(res_mca_patients, choice = "var", axes = 1, top = 15) 
+# Contributions of variable categories to dimension 2
+fviz_contrib(res_mca_patients, choice = "var", axes = 2, top = 15)
+# Total contribution to dimension 1 and 2
+fviz_contrib(res_mca_patients, choice = "var", axes = 1:2, top = 15)
+# "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
+
 
 ```
 
@@ -952,34 +1031,34 @@ fviz_mca_var(res_mca_patients,
 
 # CFA for clinical data
 
-```{r cfa}
-clinical_fa <- clinical %>%
-  mutate(sex = ifelse(gender == "Male", 1, ifelse(gender == "Female", 2, NA)),
-         appt_type = ifelse(type_appointment == "New", 1,
-                            ifelse(type_appointment == "Control" | type_appointment == "CONTROL", 2,
-                                   ifelse(type_appointment == "Discharge", 3, NA))),
-         commune_code = as.numeric(commune_code),
-         ses_detailed = ifelse(socio_economic_level == "FONASA - A", 1, 
-                      ifelse(socio_economic_level == "FONASA - B", 2,
-                      ifelse(socio_economic_level == "FONASA - C", 3, 
-                      ifelse(socio_economic_level == "FONASA - D", 4,
-                      ifelse(socio_economic_level == "Private Health Insurance", 5, 
-                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 5, NA))))))) %>%
-  select(id, sex, age_june30, ses_detailed, appt_type)
-# would like to have medical specialty here too
-
-# Using all sn categories together isn't really legit
-clinical_cor <- cor(select(clinical_fa, c(-id)), use = "pairwise")
-clinical_cor
-corrplot(clinical_cor)
-clinical_eigen <- eigen(clinical_cor)
-clinical_eigen$values
-scree(clinical_cor) # , factors = FALSE) # PC is principle components, FA is factors
-# Only keep the factors that have eigenvalue above 1. Will use PC results for now https://www.researchgate.net/post/Both-PC-and-FA-in-scree-plot-which-to-use-in-an-EFA
-# There are 4 such factors.
-
-clinical_efa <- fa(select(clinical_fa, c(-id)), nfactors = 2)
-clinical_efa
+```{r cfa, include = FALSE}
+# clinical_fa <- clinical %>%
+#   mutate(sex = ifelse(gender == "Male", 1, ifelse(gender == "Female", 2, NA)),
+#          appt_type = ifelse(type_appointment == "New", 1,
+#                             ifelse(type_appointment == "Control" | type_appointment == "CONTROL", 2,
+#                                    ifelse(type_appointment == "Discharge", 3, NA))),
+#          commune_code = as.numeric(commune_code),
+#          ses_detailed = ifelse(socio_economic_level == "FONASA - A", 1, 
+#                       ifelse(socio_economic_level == "FONASA - B", 2,
+#                       ifelse(socio_economic_level == "FONASA - C", 3, 
+#                       ifelse(socio_economic_level == "FONASA - D", 4,
+#                       ifelse(socio_economic_level == "Private Health Insurance", 5, 
+#                       ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 5, NA))))))) %>%
+#   select(id, sex, age_june30, ses_detailed, appt_type)
+# # would like to have medical specialty here too
+# 
+# # Using all sn categories together isn't really legit
+# clinical_cor <- cor(select(clinical_fa, c(-id)), use = "pairwise")
+# clinical_cor
+# corrplot(clinical_cor)
+# clinical_eigen <- eigen(clinical_cor)
+# clinical_eigen$values
+# scree(clinical_cor) # , factors = FALSE) # PC is principle components, FA is factors
+# # Only keep the factors that have eigenvalue above 1. Will use PC results for now https://www.researchgate.net/post/Both-PC-and-FA-in-scree-plot-which-to-use-in-an-EFA
+# # There are 4 such factors.
+# 
+# clinical_efa <- fa(select(clinical_fa, c(-id)), nfactors = 2)
+# clinical_efa
 
 
 ```
