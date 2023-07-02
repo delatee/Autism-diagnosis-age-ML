@@ -257,7 +257,7 @@ write_csv(patients_unique, "04_Data/Outputs/patients_unique.csv") # can't write 
 
 ```
 
-NB: there are 1688 unique ID's in patients and it's 1747 rows long because some people are represented in 2 communes.
+NB: there are 1688 unique ID's in patients and it's 1702 rows long because some people are represented in 2 communes.
 
 Are all the records in the small dataset in the big one? No
 
@@ -853,41 +853,88 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3810057/
 http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/
 
 ```{r MCA}
-# Test if there is sufficient structure in the data to do clustering
+
 clinical_mca <- clinical %>%
-  mutate(sex = ifelse(gender == "Male", 1, ifelse(gender == "Female", 2, NA)),
-         appt_type = ifelse(type_appointment == "New", 1,
-                            ifelse(type_appointment == "Control" | type_appointment == "CONTROL", 2,
-                                   ifelse(type_appointment == "Discharge", 3, NA))),
-         commune_code = as.numeric(commune_code),
-         ses_detailed = ifelse(socio_economic_level == "FONASA - A", 1, 
-                      ifelse(socio_economic_level == "FONASA - B", 2,
-                      ifelse(socio_economic_level == "FONASA - C", 3, 
-                      ifelse(socio_economic_level == "FONASA - D", 4,
-                      ifelse(socio_economic_level == "Private Health Insurance", 5, 
-                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 5, NA)))))),
-         gender = as.factor(gender),
+  mutate(gender = as.factor(gender),
+         age_june30 = as.factor(age_june30),
          commune_name = as.factor(commune_name),
+         appt_type = as.factor(type_appointment),
+         ses_status = as.factor(ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level)),
          hospital = as.factor(hospital),
          medical_specialty = as.factor(medical_specialty)
          ) %>%
-  select(#id, 
-         gender, 
-         #age_june30, 
-         #commune_code, 
-         commune_name, 
-         #ses_detailed, 
-         hospital, 
-         medical_specialty)#,
-         #appt_type)
+  select(gender, 
+         age_june30,
+         #commune_name, 
+         #appt_type,
+         ses_status, 
+         hospital) #, 
+         #medical_specialty)
 
+# Test if there is sufficient structure in the data to do clustering
 #clusttendency <- get_clust_tendency(clinical_mca,
 #                                    n = 5, # Needs to be same as number of features
 #                                    gradient = list(low = "steelblue", high = "white"))  
 # Can only handle numeric data so not that useful but even with only the numeric features,
 # the Hopkins stat is very close to 1 (0.997) so the data is highly clusterable
 
-FactoMineR::MCA(clinical_mca, ncp = 5, graph = TRUE) # Can only take categorical variables and they have to be cast to factors
+res_mca_clinical <- FactoMineR::MCA(clinical_mca, ncp = 4, graph = TRUE) # Can only take categorical variables and they have to be cast to factors
+fviz_mca_var(res_mca_clinical, choice = "mca.cor", 
+            repel = TRUE, # Avoid text overlapping (slow)
+            ggtheme = theme_minimal())
+
+# Probably better to do MCA on patient-level data because there will be a substructure of clusters of the patients' appointments.
+# Especially as there are some duplicates in the clinical data, seemingly as a result of translating the medical_specialty vales
+
+get.mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+patients_mca <- clinical %>% 
+  filter(commune_code %in% araucsur_communes$commune_code) %>%
+  mutate(medical_specialty_english = ifelse(medical_specialty == "Physiatry", "Psychiatry",
+                                     ifelse(medical_specialty == "PEDIATRIA", "Paediatrics",
+                                     ifelse(medical_specialty == "PSIQUIATRIA", "Psychiatry",
+                                     ifelse(medical_specialty == "NEUROLOGIA", "Neurology", medical_specialty)))),
+         medical_specialty_grouped = ifelse(medical_specialty_english %in% c("Psychiatry", "Child Psychiatry"), "Psychiatry",
+                                     ifelse(medical_specialty_english %in% c("Neurology", "Pediatric Neurology"), "Neurology",
+                                     ifelse(medical_specialty_english == "Paediatrics", "Paediatrics", "Other"))),
+         ses_status = ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level)) %>%
+  group_by(id, gender, dob, commune_name) %>%
+  summarise(ses_status = get.min.na(ses_status), # Fortunately the available values are in alphabetical order by status
+            autism = get.max.na(autism),
+            medical_specialty_grouped = get.mode(medical_specialty_grouped),
+            hospital = hospital[which.max(apt_date)]
+            ) %>%
+  ungroup() %>% 
+  rename("sex_desc" = "gender") %>%
+  mutate(sex_desc = as.factor(sex_desc),
+         commune_name = as.factor(commune_name),
+         ses_status = as.factor(ses_status),
+         autism = as.factor(autism),
+         medical_specialty_grouped = as.factor(medical_specialty_grouped),
+         hospital = as.factor(hospital)) %>%
+  select(sex_desc,
+         commune_name,
+         #hospital,
+         ses_status,
+         #autism,
+         medical_specialty_grouped)
+# Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
+  
+
+res_mca_patients <- FactoMineR::MCA(patients_mca, # Can only take categorical variables and they have to be cast to factors
+                                    ncp = 4, # Needs to match number of features
+                                    graph = TRUE) 
+fviz_mca_var(res_mca_patients, choice = "mca.cor", 
+            repel = TRUE, # Avoid text overlapping (slow)
+            ggtheme = theme_minimal())
+fviz_mca_var(res_mca_patients,
+             col.var = "cos2",
+             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             repel = TRUE, # Avoid text overlapping (slow)
+             ggtheme = theme_minimal())
 
 ```
 
