@@ -904,28 +904,38 @@ patients_mca <- clinical %>%
   group_by(id, gender, dob, commune_name) %>%
   summarise(ses_status = get.min.na(ses_status), # Fortunately the available values are in alphabetical order by status
             autism = get.max.na(autism),
-            medical_specialty_grouped = get.mode(medical_specialty_grouped),
-            hospital = hospital[which.max(apt_date)]
+            medical_specialty_grouped = get.mode(medical_specialty_grouped), # Most common medical specialty across visits
+            hospital = hospital[which.max(apt_date)], # most recent hospital
+            age = age_june30[which.max(apt_date)] # Age should be the same for all appts because it's based on dob
             ) %>%
   ungroup() %>% 
   rename("sex_desc" = "gender") %>%
   mutate(sex_desc = as.factor(sex_desc),
+         age_group = as.factor(ifelse(age <= 2, "0-2", 
+                               ifelse(age >= 3 & age <= 5, "3-5",
+                               ifelse(age >=6 & age <= 8, "6-8", 
+                               ifelse(age >=9 & age <=11, "9-11", 
+                               ifelse(age >=12 & age <= 14, "12-14", 
+                               ifelse(age >= 15 & age <= 18, "15-18", "Adult"))))))),
+         age = as.factor(age),
          commune_name = as.factor(commune_name),
          ses_status = as.factor(ses_status),
          autism = as.factor(autism),
          medical_specialty_grouped = as.factor(medical_specialty_grouped),
          hospital = as.factor(hospital)) %>%
   select(sex_desc,
+         #age,
+         age_group,
          commune_name,
-         #hospital,
-         ses_status,
+         hospital,
+         ses_status)#,
          #autism,
-         medical_specialty_grouped)
+         #medical_specialty_grouped)
 # Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
   
 
 res_mca_patients <- FactoMineR::MCA(patients_mca, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 4, # Needs to match number of features
+                                    ncp = 5, # Needs to match number of features
                                     graph = TRUE) 
 fviz_mca_var(res_mca_patients, choice = "mca.cor", 
             repel = TRUE, # Avoid text overlapping (slow)
