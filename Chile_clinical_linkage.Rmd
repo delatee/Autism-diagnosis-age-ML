@@ -22,6 +22,8 @@ library(RecordLinkage)
 library(dgof) # for statistical testing
 library(fdm2id) # for predict that works for kmeans
 library(ppclust) # for cmeans
+library(factoextra) # for get_cluster_?
+library(FactoMineR) # for MCA
 library(tidyverse)
 
 ```
@@ -843,12 +845,59 @@ n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id
 
 ```
 
+# Multiple Correspondence Analysis
+
+https://www.tibco.com/reference-center/what-is-correspondence-analysis#:~:text=Correspondence%20analysis%2C%20also%20called%20reciprocal,two%20or%20more%20data%20points.
+https://ladal.edu.au/clust.html
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3810057/
+http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/
+
+```{r MCA}
+# Test if there is sufficient structure in the data to do clustering
+clinical_mca <- clinical %>%
+  mutate(sex = ifelse(gender == "Male", 1, ifelse(gender == "Female", 2, NA)),
+         appt_type = ifelse(type_appointment == "New", 1,
+                            ifelse(type_appointment == "Control" | type_appointment == "CONTROL", 2,
+                                   ifelse(type_appointment == "Discharge", 3, NA))),
+         commune_code = as.numeric(commune_code),
+         ses_detailed = ifelse(socio_economic_level == "FONASA - A", 1, 
+                      ifelse(socio_economic_level == "FONASA - B", 2,
+                      ifelse(socio_economic_level == "FONASA - C", 3, 
+                      ifelse(socio_economic_level == "FONASA - D", 4,
+                      ifelse(socio_economic_level == "Private Health Insurance", 5, 
+                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 5, NA)))))),
+         gender = as.factor(gender),
+         commune_name = as.factor(commune_name),
+         hospital = as.factor(hospital),
+         medical_specialty = as.factor(medical_specialty)
+         ) %>%
+  select(#id, 
+         gender, 
+         #age_june30, 
+         #commune_code, 
+         commune_name, 
+         #ses_detailed, 
+         hospital, 
+         medical_specialty)#,
+         #appt_type)
+
+#clusttendency <- get_clust_tendency(clinical_mca,
+#                                    n = 5, # Needs to be same as number of features
+#                                    gradient = list(low = "steelblue", high = "white"))  
+# Can only handle numeric data so not that useful but even with only the numeric features,
+# the Hopkins stat is very close to 1 (0.997) so the data is highly clusterable
+
+FactoMineR::MCA(clinical_mca, ncp = 5, graph = TRUE) # Can only take categorical variables and they have to be cast to factors
+
+```
+
+
 
 # CFA for clinical data
 
 ```{r cfa}
 clinical_fa <- clinical %>%
-  mutate(sex_desc = ifelse(gender == "Male", 1, ifelse(gender == "Female", 2, NA)),
+  mutate(sex = ifelse(gender == "Male", 1, ifelse(gender == "Female", 2, NA)),
          appt_type = ifelse(type_appointment == "New", 1,
                             ifelse(type_appointment == "Control" | type_appointment == "CONTROL", 2,
                                    ifelse(type_appointment == "Discharge", 3, NA))),
@@ -859,7 +908,7 @@ clinical_fa <- clinical %>%
                       ifelse(socio_economic_level == "FONASA - D", 4,
                       ifelse(socio_economic_level == "Private Health Insurance", 5, 
                       ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 5, NA))))))) %>%
-  select(id, sex_desc, age_june30, ses_detailed, appt_type)
+  select(id, sex, age_june30, ses_detailed, appt_type)
 # would like to have medical specialty here too
 
 # Using all sn categories together isn't really legit

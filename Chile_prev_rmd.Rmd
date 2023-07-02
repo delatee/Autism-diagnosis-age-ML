@@ -1066,6 +1066,10 @@ theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
+# OR Uniform prior https://stats.stackexchange.com/questions/555260/how-to-set-prior-for-bayesian-analysis 
+
+
+
   # Initial values for model chains
 rand_ini <- list(list(theta = rep(0.001, nFeat)), #, spec = 0.5, sens = 0.5),
                    list(theta = rep(0.01, nFeat))) #, spec = 0.9, sens = 0.9))
