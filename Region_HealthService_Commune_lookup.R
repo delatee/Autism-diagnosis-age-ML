@@ -4,6 +4,7 @@
 library(writexl)
 library(tidyverse)
 
+# Get level 3 ie commune boundaries
 chile.adm2 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm2_bcn_20211008.shp")
 chile.adm3 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm3_bcn_20211008.shp") %>%
   mutate(commune_code = str_sub(ADM3_PCODE, start = 3, end = -1),
@@ -13,40 +14,13 @@ chile_communes_raw <- read_excel("04_Data/commune_by_health_service.xlsx") %>%
   clean_names()
 
 chile_communes <- chile_communes_raw %>%
-  #mutate(comuna_upper = toupper(comuna)) %>%
-  # mutate(commune_name = ifelse(comuna_upper == "AISÉN", "AYSÉN",
-  #                                     ifelse(comuna_upper == "LA CALERA", "CALERA",
-  #                                            ifelse(comuna_upper == "COIHAIQUE", "COYHAIQUE",
-  #                                                   ifelse(comuna == "Isla de Pascua", "ISLA DE PASCUA",
-  #                                                          ifelse(comuna_upper == "MAULLÍN" , "MAULLIN",
-  #                                                                 ifelse(comuna == "Pedro Aguirre Cerda", "PEDRO AGUIRRE CERDA",
-  #                                                                        ifelse(comuna_upper == "RÁNQUIL", "RANQUIL",
-  #                                                                               ifelse(comuna_upper == "TREGUACO", "TREHUACO",
-  #                                                                                      ifelse(comuna_upper == "VICHUQUÉN", "VICHUQUEN", comuna_upper)))))))
-  #                                     ))) %>%
-  mutate(commune_name = #ifelse(comuna == "Aisén", "Aysén", # Doesn't work
-                        ifelse(comuna == "La Calera", "Calera",
+  mutate(commune_name = ifelse(comuna == "La Calera", "Calera",
                         ifelse(comuna == "Coihaique", "Coyhaique",
-                        #ifelse(comuna == "Isla de Pascua", "Isla de Pascua",
-                        #ifelse(comuna == "Los Álamos" , "Los Alamos", # Doesn't work
-                        #ifelse(comuna == "Los Ángeles", "Los Angeles", # Doesn't work
-                        #ifelse(comuna == "Marchihue", "Marchigüe",
                         ifelse(comuna == "Paiguano", "Paihuano",
-                        ifelse(comuna == "Pedro Aguirre Cerda", "Pedro Aguirre Cerda",
-                        #ifelse(comuna == "Ránquil", "Ranquil",
-                        comuna))))) %>%
+                        ifelse(comuna == "Pedro Aguirre Cerda", "Pedro Aguirre Cerda", comuna))))) %>%
 rename("health_service_name" = "servicio_de_salud") %>%
   select(commune_name, health_service_name)
 
-
-# chile_merged_raw <- read.csv("04_Data/Data_Chile_Merge.csv") %>% clean_names()
-# 
-# chile_merged <- chile_merged_raw %>%
-#   rename(commune_code = cod_com_rbd,
-#          region_name = nom_reg_rbd_a,
-#          commune_name = nom_com_rbd) %>%
-#   group_by(region_name, commune_code, commune_name) %>%
-#   summarise()
 
 region_service_commune_lookup <- chile.adm3 %>%
   merge(chile_communes, by = "commune_name", all.x = TRUE) %>%
@@ -61,6 +35,7 @@ region_service_commune_lookup <- chile.adm3 %>%
          region_code = str_sub(ADM1_PCODE, start = 3, end = -1),
          commune_name_upper = toupper(commune_name)) %>%
   rename(region_name = ADM1_ES) %>%
+  filter(commune_code != "01401") %>% # Just remove the Tocopilla duplicate because we probably won't need to map this bit. Could instead merge the polygons
   select(region_name, region_code, 
          commune_name, commune_name_upper, commune_code, 
          health_service_name,
