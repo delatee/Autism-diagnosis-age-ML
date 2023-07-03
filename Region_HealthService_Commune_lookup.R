@@ -58,11 +58,11 @@ region_service_commune_lookup <-merge(region_service_commune_lookup,
                                        by = "health_service_name", all = TRUE) %>%
   rename(region_name_long = region_name,
          health_service_name_long = health_service_name) %>%
-  mutate(region_name = ifelse(grepl("Región de ", region_name_long), 
+  mutate(region_name = ifelse(region_name_long == "Región Metropolitana de Santiago", "Santiago",
+                       ifelse(grepl("Región de ", region_name_long), 
                               substr(region_name_long, start = 11, stop = nchar(region_name_long)), 
                        ifelse(grepl("Región del ", region_name_long), 
-                              substr(region_name_long, start = 12, stop = nchar(region_name_long)),
-                       ifelse(region_name_long == "Región Metropolitana", "Metropolitana", NA))),
+                              substr(region_name_long, start = 12, stop = nchar(region_name_long)), NA))),
          health_service_name = ifelse(grepl(" Del ", health_service_name_long), 
                                       str_sub(health_service_name_long, start = 23, end = -1), 
                                       str_sub(health_service_name_long, start = 19, end = -1))) %>%
