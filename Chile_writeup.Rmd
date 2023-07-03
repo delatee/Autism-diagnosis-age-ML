@@ -1,0 +1,789 @@
+---
+title: Investigating the autism and ADHD prevalence in Chile through Bayesian prevalence
+  analysis and clinical record data linkage
+author: "Student 5526"
+date: "`r Sys.Date()`"
+output: 
+  pdf_document:
+    number_sections: TRUE
+
+---
+    
+<!--header-includes:
+  - \usepackage{titling}
+  - \pretitle{\begin{center}
+  - \posttitle{\end{center}} -->
+  
+<!-- Optionally include a page break. This will force the start
+of the document to the second page -->
+
+
+This dissertation is submitted for the degree of Master of Philosophy. The dissertation does not exceed the word limit for the respective Degree Committee.
+Word count: xxx TODO
+
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+knitr::opts_knit$set(root.dir = "C:/Users/delat/OneDrive/MPhil Population Health Sciences 2022-2023/12 Dissertation")
+```
+
+
+```{r libraries}
+
+#library(nleqslv) # Only needed for robince bayesian prevalence
+library(janitor)
+library(gridExtra)
+library(readxl)
+library(writexl)
+library(viridis)
+#library(wesanderson)
+library(rgbif)
+library(chilemapas) # For commune maps
+library(leaflet)
+library(plotly)
+library(sf)
+library(sp)
+library(broom)
+library(psych)
+library(Hmisc)
+library(poolr)
+library(epitools)
+#library(corrplot)
+#library(caret)
+library(mltools)
+library(ggrepel)
+library(rjags)
+library(rstan)
+library(posterior)
+library(tidybayes)
+library(bayesplot)
+library(reclin2)
+library(lubridate)
+library(RecordLinkage)
+library(dgof) # for statistical testing
+library(fdm2id) # for predict that works for kmeans
+library(ppclust) # for cmeans
+library(factoextra) # for get_cluster_?
+library(FactoMineR) # for MCA
+library(tidyverse)
+
+```
+
+
+```{r import geographic data}
+
+# Import region and commune boundaries
+# https://data.humdata.org/dataset/cod-ab-chl
+chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp", quiet = TRUE) #%>%
+  #st_transform(crs = 32629)
+chile.adm3 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm3_bcn_20211008.shp", quiet = TRUE) %>%
+  mutate(commune_code = str_sub(ADM3_PCODE, start = 3, end = -1),
+         commune_name = ADM3_ES)
+
+# Get communes with health services
+chile_communes_raw <- read_excel("04_Data/commune_by_health_service.xlsx") %>%
+  clean_names()
+
+chile_communes <- chile_communes_raw %>%
+  mutate(commune_name = ifelse(comuna == "La Calera", "Calera",
+                        ifelse(comuna == "Coihaique", "Coyhaique",
+                        ifelse(comuna == "Paiguano", "Paihuano",
+                        ifelse(comuna == "Pedro Aguirre Cerda", "Pedro Aguirre Cerda",
+                        comuna))))) %>%
+rename("health_service_name" = "servicio_de_salud") %>%
+  select(commune_name, health_service_name)
+
+# Create a number for each health service
+health_service_lookup <- chile_communes %>%
+  group_by(health_service_name) %>%
+  summarise() %>% 
+  arrange(health_service_name) %>%
+  rowid_to_column("health_service_code")
+
+# Get region codes with region name abbreviations
+region_abr_lookup <- data.frame(
+  ADM1_PCODE = c(paste0("CL0", c(1:9)), paste0("CL", c(10:16))),
+  region_name_abr = c("TPCA", "ANTOF", "ATCMA", "COQ", "VALPO", "LGBO", "MAULE", "BBIO",
+                      "ARAUC", "LAGOS", "AYSEN", "MAG", "RM", "RIOS", "AYP", "NUBLE"))
+
+# Put region, health service and communes together
+region_service_commune_lookup <- chile.adm3 %>%
+  merge(chile_communes, by = "commune_name", all.x = TRUE) %>%
+  mutate(health_service_name = 
+           ifelse(ADM3_PCODE == "CL11201", "Servicio de Salud Aisén",
+           ifelse(commune_name == "Isla de Pascua", "Servicio de Salud Metropolitano Oriente",
+           ifelse(commune_name == "Los Alamos", "Servicio de Salud Arauco",
+           ifelse(commune_name == "Los Angeles", "Servicio de Salud Biobío",
+           ifelse(ADM3_PCODE == "CL06204", "Servicio de Salud Del Libertador B.O'Higgins",
+           ifelse(commune_name == "Pedro Aguirre Cerda", "Servicio de Salud Metropolitano Sur",
+           ifelse(commune_name == "Ranquil", "Servicio de Salud Ñuble", health_service_name))))))),
+         region_code = str_sub(ADM1_PCODE, start = 3, end = -1),
+         commune_name_upper = toupper(commune_name)) %>%
+  rename(region_name = ADM1_ES) %>%
+  filter(commune_code != "01401") %>% # Just remove the Tocopilla duplicate because we probably won't need to map this bit. Could instead merge the polygons
+  merge(region_abr_lookup, by = "ADM1_PCODE")
+  
+region_service_commune_lookup <-merge(region_service_commune_lookup, 
+                                      health_service_lookup,
+                                       by = "health_service_name", all = TRUE) %>%
+  rename(region_name_long = region_name,
+         health_service_name_long = health_service_name) %>%
+  mutate(region_name = ifelse(region_name_long == "Región Metropolitana de Santiago", "Metropolitana de Santiago",
+                       ifelse(grepl("Región de ", region_name_long), 
+                              substr(region_name_long, start = 11, stop = nchar(region_name_long)), 
+                       ifelse(grepl("Región del ", region_name_long), 
+                              substr(region_name_long, start = 12, stop = nchar(region_name_long)), NA))),
+         health_service_name = ifelse(grepl(" Del ", health_service_name_long), 
+                                      str_sub(health_service_name_long, start = 23, end = -1), 
+                                      str_sub(health_service_name_long, start = 19, end = -1))) %>%
+  select(region_name_long, region_name, region_name_abr, region_code, ADM1_PCODE,
+         commune_name, commune_name_upper, commune_code, 
+         health_service_name_long, health_service_name, health_service_code,
+         geometry)
+
+# Aggregate to region level (no )
+region_lookup <- region_service_commune_lookup %>% 
+  as.tibble %>%
+  select(-geometry) %>%
+  group_by(region_code, ADM1_PCODE, region_name, region_name_abr) %>% 
+  summarise() 
+
+# Extract communes for the Araucania Sur and Norte health services
+araucnorte_communes <- region_service_commune_lookup %>%
+  filter(str_detect(health_service_name, "a Norte")) %>%
+  as.tibble() %>%
+  select(commune_name)
+araucsur_communes <- region_service_commune_lookup %>%
+  filter(str_detect(health_service_name, "a Sur")) %>%
+  as.tibble() %>%
+  select(commune_name)
+
+```
+
+```{r import standard population data}
+chile_stdpop_raw <- read_excel("04_Data/pop_chile_2021_single_age.xlsx") %>%
+  clean_names() 
+
+chile_stdpop <- chile_stdpop_raw %>%
+  filter(sex != 9) %>%
+  rename("std_pop" = "pop_2021") %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
+```
+
+```{r import chile demog data}
+# https://www.ine.gob.cl/estadisticas/sociales/demografia-y-vitales/proyecciones-de-poblacion
+chile_regionpop_raw <- read_excel("04_Data/ine_estimaciones-y-proyecciones-2002-2035_base-2017_region_area_tabulados.xlsx", sheet = "Region summary 2021") %>%
+  clean_names()
+
+chile_regionpop <- chile_regionpop_raw %>%
+  mutate(region_name = ifelse(region == "Aysén", "Aysén del Gral. Ibañez del Campo",
+                         ifelse(region == "Biobío", "Bío-Bío",
+                         ifelse(region == "Magallanes", "Magallanes y Antártica Chilena",
+                         ifelse(region == "Metropolitana", "Metropolitana de Santiago",
+                         ifelse(region == "OHiggins", "Libertador Bernardo O'Higgins", region)))))) %>%
+  select(-region)
+
+# https://www.ine.gob.cl/estadisticas/sociales/ingresos-y-gastos/encuesta-suplementaria-de-ingresos
+# Income is from Supplementary Income Survey (ESI) (2021), data is from Instituto Nacional de Estadística (INE).
+chile_regionincome_raw <- read_excel("04_Data/ingreso-medio-mensual-por-region-2010---2021.xlsx", skip = 2) %>%
+  clean_names()
+
+chile_regionincome <- chile_regionincome_raw %>%
+  filter(ano == 2021,
+         region != "Nacional") %>%
+  mutate(region_short = ifelse(grepl("Región de ", region), 
+                               substr(region, start = 11, stop = nchar(region)), 
+                        ifelse(grepl("Región del ", region), 
+                               substr(region, start = 12, stop = nchar(region)),
+                        ifelse(region == "Región Metropolitana", "Metropolitana", NA))),
+         region_name = ifelse(region_short == "Aysén", "Aysén del Gral. Ibañez del Campo",
+                         ifelse(region_short == "Biobío", "Bío-Bío",
+                         ifelse(region_short == "Magallanes", "Magallanes y Antártica Chilena",
+                         ifelse(region_short == "Metropolitana", "Metropolitana de Santiago",
+                         ifelse(region_short == "O’Higgins", "Libertador Bernardo O'Higgins", region_short)))))) %>%
+  select(region_name, ingreso_medio_nominal)
+
+```
+
+```{r import school data}
+
+chile_merged_raw <- read.csv("04_Data/Data_Chile_Merge.csv") %>% clean_names()
+
+chile_merged <- chile_merged_raw %>%
+  rename(sex_desc = sex,
+         year = agno,
+         school_code = rbd,
+         school_check_code = dgv_rbd, 
+         school_name = nom_rbd,
+         school_region_code = cod_reg_rbd,
+         school_region_name_abr = nom_reg_rbd_a,
+         school_province_code = cod_pro_rbd,
+         school_commune_code = cod_com_rbd,
+         school_commune_name = nom_com_rbd,
+         school_dept_code = cod_deprov_rbd,
+         school_dept_name = nom_deprov_rbd,
+         school_dependency_code = cod_depe, # has categories 1-6, no1 and no2 here are no1 in grouped
+         school_dependency_code_grouped = cod_depe2, # has categories 1-5
+         school_rurality_code = rural_rbd,
+         school_operation_status = estado_estab, 
+         teaching_code1 = cod_ense, # min = 10, max = 910, eg preschool, special education hearing impaired
+         teaching_code2 = cod_ense2, # subject matter coding, 1-8
+         teaching_code3 = cod_ense3, # age based coding, 1-7
+         grade_code1 = cod_grado, # grade of schooling, 1-10, 21-25, 31-34, nests in teaching_code1
+         grade_code2 = cod_grado2, # equivalent grade of schooling for adult special education, 1-8, 99
+         grade_letter = let_cur, # refers to the class within the grade, close to start of alphabet is higher aptitude
+         course_timing = cod_jor, # time of day, morning, afternoon, both, night, no info
+         course_type = cod_tip_cur, # 0 = simple course, 1-4 = combined course, 99 = no info
+         course_descr = cod_des_cur, # Description of course (TP secondary education only). 0: Does not apply, 1: Only High School, 2: Dual, 3: Other
+         student_id = mrun,
+         sex = gen_alu, # 0 = no info, 1 = male, 2 = female
+         dob = fec_nac_alu_2, # The second one has DD
+         age_june30 = edad_alu, # age at 30th June 2021
+         special_needs_status = int_alu, # integrated student indicator, 0 = no, 1 = yes. Mostly no
+         special_needs_code = cod_int_alu, # ADHD, blindness, etc. 0 = none. 105 = autism, 203 = ADHD. See ER_Matricula_por_alumno_PUBL_MRUN annex 7
+         student_region_code = cod_reg_alu,
+         student_commune_code = cod_com_alu,
+         student_commune_name = nom_com_alu,
+         economic_sector_code = cod_sec,
+         economic_specialty_code = cod_espe,
+         economic_branch_code = cod_rama,
+         economic_profspec_code = cod_men,
+         teaching_code_new = ens) %>%
+  mutate(commune_code = ifelse(nchar(as.character(school_commune_code)) == 4,
+                               paste0("0", as.character(school_commune_code)),
+                               as.character(school_commune_code)))
+```
+
+
+```{r import clinical data}
+clinical_large_raw <- read_excel("04_Data/dataset_ssas_2015_2021.xlsx") %>% clean_names
+#describe(clinical_raw)
+
+clinical_large <- clinical_large_raw %>%
+  select(c(-procedence, -ethnicity, -education_level, -disability, -foster_care)) %>%
+  # Fix the date columns
+  mutate(dob_eng = ifelse(str_detect(date_of_birth, "/"), 1,
+                   ifelse(str_detect(date_of_birth, "-"), 0, NA)),
+         apt_eng = ifelse(str_detect(date_appointment, "/"), 1, ifelse(str_detect(date_appointment, "-"), 0, NA)),
+         dob_day = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "^\\d+")), 
+                   ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "^\\d+")), NA)),
+         dob_month = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "(?<=/)\\d+(?=/)")), 
+                     ifelse(dob_eng == 0, str_extract(date_of_birth, "(?<=-)\\w+(?=-)"), NA)),
+         dob_year = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "\\d+$")), 
+                    ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "\\d+$")) + 2000, NA)),
+         dob_month_eng = as.integer(ifelse(dob_month == "ene", 1,
+                                    ifelse(dob_month == "abr", 4, 
+                                    ifelse(dob_month == "ago", 8, 
+                                    ifelse(dob_month == "sept", 9, 
+                                    ifelse(dob_month == "dic", 12, dob_month)))))),
+         dob = make_date(year = dob_year, month = dob_month_eng, day = dob_day),
+         apt_day = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "^\\d+")), 
+                   ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "^\\d+")), NA)),
+         apt_month = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "(?<=/)\\d+(?=/)")), 
+                     ifelse(apt_eng == 0, str_extract(date_appointment, "(?<=-)\\w+(?=-)"), NA)),
+         apt_year = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "\\d+$")), 
+                    ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "\\d+$")) + 2000, NA)),
+         apt_month_eng = as.integer(ifelse(apt_month == "ene", 1,
+                                    ifelse(apt_month == "abr", 4, 
+                                    ifelse(apt_month == "ago", 8, 
+                                    ifelse(apt_month == "sept", 9, 
+                                    ifelse(apt_month == "dic", 12, apt_month)))))),
+         apt_date = make_date(year = apt_year, month = apt_month_eng, day = apt_day),
+         age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
+         commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN",
+                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN",
+                        ifelse(comuna == "PUCON", "PUCÓN",
+                        ifelse(comuna == "TOLTEN", "TOLTÉN",
+                        ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
+         #commune_name_upper = comuna,
+         ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
+                      ifelse(socio_economic_level == "FONASA - B", 2,
+                      ifelse(socio_economic_level == "FONASA - C", 2, 
+                      ifelse(socio_economic_level == "FONASA - D", 2,
+                      ifelse(socio_economic_level == "Private Health Insurance", 3, 
+                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA)))))),
+         autism = 1,
+         intdisab = 0,
+         aut_rank = 1
+         ) %>%
+  left_join(region_service_commune_lookup, by = "commune_name_upper") %>%
+  select(id, gender, 
+         commune_code, commune_name, commune_name_upper, 
+         health_service_name, region_name, 
+         socio_economic_level, ses_status, 
+         dob, age_june30, 
+         apt_date, hospital, medical_specialty, type_appointment,
+         autism, intdisab, aut_rank) 
+
+aut_codes <- unique(clinical_large_raw$codigo)
+
+clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
+
+clinical_small <- clinical_small_raw %>%
+  rename("dob" = "fecha_nacimiento",
+         "apt_date" = "fecha_ejecutada",
+         "type_appointment" = "appoinment",
+         "diagnosis" = "diagnostico_1") %>%
+  mutate(gender = str_to_title(gender),
+         autism = ifelse(cod_dg_1 %in% aut_codes | 
+                           cod_dg_2 %in% aut_codes | 
+                           cod_dg_3 %in% aut_codes, 1, 0),
+         aut_rank = ifelse(cod_dg_1 %in% aut_codes, 1,
+                    ifelse(cod_dg_2 %in% aut_codes, 2,
+                    ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
+         age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
+         commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
+                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
+                        ifelse(comuna == "PUCON", "PUCÓN", 
+                        ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                        ifelse(comuna == "VILCUN", "VILCÚN", 
+                        ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
+                        ifelse(comuna == "MACHALI", "MACHALÍ",
+                        ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
+         ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
+                      ifelse(socio_economic_level == "FONASA - B", 2,
+                      ifelse(socio_economic_level == "FONASA - C", 2, 
+                      ifelse(socio_economic_level == "FONASA - D", 2,
+                      ifelse(socio_economic_level == "Private Health Insurance", 3, 
+                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA))))))
+         ) %>%
+  left_join(region_service_commune_lookup, by = "commune_name_upper") %>%
+  #filter(autism == 1) %>%
+  select(id, gender, commune_code, commune_name, commune_name_upper, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, cod_dg_1, cod_dg_2, cod_dg_3, diagnosis, autism, aut_rank) 
+# Throws a warning because there are 2 records for Tocopila which is in two regions. Will keep both because we have no way of knowing which is correct.
+# Doesn't anymore because I changed the lookup to have only 1 Tocopilla row
+
+intdisab_codes <- unique(c(clinical_small_raw$cod_dg_1, clinical_small_raw$cod_dg_2, clinical_small_raw$cod_dg_3)) %>%
+  str_subset("F7") %>%
+  sort() 
+
+clinical_small <- clinical_small %>% 
+  mutate(intdisab = ifelse(cod_dg_1 %in% intdisab_codes |
+                             cod_dg_2 %in% intdisab_codes | 
+                             cod_dg_3 %in% intdisab_codes, 1, 0)) %>%
+  #rename("codigo" = "cod_dg_1") %>%
+  select(c(-cod_dg_1, -cod_dg_2, -cod_dg_3, -diagnosis))
+
+clinical <- rbind(clinical_large, clinical_small)
+
+clinical_communes <- clinical %>% group_by(commune_code) %>% summarise() %>% arrange() %>%
+  mutate(commune_in_school_data = ifelse(commune_code %in% unique(chile_merged$commune_code), 1, 0)) # Needs to all be 1's
+
+```
+
+
+```{r functions bayes}
+
+get_grouped_prev_plot <- function(x, grouping_vars, disease) {
+  # Calculates sample prevalence and its confidence intervals for supplied feature grouping
+  # x = chile_bayes_aut or chile_bayes_adhd, needs columns called autism or adhd, and count
+  # grouping_vars = variables in x to group by
+  # disease = autism or adhd
+  
+  x_grouped <- x %>% 
+    group_by(across(all_of(grouping_vars))) %>%
+    summarise(count = n()) %>%
+    pivot_wider(names_from = disease, values_from = count) %>%
+    rename("n_nodisease" = "0", "n_disease" = "1") %>% #, "age" = "age_june30") %>%
+    mutate(n_disease = ifelse(is.na(n_disease), 0, n_disease), # If there are no cases of autism in the group, input 0
+           sample_pop_size = n_nodisease + n_disease, # Total sample population is autism cases + not cases
+           sample_prevalence = n_disease / sample_pop_size, # Prevalence of autism in the group
+           ci_lower = sample_prevalence - (1.96 * sqrt(sample_prevalence * (1 - sample_prevalence) / sample_pop_size)),
+           ci_upper = sample_prevalence + (1.96 * sqrt(sample_prevalence * (1 - sample_prevalence) / sample_pop_size))) %>%
+    ungroup()
+  return(x_grouped)
+}
+
+get_grouped_prev <- function(x, stdpop, grouping_vars, disease) {
+  # Calculates sample prevalence, age- and sex-standardised prevalence and group weighting for supplied feature grouping
+  # x = chile_bayes_aut, needs columns called autism, count
+  # stdpop = standard population with age and sex counts
+  # grouping_vars = variables in x to group by
+  # disease = autism or adhd
+  
+  n_stdpop <- sum(stdpop$std_pop)
+  
+  x_grouped <- x %>% 
+    group_by(across(all_of(grouping_vars))) %>%
+    summarise(count = n()) %>%
+    pivot_wider(names_from = disease, values_from = count) %>%
+    rename("n_nodisease" = "0", "n_disease" = "1", "age" = "age_june30") %>%
+    mutate(n_disease = ifelse(is.na(n_disease), 0, n_disease), # If there are no cases of autism in the group, input 0
+           sample_pop_size = n_nodisease + n_disease, # Total sample population is autism cases + not cases
+           sample_prevalence = n_disease / sample_pop_size) %>% # Prevalence of autism in the group
+    left_join(stdpop, by = c("age", "sex")) %>%
+    mutate(disease_prev_std = n_disease / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+           w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+           w2 = pop_prop / sample_pop_size,
+           #sum_std_pop = sum(std_pop)
+           ) %>%
+    ungroup()
+  return(x_grouped)
+}
+
+get_adjusted_prev <- function(x, grouping_vars) {
+  # Turns grouped prevalences into age- and sex- adjusted prevalences with Fay and Feuer Gamma confidence intervals
+  # x = output from get_grouped_prev
+  x_adj <- x %>%
+  group_by(across(all_of(grouping_vars))) %>%
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_disease) / sum(sample_pop_size),
+            crude_count = sum(n_disease),
+            adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  arrange(across(all_of(grouping_vars)))
+}
+
+do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBurn = 1000, nIter = 1000, convergence_checks = FALSE) {
+  # x = output from get_adjusted_prev. Needs to have columns sum_sample_pop_size, adjusted_count
+  # feat = feature being used as random effect
+  # model = JAGS random effects model
+  # theta_mu, theta_sigma = mean and sd of beta prior distribution
+  # pars = model parameters to report
+  # nBurn = number of burn-in samples
+  # nIter = number of posterior iterations
+  
+  nFeat <- length(unique(x[[feat]]))
+  FeatNames <- sort(unique(x[[feat]]))
+  
+  # Define beta prior
+  theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+  theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+  
+  # Initial values for model chains
+  rand_ini <- list(list(theta = rep(0.001, nFeat)), #, spec = 0.5, sens = 0.5),
+                   list(theta = rep(0.01, nFeat))) #, spec = 0.9, sens = 0.9)) 
+  
+  # Run JAGS model
+  rand_data <- list(theta_a = theta_a, 
+                    theta_b = theta_b,
+                    nObs = x$sum_sample_pop_size,
+                    disease_sample = x$adjusted_count,
+                    nFeat = nFeat)
+  rand_jag <- jags.model(textConnection(model),
+                         data = rand_data,
+                         inits = rand_ini,
+                         n.chains = 2,
+                         quiet = TRUE)
+  update(rand_jag, n.iter = nBurn)
+  rand_sam <- coda.samples(model = rand_jag,
+                           variable.names = pars,
+                           n.iter = nIter)
+  
+  # Convergence checks
+  if(convergence_checks) {
+    print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+    print(mcmc_trace(rand_sam, paste0("aut_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+    rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                         ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                         ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                         "rhat") %>%
+      arrange(desc(rhat))
+    print(rand_summ)
+  }
+  
+  # Extract posterior density
+  prev_post <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "Feat",
+                 values_to = "predicted_prev") %>%
+    mutate(Feat_names = factor(Feat, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
+    select(Iteration, Feat_names, predicted_prev)
+  
+  return(prev_post)
+}
+
+
+plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigma, title_text = "") {
+  # Plots posterior densities and their 95% credible intervals, and sample prevalence confidence intervals
+  # jags_post = output from do_jags_rand_model, ie posterior densities
+  # sample data = output from get_adjusted_prev, ie sample prevalences with confidence intervals
+  # feat = the same feature used as the random effect in do_jags_rand_model
+  # theta_mu, theta_sigma = mean and sd of beta prior distribution used in do_jags_rand_model
+  
+  # calcuate posterior credible intervals
+  post_ci <- jags_post %>%
+  group_by(across(all_of(feat))) %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+  print(ggplot() +
+          geom_density(data = jags_post, aes(x = predicted_prev)) +
+          geom_vline(data = post_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
+          geom_vline(data = post_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
+          geom_vline(data = sample_data, aes(xintercept = ci_lower), color = "red", linetype = "dashed") +
+          geom_vline(data = sample_data, aes(xintercept = ci_upper), color = "red", linetype = "dashed") +
+          facet_wrap(as.formula(paste0("~", feat))) +
+          labs(title = paste0("Prior mean = ", signif(theta_mu, 3), ", prior sd = ", signif(theta_sigma, 3), title_text)))
+}
+
+
+```
+
+```{r functions restructure}
+# Define some functions to help with restructuring clinical data into patient level data
+get.min.na <- function(x) ifelse( !all(is.na(x)), min(x, na.rm = TRUE), NA)
+
+get.max.na <- function(x) ifelse( !all(is.na(x)), max(x, na.rm = TRUE), NA)
+
+get.mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+get.yes.disability <- function(x) {
+  y <- NA
+  if(any(x == "Yes")) {
+    y <- "Yes disability"
+  } else if(any(x == "No")) {
+    y <- "No disability"
+  } else {
+    y <- "No disability information"
+  }
+  return(y)
+}
+
+get.yes.fostercare <- function(x) {
+  y <- NA
+  if(any(x == "Yes")) {
+    y <- "Yes foster care"
+  } else if(any(x == "No")) {
+    y <- "No foster care"
+  } else {
+    y <- "No foster care information"
+  }
+  return(y)
+}
+
+
+```
+
+
+
+# Abstract
+
+TODO
+
+
+# Declaration
+
+This dissertation is the result of my own work and includes nothing which is the outcome of work done in collaboration except where specifically indicated in the text.
+
+USN: xxxxx July, 2022
+
+TODO - is this section needed?
+
+
+# Introduction
+
+```{r map}
+#commune_geoms <- data.frame(mapa_comunas)
+#communes_lookup <- data.frame(codigos_territoriales)
+
+# Get region-level geometries with demographic data for plotting
+demog_geom <- chile.adm1 %>%
+  left_join(region_lookup, by = "ADM1_PCODE") %>%
+  left_join(chile_regionpop, by = "region_name") %>%
+  left_join(chile_regionincome, by = "region_name")
+
+#chile.adm2 <- st_read("04_Data/CHL_adm/CHL_adm2.shp") # Also doesn't have Biobio
+#chile.adm2 <- st_transform(chile.adm2, crs = 32629)
+
+#region_geoms_demog <- region_geoms %>%
+#  left_join(chile_regionpop, by = "nombre_region") %>%
+#  left_join(chile_regionincome, by = "nombre_region") %>%
+#  select(-region)
+```
+
+```{r map pop, include = TRUE}
+# Population
+ggplot(demog_geom) + 
+  geom_sf(mapping = aes(geometry = geometry, fill = youth_pop_2021), linewidth = 0.01) +
+  geom_sf_text(mapping = aes(geometry = geometry, label = region_name), nudge_x = 8, size = 3) +
+  scale_fill_viridis(option = "viridis", direction = 1, name = "Population") + #, limits = c(23000, 400000), oob = scales::squish) +
+  labs(title = "Population aged 0-14 (2021 projections)") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  coord_sf(xlim = c(-85, -50), ylim = c(-60, -15))
+```
+
+```{r map income, include = TRUE}
+# Income
+ggplot(demog_geom) + 
+  geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.01) +
+  geom_sf_text(mapping = aes(geometry = geometry, label = region_name), nudge_x = 8, size = 3) +
+  scale_fill_viridis(option = "viridis", direction = 1, name = "Median income (Peso)") +
+  labs(title = "Net income from main job (2021)") +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  coord_sf(xlim = c(-85, -50), ylim = c(-60, -15))
+```
+
+
+
+```{r map arauc}
+# ARAUC communes
+arauc <- region_service_commune_lookup %>%
+  filter(ADM1_PCODE == "CL09")
+
+ggplot(arauc) +
+  geom_sf(mapping = aes(geometry = geometry, fill = health_service_name)) +
+  geom_sf_text(mapping = aes(geometry = geometry, label = commune_name), size = 3) +
+  coord_sf(xlim = c(-74, -70.5), ylim = c(-40, -37.5)) +
+  labs(title = "Communes in La Araucania") +
+  xlab("Longitude") +
+  ylab("Latitude")
+```
+
+# Methods
+
+
+# Results
+
+```{r restructure data}
+chile_bayes_aut <- chile_merged %>%
+  #select(-student_commune_name) %>%
+  left_join(region_service_commune_lookup, by = "commune_code") %>%
+  filter(age_june30 >= 6 & age_june30 <= 18,
+         #special_needs_status == 1,
+         sex != 0) %>%
+  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
+         age_cat = ifelse(age_june30 <= 8, 1, ifelse(age_june30 <= 11, 2, ifelse(age_june30 <= 14, 3, 4))),
+         age_cat_name = ifelse(age_cat == 1, "6-8", ifelse(age_cat == 2, "9-11", ifelse(age_cat == 3, "12-14", "15-18"))),
+          # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
+         age_cat_name = factor(age_cat_name, levels = c("6-8", "9-11", "12-14", "15-18")),
+         ethnic_2_group = ifelse(ethnic_3_group == "Aymara", "Other ethnic group", ethnic_3_group),
+         school_fee_temp = school_fee,
+         school_fee = ifelse(school_fee == "", "No information", 
+                      ifelse(school_fee == "GRATUITO", "Free", 
+                      ifelse(school_fee == "$1.000 A $10.000", "$1,000-$10,000",
+                      ifelse(school_fee == "$10.001 A $25.000", "$10,001-$25,000", 
+                      ifelse(school_fee == "$25.001 A $50.000", "$25,001-$50,000",
+                      ifelse(school_fee == "$50.001 A $100.000", "$50,001-$100,000", 
+                      ifelse(school_fee == "MAS DE $100.000", "$100,001+", 
+                      ifelse(school_fee == "SIN INFORMACION", "No information", NA)))))))),
+         school_fee = factor(school_fee, levels = c("Free", "$1,000-$10,000", "$10,001-$25,000", "$25,001-$50,000", "$50,001-$100,000", "$100,001+", "No information")),
+         school_fee_group = ifelse(school_fee == "Free", "Free", 
+                            ifelse(school_fee %in% c("$1,000-$10,000", "$10,001-$25,000", "$25,001-$50,000", "$50,001-$100,000"), "Low",
+                            ifelse(school_fee == "$100,001+", "Medium", 
+                            ifelse(school_fee == "No information", "No information", NA)))),
+         school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium", "No information"))) %>% 
+  #left_join(commune_region_lookup, by = c("commune_code")) %>%
+  #rename(school_commune_code = commune_code) %>%          
+  select(school_region_name_abr,
+         region_name,
+         commune_code,
+         school_commune_name,
+         commune_name,
+         health_service_code,
+         health_service_name,
+         sex,
+         sex_desc,
+         age_june30,
+         #edad_alu_2, # equal to age_june30
+         age_cat,
+         age_cat_name,
+         school_rurality_code,
+         #rural_rbd_2, # not quite equal to school_rurality_code as it has NA's
+         pago_matricula,
+         pago_mensual,
+         school_fee,
+         school_fee_group,
+         school_fee_temp,
+         ethnicity,
+         mapuche,
+         nationality,
+         ethnic_3_group,
+         ethnic_2_group,
+         #asd_chile, # equal to autism
+         autism
+  ) 
+```
+
+
+## School data
+
+TODO - table summarising data content
+
+
+## Frequentist prevalence estimation
+
+
+```{r adj prev}
+
+aut_prev <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                             grouping_vars = c("age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
+
+aut_prev_adj <- aut_prev %>% 
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_autism) / sum(sample_pop_size),
+            crude_count = sum(n_autism),
+            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
+
+```
+
+```{r adj prev sex}
+chile_stdpop_f <- chile_stdpop %>%
+  filter(sex == 2) %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
+chile_stdpop_m <- chile_stdpop %>%
+  filter(sex == 1) %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
+
+aut_prev_f <- chile_bayes_aut %>%
+  filter(sex == 2) %>%
+  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"))
+aut_prev_adj_f <- get_adjusted_prev(aut_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female")
+
+aut_prev_m <- chile_bayes_aut %>%
+  filter(sex == 1) %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"))
+aut_prev_adj_m <- get_adjusted_prev(aut_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male")
+
+```
+
+
+```{r bayes global params}
+nObs <- nrow(chile_bayes_aut)
+nIter <- 1000
+nBurn <- 1000
+pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
+
+theta_mu_prior <- aut_prev_adj$adjusted_rate
+theta_sigma_prior <- (aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96)
+theta_mu_proj <- c(0.005, 0.01, 0.02, 0.03) # 0.5%, 1%, 2%, 3% prevalence
+theta_mu_proj_f <- c(0.0025, 0.005, 0.01, 0.02)
+theta_mu_proj_m <- c(0.01, 0.02, 0.03, 0.05)
+theta_sigma_proj <- c(rep((aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96), 4)) # Same as chosen prior
+#theta_mu <- c(theta_mu_prior, theta_mu_sens)
+#theta_sigma <- c(theta_sigma_prior, theta_sigma_sens)
+#theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+#theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+rand_model <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dbeta(theta_a, theta_b)
+    aut_sample[i] ~ dbin(theta[i], nObs[i])
+    aut_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+```
+
+

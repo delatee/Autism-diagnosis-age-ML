@@ -430,7 +430,7 @@ regions_lookup <- communes_lookup %>%
 #  full_join(regions_lookup, by = "codigo_region")
 
 # https://data.humdata.org/dataset/cod-ab-chl
-chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp") #%>%
+chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp", quiet = TRUE) #%>%
   #st_transform(crs = 32629)
 
 demog_geom <- chile.adm1 %>%
