@@ -98,6 +98,10 @@ rename("health_service_name" = "servicio_de_salud") %>%
 health_service_lookup <- chile_communes %>%
   group_by(health_service_name) %>%
   summarise() %>% 
+  #rename(health_service_name_long = health_service_name) %>%
+  mutate(health_service_name_short = ifelse(grepl(" Del ", health_service_name), 
+                                      str_sub(health_service_name, start = 23, end = -1), 
+                                      str_sub(health_service_name, start = 19, end = -1))) %>%
   arrange(health_service_name) %>%
   rowid_to_column("health_service_code")
 
@@ -124,19 +128,17 @@ region_service_commune_lookup <- chile.adm3 %>%
   filter(commune_code != "01401") %>% # Just remove the Tocopilla duplicate because we probably won't need to map this bit. Could instead merge the polygons
   merge(region_abr_lookup, by = "ADM1_PCODE")
   
-region_service_commune_lookup <-merge(region_service_commune_lookup, 
-                                      health_service_lookup,
+region_service_commune_lookup <- merge(region_service_commune_lookup, 
+                                       health_service_lookup,
                                        by = "health_service_name", all = TRUE) %>%
   rename(region_name_long = region_name,
-         health_service_name_long = health_service_name) %>%
+         health_service_name_long = health_service_name,
+         health_service_name = health_service_name_short) %>%
   mutate(region_name = ifelse(region_name_long == "Región Metropolitana de Santiago", "Metropolitana de Santiago",
                        ifelse(grepl("Región de ", region_name_long), 
                               substr(region_name_long, start = 11, stop = nchar(region_name_long)), 
                        ifelse(grepl("Región del ", region_name_long), 
-                              substr(region_name_long, start = 12, stop = nchar(region_name_long)), NA))),
-         health_service_name = ifelse(grepl(" Del ", health_service_name_long), 
-                                      str_sub(health_service_name_long, start = 23, end = -1), 
-                                      str_sub(health_service_name_long, start = 19, end = -1))) %>%
+                              substr(region_name_long, start = 12, stop = nchar(region_name_long)), NA)))) %>%
   select(region_name_long, region_name, region_name_abr, region_code, ADM1_PCODE,
          commune_name, commune_name_upper, commune_code, 
          health_service_name_long, health_service_name, health_service_code,
