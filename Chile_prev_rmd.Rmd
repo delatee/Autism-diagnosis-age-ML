@@ -432,6 +432,7 @@ regions_lookup <- communes_lookup %>%
 # https://data.humdata.org/dataset/cod-ab-chl
 chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp", quiet = TRUE) #%>%
   #st_transform(crs = 32629)
+chile.adm3 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm3_bcn_20211008.shp", quiet = TRUE)
 
 demog_geom <- chile.adm1 %>%
   left_join(regions_lookup, by = "ADM1_PCODE") %>%
@@ -475,6 +476,28 @@ ggplot(arauc) +
   labs(title = "Communes in La Araucania") +
   xlab("Longitude") +
   ylab("Latitude")
+
+```
+
+
+```{r biobio}
+# There are issues with the codes for student_commune_code because some of them used to be Biobio but are now Nuble
+biobio_nuble_lookup <- chile.adm3 %>%
+  filter(#ADM1_PCODE == "CL08" | 
+    ADM1_PCODE == "CL16")
+
+ggplot(biobio_nuble_lookup) +
+  geom_sf(mapping = aes(geometry = geometry, fill = ADM2_ES)) +
+  #geom_sf_text(mapping = aes(geometry = geometry, label = commune_name), size = 3) +
+  geom_sf_text(mapping = aes(geometry = geometry, label = commune_code), size = 3) +
+  #coord_sf(xlim = c(-74, -70.5), ylim = c(-40, -37.5)) +
+  labs(title = "Communes in Nuble") +
+  xlab("Longitude") +
+  ylab("Latitude")
+
+chile_merged_084xx <- chile_merged %>%
+  filter(grepl("084", commune_code) & school_region_name_abr == "BBIO") %>%
+  select(school_region_name_abr, school_commune_name, school_commune_code, commune_code)
 
 ```
 
@@ -745,6 +768,7 @@ ggplot(aut_prev_region.geom.m) +
   coord_sf(xlim = c(-83, -55), ylim = c(-60, -15))
 
 ```
+
 
 ```{r region}
 aut_prev_region <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 

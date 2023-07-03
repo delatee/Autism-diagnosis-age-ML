@@ -80,6 +80,9 @@ chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp
 chile.adm3 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm3_bcn_20211008.shp", quiet = TRUE) %>%
   mutate(commune_code = str_sub(ADM3_PCODE, start = 3, end = -1),
          commune_name = ADM3_ES)
+chile.adm3_old <- st_read("04_Data/CHL_adm/CHL_adm3.shp", quiet = TRUE)
+
+
 
 # Get communes with health services
 chile_communes_raw <- read_excel("04_Data/commune_by_health_service.xlsx") %>%
@@ -221,8 +224,8 @@ chile_merged <- chile_merged_raw %>%
          school_region_code = cod_reg_rbd,
          school_region_name_abr = nom_reg_rbd_a,
          school_province_code = cod_pro_rbd,
-         school_commune_code = cod_com_rbd,
-         school_commune_name = nom_com_rbd,
+         school_commune_code = cod_com_rbd_2,
+         school_commune_name = nom_com_rbd_2,
          school_dept_code = cod_deprov_rbd,
          school_dept_name = nom_deprov_rbd,
          school_dependency_code = cod_depe, # has categories 1-6, no1 and no2 here are no1 in grouped
@@ -730,6 +733,38 @@ chile_bayes_adhd <- chile_bayes %>% select(-autism)
 
 TODO - table summarising data content
 
+```{r health plot}
+
+aut_prev_health.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut,
+                                                    grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "autism"),
+                                                    disease = "autism")
+
+ggplot(data = aut_prev_health.agecat.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~health_service_name) +
+  labs(title = "Autism prevalence by school health service",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
+
+aut_prev_health.age.sex <- get_grouped_prev_plot(x = chile_bayes_aut, grouping_vars = c("health_service_name", "age_june30", "sex_desc", "autism"),
+                                                 disease = "autism")
+
+ggplot(data = aut_prev_health.age.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_c(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~health_service_name) +
+  labs(title = "Autism prevalence by school health service",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age")
+```
+
 
 ## Frequentist prevalence estimation
 
@@ -830,12 +865,25 @@ aut_prev_health <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop,
                                     disease = "autism")
 
 aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "health_service_code") %>%
-  merge(health_service_lookup, by = "health_service_code")
+  merge(health_service_lookup, by = "health_service_code") %>%
+  rename(health_service_name_long = health_service_name,
+         health_service_name = health_service_name_short)
 
 aut_prev_health_adj %>% 
   select(health_service_name, 
          crude_ci_lower, crude_rate, crude_ci_upper, 
          adjusted_ci_lower, adjusted_rate, adjusted_ci_upper)
+
+ggplot(data = aut_prev_health_adj) +
+  geom_col(aes(x = age_cat_name, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = age_cat_name, ymin = crude_ci_lower, ymax = crude_ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~health_service_name) +
+  labs(title = "Autism prevalence by school health service",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
 ```
 
 ```{r adj prev araucS}
@@ -852,6 +900,7 @@ aut_prev_araucS_adj %>%
   select(commune_name, 
          crude_ci_lower, crude_rate, crude_ci_upper, 
          adjusted_ci_lower, adjusted_rate, adjusted_ci_upper)
+# Will need to convert these to tables and round to 3 decimal places
 ```
 Report frequentist prevalence estimates for all, by sex, for health services and for Arauc Sur's communes
 
