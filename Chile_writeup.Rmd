@@ -250,9 +250,9 @@ chile_merged <- chile_merged_raw %>%
          economic_branch_code = cod_rama,
          economic_profspec_code = cod_men,
          teaching_code_new = ens) %>%
-  mutate(commune_code = ifelse(nchar(as.character(school_commune_code)) == 4,
-                               paste0("0", as.character(school_commune_code)),
-                               as.character(school_commune_code)))
+  mutate(commune_code = ifelse(nchar(as.character(student_commune_code)) == 4,
+                               paste0("0", as.character(student_commune_code)),
+                               as.character(student_commune_code)))
 ```
 
 
@@ -438,8 +438,10 @@ get_adjusted_prev <- function(x, grouping_vars) {
             var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
             #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
-            ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
-            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
+            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
+            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
   arrange(across(all_of(grouping_vars)))
 }
 
@@ -651,15 +653,20 @@ ggplot(arauc) +
 # Results
 
 ```{r restructure data}
-chile_bayes_aut <- chile_merged %>%
+chile_bayes <- chile_merged %>%
   #select(-student_commune_name) %>%
   left_join(region_service_commune_lookup, by = "commune_code") %>%
   filter(age_june30 >= 6 & age_june30 <= 18,
          #special_needs_status == 1,
          sex != 0) %>%
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         age_cat = ifelse(age_june30 <= 8, 1, ifelse(age_june30 <= 11, 2, ifelse(age_june30 <= 14, 3, 4))),
-         age_cat_name = ifelse(age_cat == 1, "6-8", ifelse(age_cat == 2, "9-11", ifelse(age_cat == 3, "12-14", "15-18"))),
+         adhd = ifelse(special_needs_code == 203, 1, 0),
+         age_cat_code = ifelse(age_june30 <= 8, 1, 
+                   ifelse(age_june30 <= 11, 2, 
+                   ifelse(age_june30 <= 14, 3, 4))),
+         age_cat_name = ifelse(age_cat_code == 1, "6-8", 
+                        ifelse(age_cat_code == 2, "9-11", 
+                        ifelse(age_cat_code == 3, "12-14", "15-18"))),
           # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
          age_cat_name = factor(age_cat_name, levels = c("6-8", "9-11", "12-14", "15-18")),
          ethnic_2_group = ifelse(ethnic_3_group == "Aymara", "Other ethnic group", ethnic_3_group),
@@ -672,42 +679,48 @@ chile_bayes_aut <- chile_merged %>%
                       ifelse(school_fee == "$50.001 A $100.000", "$50,001-$100,000", 
                       ifelse(school_fee == "MAS DE $100.000", "$100,001+", 
                       ifelse(school_fee == "SIN INFORMACION", "No information", NA)))))))),
-         school_fee = factor(school_fee, levels = c("Free", "$1,000-$10,000", "$10,001-$25,000", "$25,001-$50,000", "$50,001-$100,000", "$100,001+", "No information")),
+         school_fee = factor(school_fee, levels = c("Free", "$1,000-$10,000", 
+                                                    "$10,001-$25,000", "$25,001-$50,000",
+                                                    "$50,001-$100,000", "$100,001+", 
+                                                    "No information")),
          school_fee_group = ifelse(school_fee == "Free", "Free", 
-                            ifelse(school_fee %in% c("$1,000-$10,000", "$10,001-$25,000", "$25,001-$50,000", "$50,001-$100,000"), "Low",
+                            ifelse(school_fee %in% c("$1,000-$10,000", "$10,001-$25,000",
+                                                     "$25,001-$50,000", "$50,001-$100,000"), "Low",
                             ifelse(school_fee == "$100,001+", "Medium", 
                             ifelse(school_fee == "No information", "No information", NA)))),
-         school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium", "No information"))) %>% 
-  #left_join(commune_region_lookup, by = c("commune_code")) %>%
-  #rename(school_commune_code = commune_code) %>%          
-  select(school_region_name_abr,
-         region_name,
-         commune_code,
-         school_commune_name,
-         commune_name,
-         health_service_code,
-         health_service_name,
-         sex,
-         sex_desc,
-         age_june30,
-         #edad_alu_2, # equal to age_june30
-         age_cat,
-         age_cat_name,
-         school_rurality_code,
-         #rural_rbd_2, # not quite equal to school_rurality_code as it has NA's
-         pago_matricula,
-         pago_mensual,
-         school_fee,
-         school_fee_group,
-         school_fee_temp,
-         ethnicity,
-         mapuche,
-         nationality,
-         ethnic_3_group,
-         ethnic_2_group,
-         #asd_chile, # equal to autism
-         autism
+         school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium",
+                                                                "No information"))) %>% 
+  select(#school_region_name_abr,
+    region_code,
+    region_name,
+    region_name_abr,
+    commune_code, # student, see chile_merged
+    student_commune_name, # upper case, from chile_merged
+    commune_name, # Sentence case, from lookup table
+    health_service_code,
+    health_service_name,
+    sex,
+    sex_desc,
+    age_june30,
+    age_cat_code,
+    age_cat_name,
+    school_rurality_code,
+    pago_matricula,
+    pago_mensual,
+    school_fee,
+    school_fee_group,
+    school_fee_temp,
+    ethnicity,
+    mapuche,
+    nationality,
+    ethnic_3_group,
+    ethnic_2_group,
+    autism,
+    adhd
   ) 
+
+chile_bayes_aut <- chile_bayes %>% select(-adhd)
+chile_bayes_adhd <- chile_bayes %>% select(-autism)
 ```
 
 
@@ -720,22 +733,49 @@ TODO - table summarising data content
 
 
 ```{r adj prev}
-
+# Autism
 aut_prev <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                             grouping_vars = c("age_june30", "age_cat_name", "sex", "sex_desc", "autism"))
+                             grouping_vars = c("age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                             disease = "autism")
 
-aut_prev_adj <- aut_prev %>% 
+aut_prev_adj <- aut_prev %>% # Don't use get_adjusted_prev here because we have no variables to group on
   summarise(sum_sample_pop_size = sum(sample_pop_size),
-            crude_rate = sum(n_autism) / sum(sample_pop_size),
-            crude_count = sum(n_autism),
-            adjusted_rate = sum(n_autism / sample_pop_size * pop_prop),
+            crude_rate = sum(n_disease) / sum(sample_pop_size),
+            crude_count = sum(n_disease),
+            adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
             adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
             #adjusted_count = adjusted_rate * sum_sample_pop_size,
-            var = sum(pop_prop^2 * n_autism / sample_pop_size^2),
+            var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
             #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
-            ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
-            ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
+            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
+            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
+            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
+
+aut_prev_adj %>% select(crude_ci_lower, crude_rate, crude_ci_upper, adjusted_ci_lower, adjusted_rate, adjusted_ci_upper)
+
+# ADHD
+adhd_prev <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
+                             grouping_vars = c("age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                             disease = "adhd")
+
+adhd_prev_adj <- adhd_prev %>% # Don't use get_adjusted_prev here because we have no variables to group on
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_disease) / sum(sample_pop_size),
+            crude_count = sum(n_disease),
+            adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
+            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
+            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
+
+adhd_prev_adj %>% select(crude_ci_lower, crude_rate, crude_ci_upper, adjusted_ci_lower, adjusted_rate, adjusted_ci_upper)
 
 ```
 
@@ -747,31 +787,93 @@ chile_stdpop_m <- chile_stdpop %>%
   filter(sex == 1) %>%
   mutate(pop_prop = std_pop / sum(std_pop))
 
+# Autism
 aut_prev_f <- chile_bayes_aut %>%
   filter(sex == 2) %>%
-  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"))
+  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
 aut_prev_adj_f <- get_adjusted_prev(aut_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female")
 
 aut_prev_m <- chile_bayes_aut %>%
   filter(sex == 1) %>%
-  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"))
+  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
 aut_prev_adj_m <- get_adjusted_prev(aut_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male")
+
+rbind(aut_prev_adj_m, aut_prev_adj_f) %>% 
+  select(sex_desc, 
+         crude_ci_lower, crude_rate, crude_ci_upper,
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper)
+
+# ADHD
+adhd_prev_f <- chile_bayes_adhd %>%
+  filter(sex == 2) %>%
+  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "adhd"), disease = "adhd")
+adhd_prev_adj_f <- get_adjusted_prev(adhd_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female")
+
+adhd_prev_m <- chile_bayes_adhd %>%
+  filter(sex == 1) %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "adhd"), disease = "adhd")
+adhd_prev_adj_m <- get_adjusted_prev(adhd_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male")
+
+rbind(adhd_prev_adj_m, adhd_prev_adj_f) %>%
+  select(sex_desc,
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper)
 
 ```
 
+```{r adj prev health}
+# Autism only because we don't have clinical data for ADHD
+aut_prev_health <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                                    grouping_vars = c("health_service_code", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    disease = "autism")
+
+aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "health_service_code") %>%
+  merge(health_service_lookup, by = "health_service_code")
+
+aut_prev_health_adj %>% 
+  select(health_service_name, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper)
+```
+
+```{r adj prev araucS}
+chile_bayes_aut_araucS <- chile_bayes_aut %>%
+  filter(health_service_code == 5)
+
+aut_prev_araucS <- get_grouped_prev(x = chile_bayes_aut_araucS, stdpop = chile_stdpop, 
+                                    grouping_vars = c("commune_name", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    disease = "autism")
+
+aut_prev_araucS_adj <- get_adjusted_prev(aut_prev_araucS, grouping_vars = "commune_name") 
+
+aut_prev_araucS_adj %>% 
+  select(commune_name, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper)
+```
+Report frequentist prevalence estimates for all, by sex, for health services and for Arauc Sur's communes
+
+## Bayesian prevalence estimation
 
 ```{r bayes global params}
-nObs <- nrow(chile_bayes_aut)
+nObs <- nrow(chile_bayes)
 nIter <- 1000
 nBurn <- 1000
-pars <- c("theta_a", "theta_b", "theta", "aut_sample", "aut_pred")
+pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
 
-theta_mu_prior <- aut_prev_adj$adjusted_rate
-theta_sigma_prior <- (aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96)
-theta_mu_proj <- c(0.005, 0.01, 0.02, 0.03) # 0.5%, 1%, 2%, 3% prevalence
-theta_mu_proj_f <- c(0.0025, 0.005, 0.01, 0.02)
-theta_mu_proj_m <- c(0.01, 0.02, 0.03, 0.05)
-theta_sigma_proj <- c(rep((aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96), 4)) # Same as chosen prior
+aut_theta_mu_prior <- aut_prev_adj$adjusted_rate
+aut_theta_sigma_prior <- (aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96)
+aut_theta_mu_proj <- c(0.005, 0.01, 0.02, 0.03) # 0.5%, 1%, 2%, 3% prevalence
+aut_theta_mu_proj_f <- c(0.0025, 0.005, 0.01, 0.02)
+aut_theta_mu_proj_m <- c(0.01, 0.02, 0.03, 0.05)
+aut_theta_sigma_proj <- c(rep((aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96), 4)) # Same as chosen prior
+
+adhd_theta_mu_prior <- adhd_prev_adj$adjusted_rate
+adhd_theta_sigma_prior <- (adhd_prev_adj$ci_upper - adhd_prev_adj$ci_lower) / (2*1.96)
+adhd_theta_mu_proj <- c(0.02, 0.03, 0.05, 0.07) # 2%, 3%, 5%, 7% prevalence
+adhd_theta_mu_proj_f <- c(0.015, 0.02, 0.03, 0.05)
+adhd_theta_mu_proj_m <- c(0.02, 0.03, 0.05, 0.07)
+adhd_theta_sigma_proj <- c(rep((adhd_prev_adj$ci_upper - adhd_prev_adj$ci_lower) / (2*1.96), 4)) # Same as chosen prior
 #theta_mu <- c(theta_mu_prior, theta_mu_sens)
 #theta_sigma <- c(theta_sigma_prior, theta_sigma_sens)
 #theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
@@ -780,8 +882,8 @@ theta_sigma_proj <- c(rep((aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1
 rand_model <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
     theta[i] ~ dbeta(theta_a, theta_b)
-    aut_sample[i] ~ dbin(theta[i], nObs[i])
-    aut_pred[i] ~ dbin(theta[i], nObs[i])
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
   }
 }"
 ```
