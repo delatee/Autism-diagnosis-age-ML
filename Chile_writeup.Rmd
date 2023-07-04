@@ -519,7 +519,7 @@ do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBur
   # Convergence checks
   if(convergence_checks) {
     print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-    print(mcmc_trace(rand_sam, paste0("aut_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+    print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
     rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
                          ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
                          ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
@@ -541,12 +541,14 @@ do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBur
 }
 
 
-plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigma, title_text = "") {
+plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigma, disease, title_text = "") {
   # Plots posterior densities and their 95% credible intervals, and sample prevalence confidence intervals
   # jags_post = output from do_jags_rand_model, ie posterior densities
   # sample data = output from get_adjusted_prev, ie sample prevalences with confidence intervals
   # feat = the same feature used as the random effect in do_jags_rand_model
   # theta_mu, theta_sigma = mean and sd of beta prior distribution used in do_jags_rand_model
+  # disease = autism or ADHD
+  # title_text = any additional text for the title, eg grouing variables
   
   # calcuate posterior credible intervals
   post_ci <- jags_post %>%
@@ -558,10 +560,12 @@ plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigm
           geom_density(data = jags_post, aes(x = predicted_prev)) +
           geom_vline(data = post_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
           geom_vline(data = post_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
-          geom_vline(data = sample_data, aes(xintercept = ci_lower), color = "red", linetype = "dashed") +
-          geom_vline(data = sample_data, aes(xintercept = ci_upper), color = "red", linetype = "dashed") +
+          geom_vline(data = sample_data, aes(xintercept = adjusted_ci_lower), color = "red", linetype = "dashed") +
+          geom_vline(data = sample_data, aes(xintercept = adjusted_ci_upper), color = "red", linetype = "dashed") +
           facet_wrap(as.formula(paste0("~", feat))) +
-          labs(title = paste0("Prior mean = ", signif(theta_mu, 3), ", prior sd = ", signif(theta_sigma, 3), title_text)))
+          labs(title = paste0(disease, " prevalence, prior mean = ", signif(theta_mu, 3), ", prior sd = ", signif(theta_sigma, 3), title_text),
+               x = "Posterior predictive distribution",
+               y = "Density"))
 }
 
 
@@ -1326,23 +1330,37 @@ nIter <- 1000
 nBurn <- 1000
 pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
 
+# Autism priors
+# All
 aut_theta_mu_prior <- aut_prev_adj$adjusted_rate
-aut_theta_sigma_prior <- (aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96)
+aut_theta_sigma_prior <- (aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96)
+# Females
+aut_theta_mu_prior_f <- aut_prev_adj_f$adjusted_rate
+aut_theta_sigma_prior_f <- sqrt(aut_prev_adj_f$var)
+# Males
+theta_mu_prior_m <- aut_prev_adj_m$adjusted_rate
+theta_sigma_prior_m <- sqrt(aut_prev_adj_m$var)
+# Projections, use same sigma as before
 aut_theta_mu_proj <- c(0.005, 0.01, 0.02, 0.03) # 0.5%, 1%, 2%, 3% prevalence
 aut_theta_mu_proj_f <- c(0.0025, 0.005, 0.01, 0.02)
 aut_theta_mu_proj_m <- c(0.01, 0.02, 0.03, 0.05)
-aut_theta_sigma_proj <- c(rep((aut_prev_adj$ci_upper - aut_prev_adj$ci_lower) / (2*1.96), 4)) # Same as chosen prior
+aut_theta_sigma_proj <- c(rep((aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96), 4))
 
+# ADHD priors
+# All
 adhd_theta_mu_prior <- adhd_prev_adj$adjusted_rate
-adhd_theta_sigma_prior <- (adhd_prev_adj$ci_upper - adhd_prev_adj$ci_lower) / (2*1.96)
+adhd_theta_sigma_prior <- (adhd_prev_adj$adjusted_ci_upper - adhd_prev_adj$adjusted_ci_lower) / (2*1.96)
+# Females
+adhd_theta_mu_prior_f <- adhd_prev_adj_f$adjusted_rate
+adhd_theta_sigma_prior_f <- sqrt(adhd_prev_adj_f$var)
+# Males
+adhd_theta_mu_prior_m <- adhd_prev_adj_m$adjusted_rate
+adhd_theta_sigma_prior_m <- sqrt(adhd_prev_adj_m$var)
+# Projections, use same sigma as before
 adhd_theta_mu_proj <- c(0.02, 0.03, 0.05, 0.07) # 2%, 3%, 5%, 7% prevalence
 adhd_theta_mu_proj_f <- c(0.015, 0.02, 0.03, 0.05)
 adhd_theta_mu_proj_m <- c(0.02, 0.03, 0.05, 0.07)
-adhd_theta_sigma_proj <- c(rep((adhd_prev_adj$ci_upper - adhd_prev_adj$ci_lower) / (2*1.96), 4)) # Same as chosen prior
-#theta_mu <- c(theta_mu_prior, theta_mu_sens)
-#theta_sigma <- c(theta_sigma_prior, theta_sigma_sens)
-#theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-#theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+adhd_theta_sigma_proj <- c(rep((adhd_prev_adj$adjusted_ci_upper - adhd_prev_adj$adjusted_ci_lower) / (2*1.96), 4))
 
 rand_model <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
@@ -1353,6 +1371,48 @@ rand_model <- "model {
 }"
 ```
 
+### Random effect on sex
+
+```{r bayes sex aut, fig.cap = "Posterior predictive distribution for autism with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_sex_adj <- rbind(aut_prev_adj_m, aut_prev_adj_f) 
+# have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
+
+aut_prev_sex_post <- do_jags_rand_model(x = aut_prev_sex_adj,
+                              feat = "sex_desc",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("sex_desc" = "Feat_names")
+
+plot_post_density(aut_prev_sex_post, aut_prev_sex_adj, 
+                  feat = "sex_desc", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+
+```{r bayes sex adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f) 
+# have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
+
+adhd_prev_sex_post <- do_jags_rand_model(x = adhd_prev_sex_adj,
+                              feat = "sex_desc",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("sex_desc" = "Feat_names")
+
+plot_post_density(adhd_prev_sex_post, adhd_prev_sex_adj, 
+                  feat = "sex_desc", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+
+
+```
 
 # Supplementary figures
 
