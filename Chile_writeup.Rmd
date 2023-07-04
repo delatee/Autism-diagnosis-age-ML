@@ -290,6 +290,76 @@ chile_merged <- chile_merged_raw %>%
                         ifelse(commune_code_old == "08421", "16109", commune_code_old))))))))))))))))))))))
 ```
 
+```{r restructure data}
+chile_bayes <- chile_merged %>%
+  #select(-student_commune_name) %>%
+  left_join(region_service_commune_lookup, by = "commune_code") %>%
+  filter(age_june30 >= 6 & age_june30 <= 18,
+         #special_needs_status == 1,
+         sex != 0) %>%
+  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
+         adhd = ifelse(special_needs_code == 203, 1, 0),
+         age_cat_code = ifelse(age_june30 <= 8, 1, 
+                   ifelse(age_june30 <= 11, 2, 
+                   ifelse(age_june30 <= 14, 3, 4))),
+         age_cat_name = ifelse(age_cat_code == 1, "6-8", 
+                        ifelse(age_cat_code == 2, "9-11", 
+                        ifelse(age_cat_code == 3, "12-14", "15-18"))),
+          # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
+         age_cat_name = factor(age_cat_name, levels = c("6-8", "9-11", "12-14", "15-18")),
+         ethnic_2_group = ifelse(ethnic_3_group == "Aymara", "Other ethnic group", ethnic_3_group),
+         school_fee_temp = school_fee,
+         school_fee = ifelse(school_fee == "", "No information", 
+                      ifelse(school_fee == "GRATUITO", "Free", 
+                      ifelse(school_fee == "$1.000 A $10.000", "$1,000-$10,000",
+                      ifelse(school_fee == "$10.001 A $25.000", "$10,001-$25,000", 
+                      ifelse(school_fee == "$25.001 A $50.000", "$25,001-$50,000",
+                      ifelse(school_fee == "$50.001 A $100.000", "$50,001-$100,000", 
+                      ifelse(school_fee == "MAS DE $100.000", "$100,001+", 
+                      ifelse(school_fee == "SIN INFORMACION", "No information", NA)))))))),
+         school_fee = factor(school_fee, levels = c("Free", "$1,000-$10,000", 
+                                                    "$10,001-$25,000", "$25,001-$50,000",
+                                                    "$50,001-$100,000", "$100,001+", 
+                                                    "No information")),
+         school_fee_group = ifelse(school_fee == "Free", "Free", 
+                            ifelse(school_fee %in% c("$1,000-$10,000", "$10,001-$25,000",
+                                                     "$25,001-$50,000", "$50,001-$100,000"), "Low",
+                            ifelse(school_fee == "$100,001+", "Medium", 
+                            ifelse(school_fee == "No information", "No information", NA)))),
+         school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium",
+                                                                "No information"))) %>% 
+  select(#school_region_name_abr,
+    region_code,
+    region_name,
+    region_name_abr,
+    commune_code, # student, see chile_merged
+    student_commune_name, # upper case, from chile_merged
+    commune_name, # Sentence case, from lookup table
+    health_service_code,
+    health_service_name,
+    sex,
+    sex_desc,
+    age_june30,
+    age_cat_code,
+    age_cat_name,
+    school_rurality_code,
+    pago_matricula,
+    pago_mensual,
+    school_fee,
+    school_fee_group,
+    school_fee_temp,
+    ethnicity,
+    mapuche,
+    nationality,
+    ethnic_3_group,
+    ethnic_2_group,
+    autism,
+    adhd
+  ) 
+
+chile_bayes_aut <- chile_bayes %>% select(-adhd)
+chile_bayes_adhd <- chile_bayes %>% select(-autism)
+```
 
 ```{r import clinical data}
 clinical_large_raw <- read_excel("04_Data/dataset_ssas_2015_2021.xlsx") %>% clean_names
@@ -725,78 +795,6 @@ ggplot(arauc) +
 
 
 # Results
-
-```{r restructure data}
-chile_bayes <- chile_merged %>%
-  #select(-student_commune_name) %>%
-  left_join(region_service_commune_lookup, by = "commune_code") %>%
-  filter(age_june30 >= 6 & age_june30 <= 18,
-         #special_needs_status == 1,
-         sex != 0) %>%
-  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         adhd = ifelse(special_needs_code == 203, 1, 0),
-         age_cat_code = ifelse(age_june30 <= 8, 1, 
-                   ifelse(age_june30 <= 11, 2, 
-                   ifelse(age_june30 <= 14, 3, 4))),
-         age_cat_name = ifelse(age_cat_code == 1, "6-8", 
-                        ifelse(age_cat_code == 2, "9-11", 
-                        ifelse(age_cat_code == 3, "12-14", "15-18"))),
-          # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
-         age_cat_name = factor(age_cat_name, levels = c("6-8", "9-11", "12-14", "15-18")),
-         ethnic_2_group = ifelse(ethnic_3_group == "Aymara", "Other ethnic group", ethnic_3_group),
-         school_fee_temp = school_fee,
-         school_fee = ifelse(school_fee == "", "No information", 
-                      ifelse(school_fee == "GRATUITO", "Free", 
-                      ifelse(school_fee == "$1.000 A $10.000", "$1,000-$10,000",
-                      ifelse(school_fee == "$10.001 A $25.000", "$10,001-$25,000", 
-                      ifelse(school_fee == "$25.001 A $50.000", "$25,001-$50,000",
-                      ifelse(school_fee == "$50.001 A $100.000", "$50,001-$100,000", 
-                      ifelse(school_fee == "MAS DE $100.000", "$100,001+", 
-                      ifelse(school_fee == "SIN INFORMACION", "No information", NA)))))))),
-         school_fee = factor(school_fee, levels = c("Free", "$1,000-$10,000", 
-                                                    "$10,001-$25,000", "$25,001-$50,000",
-                                                    "$50,001-$100,000", "$100,001+", 
-                                                    "No information")),
-         school_fee_group = ifelse(school_fee == "Free", "Free", 
-                            ifelse(school_fee %in% c("$1,000-$10,000", "$10,001-$25,000",
-                                                     "$25,001-$50,000", "$50,001-$100,000"), "Low",
-                            ifelse(school_fee == "$100,001+", "Medium", 
-                            ifelse(school_fee == "No information", "No information", NA)))),
-         school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium",
-                                                                "No information"))) %>% 
-  select(#school_region_name_abr,
-    region_code,
-    region_name,
-    region_name_abr,
-    commune_code, # student, see chile_merged
-    student_commune_name, # upper case, from chile_merged
-    commune_name, # Sentence case, from lookup table
-    health_service_code,
-    health_service_name,
-    sex,
-    sex_desc,
-    age_june30,
-    age_cat_code,
-    age_cat_name,
-    school_rurality_code,
-    pago_matricula,
-    pago_mensual,
-    school_fee,
-    school_fee_group,
-    school_fee_temp,
-    ethnicity,
-    mapuche,
-    nationality,
-    ethnic_3_group,
-    ethnic_2_group,
-    autism,
-    adhd
-  ) 
-
-chile_bayes_aut <- chile_bayes %>% select(-adhd)
-chile_bayes_adhd <- chile_bayes %>% select(-autism)
-```
-
 
 
 ## School data
@@ -1312,6 +1310,159 @@ ggplot(data = aut_prev_araucS_adj.long) +
        fill = "Prevalence")
 ```
 
+### Autism and ADHD prevalence by socio-economic status
+
+```{r adj prev economicAll aut}
+aut_prev_econA <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                                    grouping_vars = c("school_fee", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    disease = "autism")
+
+aut_prev_econA_adj <- get_adjusted_prev(aut_prev_econA, grouping_vars = "school_fee")
+
+aut_prev_econA_adj %>% 
+  select(school_fee, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
+ mutate(across(is.numeric, round, digits = 5))  
+
+```
+
+
+```{r adj prev economicAll plot aut agecat, fig.cap = "Sample prevalence of autism by socio-economic (SES) status of student's family, age band and sex. Bars show 95% normal confidence intervals."}
+# By age and sex
+# Age categories
+aut_prev_econA.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut,
+                                                    grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "autism"),
+                                                    disease = "autism")
+
+ggplot(data = aut_prev_econA.agecat.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~health_service_name) +
+  labs(title = "Autism prevalence by SES status",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
+```
+
+```{r adj prev economicAll plot aut age, fig.cap = "Sample prevalence of autism by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals."}
+# Single ages
+aut_prev_econA.age.sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
+                                                 grouping_vars = c("school_fee", "age_june30", "sex_desc", "autism"),
+                                                 disease = "autism")
+
+ggplot(data = aut_prev_econA.age.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_c(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~health_service_name) +
+  labs(title = "Autism prevalence by SES status",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age")
+```
+
+```{r adj prev economicAll plot aut rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+
+# All
+aut_prev_econA_adj.long <- aut_prev_econA_adj %>%
+  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
+  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
+               names_to = c("type", ".value"),
+               names_pattern = "(crude|adjusted)_(.*)") %>%
+  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
+
+ggplot(data = aut_prev_econA_adj.long) +
+  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
+  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  facet_wrap(~health_service_name) +
+  labs(title = "Autism prevalence by SES status",
+       #y = "Aggregate prevalence",
+       fill = "Prevalence")
+```
+
+```{r adj prev health adhd}
+adhd_prev_health <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
+                                    grouping_vars = c("health_service_code", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                                    disease = "adhd")
+
+adhd_prev_health_adj <- get_adjusted_prev(adhd_prev_health, grouping_vars = "health_service_code") %>%
+  merge(health_service_lookup, by = "health_service_code") %>%
+  rename(health_service_name_long = health_service_name,
+         health_service_name = health_service_name_short)
+
+adhd_prev_health_adj %>% 
+  select(health_service_name, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
+ mutate(across(is.numeric, round, digits = 5))  
+
+```
+
+
+```{r adj prev health plot adhd agecat, fig.cap = "Sample prevalence of ADHD by health service, age band and sex. Bars show 95% normal confidence intervals."}
+# By age and sex
+# Age categories
+adhd_prev_health.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
+                                                    grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "adhd"),
+                                                    disease = "adhd")
+
+ggplot(data = adhd_prev_health.agecat.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~health_service_name) +
+  labs(title = "ADHD prevalence by health service",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
+```
+
+```{r adj prev health plot adhd age, fig.cap = "Sample prevalence of ADHD by health service, age and sex. Bars show 95% normal confidence intervals."}
+# Single ages
+adhd_prev_health.age.sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
+                                                 grouping_vars = c("health_service_name", "age_june30", "sex_desc", "adhd"),
+                                                 disease = "adhd")
+
+ggplot(data = adhd_prev_health.age.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_c(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~health_service_name) +
+  labs(title = "ADHD prevalence by health service",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age")
+```
+
+```{r adj prev health plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+
+# All
+adhd_prev_health_adj.long <- adhd_prev_health_adj %>%
+  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
+  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
+               names_to = c("type", ".value"),
+               names_pattern = "(crude|adjusted)_(.*)") %>%
+  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
+
+ggplot(data = adhd_prev_health_adj.long) +
+  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
+  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  facet_wrap(~health_service_name) +
+  labs(title = "ADHD prevalence by health service",
+       #y = "Aggregate prevalence",
+       fill = "Prevalence")
+```
+
 
 Also do:
 
@@ -1410,10 +1561,95 @@ plot_post_density(adhd_prev_sex_post, adhd_prev_sex_adj,
                   feat = "sex_desc", 
                   theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
                   disease = "ADHD")
-
-
 ```
 
-# Supplementary figures
+### Random effect on health service
+
+```{r bayes health aut, fig.cap = "Posterior predictive distribution for autism with a random effect on student's health service, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
+                              feat = "health_service_name",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("health_service_name" = "Feat_names")
+
+plot_post_density(aut_prev_health_post, aut_prev_health_adj, 
+                  feat = "health_service_name", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+```{r bayes health adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on health service, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_health_post <- do_jags_rand_model(x = adhd_prev_health_adj,
+                              feat = "health_service_name",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("health_service_name" = "Feat_names")
+
+plot_post_density(adhd_prev_health_post, adhd_prev_health_adj, 
+                  feat = "health_service_name", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
+
+### Random effect on commune in Araucanía Sur health service
+
+```{r bayes araucS aut, fig.cap = "Posterior predictive distribution for autism with a random effect on commune within Araucanía Sur health service, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_araucS_post <- do_jags_rand_model(x = aut_prev_araucS_adj,
+                              feat = "commune_name",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("commune_name" = "Feat_names")
+
+plot_post_density(aut_prev_araucS_post, aut_prev_araucS_adj, 
+                  feat = "commune_name", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+### Random effect on socio-economic status
+
+```{r bayes economicAll aut, fig.cap = "Posterior predictive distribution for autism with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_econA_post <- do_jags_rand_model(x = aut_prev_econA_adj,
+                              feat = "school_fee",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = TRUE) %>%
+  rename("school_fee" = "Feat_names")
+
+plot_post_density(aut_prev_econA_post, aut_prev_econA_adj, 
+                  feat = "school_fee", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+```{r bayes economicAll adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_econA_post <- do_jags_rand_model(x = adhd_prev_econA_adj,
+                              feat = "school_fee",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = TRUE) %>%
+  rename("school_fee" = "Feat_names")
+
+plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj, 
+                  feat = "school_fee", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
+
+
+# Supplementary materials
 
 
