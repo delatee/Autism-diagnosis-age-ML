@@ -307,7 +307,10 @@ chile_bayes <- chile_merged %>%
                         ifelse(age_cat_code == 3, "12-14", "15-18"))),
           # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
          age_cat_name = factor(age_cat_name, levels = c("6-8", "9-11", "12-14", "15-18")),
-         ethnic_2_group = ifelse(ethnic_3_group == "Aymara", "Other ethnic group", ethnic_3_group),
+         ethnic_2_group = ifelse(ethnic_3_group == "Other ethnic group", "Other Indigenous group",
+                          ifelse(ethnic_3_group == "Aymara", "Other Indigenous group",
+                          ifelse(ethnic_3_group == "No Native Group", "No Indigenous group", ethnic_3_group))),
+         school_rurality = ifelse(school_rurality_code == 0, "Urban", "Rural"),
          school_fee_temp = school_fee,
          school_fee = ifelse(school_fee == "", "No information", 
                       ifelse(school_fee == "GRATUITO", "Free", 
@@ -343,6 +346,7 @@ chile_bayes <- chile_merged %>%
     age_cat_code,
     age_cat_name,
     school_rurality_code,
+    school_rurality,
     pago_matricula,
     pago_mensual,
     school_fee,
@@ -803,7 +807,17 @@ TODO - table summarising data content
 
 In the school data, `r chile_merged %>% filter(student_commune_code == "0") %>% nrow` (`r round(chile_merged %>% filter(student_commune_code == "0") %>% nrow / nrow(chile_merged) * 100, 2)`%) students were missing commune of residence. These missing values were imputed with their school's commune as most students are likely to go to school near their place of residence.
 
+## Clinical data
 
+TODO - table summarising data content
+
+## Probabilistic data linkage
+
+### Number matched
+
+### Differences between un/matched
+
+### Prev delta
 
 ## Frequentist prevalence estimation
 
@@ -828,7 +842,9 @@ aut_prev_adj <- aut_prev %>% # Don't use get_adjusted_prev here because we have 
             crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
             crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
             adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
-            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 aut_prev_adj %>% 
   select(crude_ci_lower, crude_rate, crude_ci_upper,
@@ -853,7 +869,9 @@ adhd_prev_adj <- adhd_prev %>% # Don't use get_adjusted_prev here because we hav
             crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
             crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
             adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
-            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)))
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 adhd_prev_adj %>% 
   select(crude_ci_lower, crude_rate, crude_ci_upper, 
@@ -875,12 +893,16 @@ chile_stdpop_m <- chile_stdpop %>%
 aut_prev_f <- chile_bayes_aut %>%
   filter(sex == 2) %>%
   get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_prev_adj_f <- get_adjusted_prev(aut_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female")
+aut_prev_adj_f <- get_adjusted_prev(aut_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 aut_prev_m <- chile_bayes_aut %>%
   filter(sex == 1) %>%
   get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_prev_adj_m <- get_adjusted_prev(aut_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male")
+aut_prev_adj_m <- get_adjusted_prev(aut_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 rbind(aut_prev_adj_m, aut_prev_adj_f) %>% 
   select(sex_desc, 
@@ -892,12 +914,16 @@ rbind(aut_prev_adj_m, aut_prev_adj_f) %>%
 adhd_prev_f <- chile_bayes_adhd %>%
   filter(sex == 2) %>%
   get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "adhd"), disease = "adhd")
-adhd_prev_adj_f <- get_adjusted_prev(adhd_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female")
+adhd_prev_adj_f <- get_adjusted_prev(adhd_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 adhd_prev_m <- chile_bayes_adhd %>%
   filter(sex == 1) %>%
   get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "adhd"), disease = "adhd")
-adhd_prev_adj_m <- get_adjusted_prev(adhd_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male")
+adhd_prev_adj_m <- get_adjusted_prev(adhd_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 rbind(adhd_prev_adj_m, adhd_prev_adj_f) %>%
   select(sex_desc,
@@ -912,7 +938,8 @@ rbind(adhd_prev_adj_m, adhd_prev_adj_f) %>%
 # Autism
 aut_prev.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                           grouping_vars = c("age_cat_name", "sex_desc", "autism"),
-                                          disease = "autism")
+                                          disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 # By age category and sex
 ggplot(data = aut_prev.agecat.sex) +
@@ -929,7 +956,8 @@ ggplot(data = aut_prev.agecat.sex) +
 # Autism
 aut_prev.age.sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                           grouping_vars = c("age_june30", "sex_desc", "autism"),
-                                          disease = "autism")
+                                          disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 # By age and sex
 ggplot(data = aut_prev.age.sex) +
@@ -997,7 +1025,8 @@ grid.arrange(aut_prev_adj_b.long_plot, aut_prev_adj.long_plot, ncol = 2)
 # ADHD
 adhd_prev.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("age_cat_name", "sex_desc", "adhd"),
-                                          disease = "adhd")
+                                          disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 # By age category and sex
 ggplot(data = adhd_prev.agecat.sex) +
@@ -1014,7 +1043,8 @@ ggplot(data = adhd_prev.agecat.sex) +
 # ADHD
 adhd_prev.age.sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("age_june30", "sex_desc", "adhd"),
-                                          disease = "adhd")
+                                          disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 # By age and sex
 ggplot(data = adhd_prev.age.sex) +
@@ -1086,13 +1116,15 @@ aut_prev_health <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop,
 aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "health_service_code") %>%
   merge(health_service_lookup, by = "health_service_code") %>%
   rename(health_service_name_long = health_service_name,
-         health_service_name = health_service_name_short)
+         health_service_name = health_service_name_short) %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 aut_prev_health_adj %>% 
   select(health_service_name, 
          crude_ci_lower, crude_rate, crude_ci_upper, 
          adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
- mutate(across(is.numeric, round, digits = 5))  
+ mutate(across(is.numeric, round, digits = 5))
 
 ```
 
@@ -1102,7 +1134,8 @@ aut_prev_health_adj %>%
 # Age categories
 aut_prev_health.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "autism"),
-                                                    disease = "autism")
+                                                    disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = aut_prev_health.agecat.sex) +
   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
@@ -1120,7 +1153,8 @@ ggplot(data = aut_prev_health.agecat.sex) +
 # Single ages
 aut_prev_health.age.sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                                  grouping_vars = c("health_service_name", "age_june30", "sex_desc", "autism"),
-                                                 disease = "autism")
+                                                 disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = aut_prev_health.age.sex) +
   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
@@ -1163,7 +1197,9 @@ adhd_prev_health <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop
 adhd_prev_health_adj <- get_adjusted_prev(adhd_prev_health, grouping_vars = "health_service_code") %>%
   merge(health_service_lookup, by = "health_service_code") %>%
   rename(health_service_name_long = health_service_name,
-         health_service_name = health_service_name_short)
+         health_service_name = health_service_name_short) %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 adhd_prev_health_adj %>% 
   select(health_service_name, 
@@ -1179,7 +1215,8 @@ adhd_prev_health_adj %>%
 # Age categories
 adhd_prev_health.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
                                                     grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "adhd"),
-                                                    disease = "adhd")
+                                                    disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = adhd_prev_health.agecat.sex) +
   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
@@ -1197,7 +1234,8 @@ ggplot(data = adhd_prev_health.agecat.sex) +
 # Single ages
 adhd_prev_health.age.sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                                  grouping_vars = c("health_service_name", "age_june30", "sex_desc", "adhd"),
-                                                 disease = "adhd")
+                                                 disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = adhd_prev_health.age.sex) +
   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
@@ -1317,7 +1355,9 @@ aut_prev_econA <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop,
                                     grouping_vars = c("school_fee", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
                                     disease = "autism")
 
-aut_prev_econA_adj <- get_adjusted_prev(aut_prev_econA, grouping_vars = "school_fee")
+aut_prev_econA_adj <- get_adjusted_prev(aut_prev_econA, grouping_vars = "school_fee") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 aut_prev_econA_adj %>% 
   select(school_fee, 
@@ -1333,14 +1373,15 @@ aut_prev_econA_adj %>%
 # Age categories
 aut_prev_econA.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "autism"),
-                                                    disease = "autism")
+                                                    disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = aut_prev_econA.agecat.sex) +
   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
   geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
   scale_fill_viridis_d(option = "plasma") +
   #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~health_service_name) +
+  facet_wrap(~school_fee) +
   labs(title = "Autism prevalence by SES status",
        x = "Sex",
        y = "Sample prevalence",
@@ -1351,14 +1392,15 @@ ggplot(data = aut_prev_econA.agecat.sex) +
 # Single ages
 aut_prev_econA.age.sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                                  grouping_vars = c("school_fee", "age_june30", "sex_desc", "autism"),
-                                                 disease = "autism")
+                                                 disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = aut_prev_econA.age.sex) +
   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
   geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
   scale_fill_viridis_c(option = "plasma") +
   #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~health_service_name) +
+  facet_wrap(~school_fee) +
   labs(title = "Autism prevalence by SES status",
        x = "Sex",
        y = "Sample prevalence",
@@ -1380,24 +1422,23 @@ ggplot(data = aut_prev_econA_adj.long) +
   geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  facet_wrap(~health_service_name) +
+  facet_wrap(~school_fee) +
   labs(title = "Autism prevalence by SES status",
        #y = "Aggregate prevalence",
        fill = "Prevalence")
 ```
 
-```{r adj prev health adhd}
-adhd_prev_health <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
-                                    grouping_vars = c("health_service_code", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+```{r adj prev economicAll adhd}
+adhd_prev_econA <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
+                                    grouping_vars = c("school_fee", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
                                     disease = "adhd")
 
-adhd_prev_health_adj <- get_adjusted_prev(adhd_prev_health, grouping_vars = "health_service_code") %>%
-  merge(health_service_lookup, by = "health_service_code") %>%
-  rename(health_service_name_long = health_service_name,
-         health_service_name = health_service_name_short)
+adhd_prev_econA_adj <- get_adjusted_prev(adhd_prev_econA, grouping_vars = "school_fee")  %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
-adhd_prev_health_adj %>% 
-  select(health_service_name, 
+adhd_prev_econA_adj %>% 
+  select(school_fee, 
          crude_ci_lower, crude_rate, crude_ci_upper, 
          adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
  mutate(across(is.numeric, round, digits = 5))  
@@ -1405,72 +1446,382 @@ adhd_prev_health_adj %>%
 ```
 
 
-```{r adj prev health plot adhd agecat, fig.cap = "Sample prevalence of ADHD by health service, age band and sex. Bars show 95% normal confidence intervals."}
+```{r adj prev economicAll plot adhd agecat, fig.cap = "Sample prevalence of ADHD by socio-economic (SES) status of student's family, age band and sex. Bars show 95% normal confidence intervals."}
 # By age and sex
 # Age categories
-adhd_prev_health.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
-                                                    grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "adhd"),
-                                                    disease = "adhd")
+adhd_prev_econA.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
+                                                    grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "adhd"),
+                                                    disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
-ggplot(data = adhd_prev_health.agecat.sex) +
+ggplot(data = adhd_prev_econA.agecat.sex) +
   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
   geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
   scale_fill_viridis_d(option = "plasma") +
   #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~health_service_name) +
-  labs(title = "ADHD prevalence by health service",
+  facet_wrap(~school_fee) +
+  labs(title = "ADHD prevalence by SES status",
        x = "Sex",
        y = "Sample prevalence",
        fill = "Age category")
 ```
 
-```{r adj prev health plot adhd age, fig.cap = "Sample prevalence of ADHD by health service, age and sex. Bars show 95% normal confidence intervals."}
+```{r adj prev economicAll plot adhd age, fig.cap = "Sample prevalence of ADHD by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
-adhd_prev_health.age.sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
-                                                 grouping_vars = c("health_service_name", "age_june30", "sex_desc", "adhd"),
-                                                 disease = "adhd")
+adhd_prev_econA.age.sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
+                                                 grouping_vars = c("school_fee", "age_june30", "sex_desc", "adhd"),
+                                                 disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
-ggplot(data = adhd_prev_health.age.sex) +
+ggplot(data = adhd_prev_econA.age.sex) +
   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
   geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
   scale_fill_viridis_c(option = "plasma") +
   #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~health_service_name) +
-  labs(title = "ADHD prevalence by health service",
+  facet_wrap(~school_fee) +
+  labs(title = "ADHD prevalence by SES status",
        x = "Sex",
        y = "Sample prevalence",
        fill = "Age")
 ```
 
-```{r adj prev health plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adj prev economicAll plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 
 # All
-adhd_prev_health_adj.long <- adhd_prev_health_adj %>%
+adhd_prev_econA_adj.long <- adhd_prev_econA_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
   pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
                names_to = c("type", ".value"),
                names_pattern = "(crude|adjusted)_(.*)") %>%
   mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
 
-ggplot(data = adhd_prev_health_adj.long) +
+ggplot(data = adhd_prev_econA_adj.long) +
   geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
   geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
-  facet_wrap(~health_service_name) +
-  labs(title = "ADHD prevalence by health service",
+  facet_wrap(~school_fee) +
+  labs(title = "ADHD prevalence by SES status",
+       #y = "Aggregate prevalence",
+       fill = "Prevalence")
+```
+
+### Autism and ADHD prevalence by ethnicity
+
+```{r adj prev ethnicity aut}
+aut_prev_ethnic <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                                    grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    disease = "autism")
+
+aut_prev_ethnic_adj <- get_adjusted_prev(aut_prev_ethnic, grouping_vars = "ethnic_2_group") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_prev_ethnic_adj %>% 
+  select(ethnic_2_group, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
+ mutate(across(is.numeric, round, digits = 5))  
+
+```
+
+
+```{r adj prev ethnicity plot aut agecat, fig.cap = "Sample prevalence of autism by ethnicity, age band and sex. Bars show 95% normal confidence intervals."}
+# By age and sex
+# Age categories
+aut_prev_ethnic.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut,
+                                                    grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "autism"),
+                                                    disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = aut_prev_ethnic.agecat.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~ethnic_2_group) +
+  labs(title = "Autism prevalence by ethnicity",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
+```
+
+```{r adj prev ethnicity plot aut age, fig.cap = "Sample prevalence of autism by ethnicity, age and sex. Bars show 95% normal confidence intervals."}
+# Single ages
+aut_prev_ethnic.age.sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
+                                                 grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "autism"),
+                                                 disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = aut_prev_ethnic.age.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_c(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~ethnic_2_group) +
+  labs(title = "Autism prevalence by ethnicity",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age")
+```
+
+```{r adj prev ethnicity plot aut rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+
+# All
+aut_prev_ethnic_adj.long <- aut_prev_ethnic_adj %>%
+  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
+  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
+               names_to = c("type", ".value"),
+               names_pattern = "(crude|adjusted)_(.*)") %>%
+  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
+
+ggplot(data = aut_prev_ethnic_adj.long) +
+  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
+  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  facet_wrap(~ethnic_2_group) +
+  labs(title = "Autism prevalence by ethnicity",
+       #y = "Aggregate prevalence",
+       fill = "Prevalence")
+```
+
+```{r adj prev ethnicity adhd}
+adhd_prev_ethnic <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
+                                    grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                                    disease = "adhd")
+
+adhd_prev_ethnic_adj <- get_adjusted_prev(adhd_prev_ethnic, grouping_vars = "ethnic_2_group")  %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+adhd_prev_ethnic_adj %>% 
+  select(ethnic_2_group, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
+ mutate(across(is.numeric, round, digits = 5))  
+
+```
+
+
+```{r adj prev ethnicity plot adhd agecat, fig.cap = "Sample prevalence of ADHD by ethnicity, age band and sex. Bars show 95% normal confidence intervals."}
+# By age and sex
+# Age categories
+adhd_prev_ethnic.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
+                                                    grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "adhd"),
+                                                    disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = adhd_prev_ethnic.agecat.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~ethnic_2_group) +
+  labs(title = "ADHD prevalence by ethnicity",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
+```
+
+```{r adj prev ethnicity plot adhd age, fig.cap = "Sample prevalence of ADHD by ethnicity, age and sex. Bars show 95% normal confidence intervals."}
+# Single ages
+adhd_prev_ethnic.age.sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
+                                                 grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "adhd"),
+                                                 disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = adhd_prev_ethnic.age.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_c(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~ethnic_2_group) +
+  labs(title = "ADHD prevalence by ethnicity",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age")
+```
+
+```{r adj prev ethnicity plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+
+# All
+adhd_prev_ethnic_adj.long <- adhd_prev_ethnic_adj %>%
+  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
+  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
+               names_to = c("type", ".value"),
+               names_pattern = "(crude|adjusted)_(.*)") %>%
+  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
+
+ggplot(data = adhd_prev_ethnic_adj.long) +
+  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
+  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  facet_wrap(~ethnic_2_group) +
+  labs(title = "ADHD prevalence by ethnicity",
        #y = "Aggregate prevalence",
        fill = "Prevalence")
 ```
 
 
-Also do:
+### Autism and ADHD prevalence by rurality
 
-* SES status
-* Ethnicity
-* Rurality
+```{r adj prev rurality aut}
+aut_prev_rural <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                                    grouping_vars = c("school_rurality", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    disease = "autism")
 
-Copy the health service section.
+aut_prev_rural_adj <- get_adjusted_prev(aut_prev_rural, grouping_vars = "school_rurality") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_prev_rural_adj %>% 
+  select(school_rurality, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
+ mutate(across(is.numeric, round, digits = 5))  
+
+```
+
+
+```{r adj prev rurality plot aut agecat, fig.cap = "Sample prevalence of autism by school's rurality, age band and sex. Bars show 95% normal confidence intervals."}
+# By age and sex
+# Age categories
+aut_prev_rural.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_aut,
+                                                    grouping_vars = c("school_rurality", "age_cat_name", "sex_desc", "autism"),
+                                                    disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = aut_prev_rural.agecat.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~school_rurality) +
+  labs(title = "Autism prevalence by school's rurality",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
+```
+
+```{r adj prev rurality plot aut age, fig.cap = "Sample prevalence of autism by school's rurality, age and sex. Bars show 95% normal confidence intervals."}
+# Single ages
+aut_prev_rural.age.sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
+                                                 grouping_vars = c("school_rurality", "age_june30", "sex_desc", "autism"),
+                                                 disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = aut_prev_rural.age.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_c(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~school_rurality) +
+  labs(title = "Autism prevalence by school's rurality",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age")
+```
+
+```{r adj prev rurality plot aut rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+
+# All
+aut_prev_rural_adj.long <- aut_prev_rural_adj %>%
+  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
+  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
+               names_to = c("type", ".value"),
+               names_pattern = "(crude|adjusted)_(.*)") %>%
+  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
+
+ggplot(data = aut_prev_rural_adj.long) +
+  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
+  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  facet_wrap(~school_rurality) +
+  labs(title = "Autism prevalence by school's rurality",
+       #y = "Aggregate prevalence",
+       fill = "Prevalence")
+```
+
+```{r adj prev rurality adhd}
+adhd_prev_rural <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
+                                    grouping_vars = c("school_rurality", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                                    disease = "adhd")
+
+adhd_prev_rural_adj <- get_adjusted_prev(adhd_prev_rural, grouping_vars = "school_rurality")  %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+adhd_prev_rural_adj %>% 
+  select(school_rurality, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
+ mutate(across(is.numeric, round, digits = 5))  
+
+```
+
+
+```{r adj prev rurality plot adhd agecat, fig.cap = "Sample prevalence of ADHD by school's rurality, age band and sex. Bars show 95% normal confidence intervals."}
+# By age and sex
+# Age categories
+adhd_prev_rural.agecat.sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
+                                                    grouping_vars = c("school_rurality", "age_cat_name", "sex_desc", "adhd"),
+                                                    disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = adhd_prev_rural.agecat.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~school_rurality) +
+  labs(title = "ADHD prevalence by school's rurality",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
+```
+
+```{r adj prev rurality plot adhd age, fig.cap = "Sample prevalence of ADHD by school's rurality, age and sex. Bars show 95% normal confidence intervals."}
+# Single ages
+adhd_prev_rural.age.sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
+                                                 grouping_vars = c("school_rurality", "age_june30", "sex_desc", "adhd"),
+                                                 disease = "adhd") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = adhd_prev_rural.age.sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_c(option = "plasma") +
+  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+  facet_wrap(~school_rurality) +
+  labs(title = "ADHD prevalence by school's rurality",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age")
+```
+
+```{r adj prev rurality plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+
+# All
+adhd_prev_rural_adj.long <- adhd_prev_rural_adj %>%
+  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
+  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
+               names_to = c("type", ".value"),
+               names_pattern = "(crude|adjusted)_(.*)") %>%
+  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
+
+ggplot(data = adhd_prev_rural_adj.long) +
+  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
+  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  facet_wrap(~school_rurality) +
+  labs(title = "ADHD prevalence by rurality",
+       #y = "Aggregate prevalence",
+       fill = "Prevalence")
+```
 
 
 ## Bayesian prevalence estimation
@@ -1624,7 +1975,7 @@ aut_prev_econA_post <- do_jags_rand_model(x = aut_prev_econA_adj,
                               theta_mu = aut_theta_mu_prior,
                               theta_sigma = aut_theta_sigma_prior,
                               pars = pars, 
-                              convergence_checks = TRUE) %>%
+                              convergence_checks = FALSE) %>%
   rename("school_fee" = "Feat_names")
 
 plot_post_density(aut_prev_econA_post, aut_prev_econA_adj, 
@@ -1640,6 +1991,74 @@ adhd_prev_econA_post <- do_jags_rand_model(x = adhd_prev_econA_adj,
                               theta_mu = adhd_theta_mu_prior,
                               theta_sigma = adhd_theta_sigma_prior,
                               pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("school_fee" = "Feat_names")
+
+plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj, 
+                  feat = "school_fee", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
+
+### Random effect on ethnicity
+
+```{r bayes ethnicity aut, fig.cap = "Posterior predictive distribution for autism with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_ethnic_post <- do_jags_rand_model(x = aut_prev_ethnic_adj,
+                              feat = "ethnic_2_group",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("ethnic_2_group" = "Feat_names")
+
+plot_post_density(aut_prev_ethnic_post, aut_prev_ethnic_adj, 
+                  feat = "ethnic_2_group", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+```{r bayes ethnic adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_ethnic_post <- do_jags_rand_model(x = adhd_prev_ethnic_adj,
+                              feat = "ethnic_2_group",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("ethnic_2_group" = "Feat_names")
+
+plot_post_density(adhd_prev_ethnic_post, adhd_prev_ethnic_adj, 
+                  feat = "ethnic_2_group", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
+
+### Random effect on school's rurality
+
+```{r bayes rurality aut, fig.cap = "Posterior predictive distribution for autism with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_rural_post <- do_jags_rand_model(x = aut_prev_rural_adj,
+                              feat = "school_rurality",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("school_rurality" = "Feat_names")
+
+plot_post_density(aut_prev_rural_post, aut_prev_rural_adj, 
+                  feat = "school_rurality", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+```{r bayes rurality adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_rural_post <- do_jags_rand_model(x = adhd_prev_rural_adj,
+                              feat = "school_rurality",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
                               convergence_checks = TRUE) %>%
   rename("school_fee" = "Feat_names")
 
@@ -1648,6 +2067,9 @@ plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj,
                   theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
                   disease = "ADHD")
 ```
+
+
+## MCA
 
 
 # Supplementary materials
