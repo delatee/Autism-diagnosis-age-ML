@@ -117,8 +117,10 @@ region_abr_lookup <- data.frame(
 # Put region, health service and communes together
 region_service_commune_lookup <- chile.adm3 %>%
   merge(chile_communes, by = "commune_name", all = TRUE) %>%
-  mutate(ADM3_PCODE = ifelse(commune_name == "Antártica", "CL12202", ADM3_PCODE),
+  mutate(commune_code = ifelse(commune_name == "Antártica", "12202", commune_code),
+         ADM3_PCODE = ifelse(commune_name == "Antártica", "CL12202", ADM3_PCODE),
          ADM1_ES = ifelse(commune_name == "Antártica", "Región de Magallanes y Antártica Chilena", ADM1_ES),
+         ADM1_PCODE = ifelse(commune_name == "Antártica", "CL12", ADM1_PCODE),
          commune_name = ifelse(ADM3_PCODE == "CL01401", "Pozo Almonte", commune_name),
                         # For the Tocopilla in Tarapaca, use it's old name to avoid duplication issues
          health_service_name = 
@@ -760,6 +762,8 @@ chile_bayes_adhd <- chile_bayes %>% select(-autism)
 ## School data
 
 TODO - table summarising data content
+
+Number of students missing commune
 
 ```{r health plot}
 
