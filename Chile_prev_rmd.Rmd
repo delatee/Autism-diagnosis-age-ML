@@ -1044,8 +1044,8 @@ araucS_lower <- aut_prev_health_adj %>%
   filter(health_service_name == "Araucanía Sur") %>%
   select(adjusted_count) %>% as.numeric
 araucS_upper <- 1688
-araucS_mean <- (aracuS_upper + araucS_lower) / 2
-araucS_sd <- (aracuS_upper - araucS_lower) / (2*1.96)
+araucS_mean <- (araucS_upper + araucS_lower) / 2
+araucS_sd <- (araucS_upper - araucS_lower) / (2*1.96)
 
 aut_prev_health_adj$new_rate <- numeric(nrow(aut_prev_health_adj))
 aut_prev_health_adj$new_count <- numeric(nrow(aut_prev_health_adj))
