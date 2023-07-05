@@ -701,6 +701,8 @@ TODO - is this section needed?
 
 # Introduction
 
+TODO - copy in intro text
+
 ```{r map}
 #commune_geoms <- data.frame(mapa_comunas)
 #communes_lookup <- data.frame(codigos_territoriales)
@@ -797,9 +799,13 @@ ggplot(arauc) +
 
 # Methods
 
+TODO - copy in methods
+
 
 # Results
 
+TODO - text explaining figures
+TODO - table formatting
 
 ## School data
 
@@ -1311,6 +1317,7 @@ ggplot(ks_perm.patients.pvals, aes(x = ses_status, y = after_stat(density))) +
 
 ```
 
+TODO - comment on whether any of the matched patients had only intellectual disability and not autism.
 
 ### Prev delta
 
@@ -2679,15 +2686,15 @@ patients_mca_small <- clinical_small_raw %>%
 
 ```{r MCA no imp}
 patients_mca_noimp <- patients_mca_small %>%
-  filter(autism == 1) %>%
+  #filter(autism == 1) %>%
    select(#id,
           sex_desc,
-          #age,
-          age_group,
+          age,
+          #age_group,
+          autism,
           commune_name,
           #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
           #medical_specialty_grouped,
-          #autism,
           #intdisab,
           ses_status,
           rurality,
@@ -2697,12 +2704,12 @@ patients_mca_noimp <- patients_mca_small %>%
           foster_care#,
           #foster_care_imp
           )
-# Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
-# We have 416 rows and 406 patients
+
+v_colours =  viridis(10, option = "G")
   
 res_mca_patients_noimp <- FactoMineR::MCA(patients_mca_noimp, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 8, # Needs to match number of features
-                                    graph = TRUE) 
+                                    ncp = 9, # Needs to match number of features
+                                    graph = FALSE) 
 
 # Plot features
 fviz_mca_var(res_mca_patients_noimp, choice = "mca.cor", 
@@ -2711,67 +2718,82 @@ fviz_mca_var(res_mca_patients_noimp, choice = "mca.cor",
 
 # Plot categories
 fviz_mca_var(res_mca_patients_noimp,
-             col.var = "cos2",
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             #habillage = grp,
+             col.var = "contrib",
+             #gradient.cols = c("#39568C", "#3CBB75", "#DCE319"),
+             gradient.cols = c(v_colours[1], v_colours[5], v_colours[7]),
              repel = TRUE, # Avoid text overlapping (slow if many points)
              ggtheme = theme_minimal())
 
 # Plot individual patients
-fviz_mca_ind(res_mca_patients_noimp, col.ind = "cos2", 
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = FALSE, # Graphs is not meaningful if this is TRUE
-             ggtheme = theme_minimal())
+# fviz_mca_ind(res_mca_patients_noimp, 
+#              label = "none",
+#              #col.ind = "cos2", 
+#              #gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              addEllipses = TRUE,
+#              ellipse.level = 0.95,
+#              repel = FALSE, # Graphs is not meaningful if this is TRUE
+#              ggtheme = theme_minimal())
 # OR
-fviz_mca_ind(res_mca_patients_noimp, 
+mca_noimp_sex_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "sex_desc", # color by groups 
-             palette = c("green", "blue"),
+             #palette = c("green", "blue"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by sex",
              ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_noimp, 
+mca_noimp_age_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "age_group", # color by groups 
+             habillage = "age", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by age",
+             ggtheme = theme_minimal()) +
+  theme(legend.position = "none")
+mca_noimp_aut_plot <- fviz_mca_ind(res_mca_patients_noimp, 
+             label = "none", # hide individual labels
+             habillage = "autism", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by autism status",
              ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_noimp, 
+mca_noimp_commune_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "commune_name", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by commune of residence",
-             ggtheme = theme_minimal()) # Really not meaningful
-fviz_mca_ind(res_mca_patients_noimp, 
+             ggtheme = theme_minimal()) + #Really not meaningful
+  theme(legend.position = "none")
+mca_noimp_ses_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "ses_status", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by SES status",
              ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_noimp, 
+mca_noimp_rural_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "rurality", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by rurality",
              ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_noimp, 
+mca_noimp_ethnic_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "ethnicity", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by ethnicity",
              ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_noimp, 
+mca_noimp_disab_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "disability", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by disability status",
              ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_noimp, 
+mca_noimp_foster_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "foster_care", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
@@ -2779,19 +2801,23 @@ fviz_mca_ind(res_mca_patients_noimp,
              title = "Patients by foster care status",
              ggtheme = theme_minimal())
 
+grid.arrange(mca_noimp_sex_plot, mca_noimp_age_plot, mca_noimp_aut_plot,
+             mca_noimp_commune_plot, mca_noimp_ses_plot, mca_noimp_rural_plot,
+             mca_noimp_ethnic_plot, mca_noimp_disab_plot, mca_noimp_foster_plot, ncol = 3, nrow = 3)
+
 #fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
 #fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
 #fviz_ellipses(res_mca_patients, 1, geom = "point")
 
-fviz_cos2(res_mca_patients_noimp, choice = "var", axes = 1:2, xtickslab.rt = 90)
-round(res_mca_patients_noimp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
+#fviz_cos2(res_mca_patients_noimp, choice = "var", axes = 1:2, xtickslab.rt = 90)
+#round(res_mca_patients_noimp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
 
 # Contributions of variable categories to dimension 1
-fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1, top = 15) 
+#fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1, top = 15) 
 # Contributions of variable categories to dimension 2
-fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 2, top = 15)
+#fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 2, top = 15)
 # Total contribution to dimension 1 and 2
-fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15)
+#fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15)
 # "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
 
 
@@ -2799,15 +2825,15 @@ fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15)
 
 ```{r MCA imp}
 patients_mca_imp <- patients_mca_small %>%
-  filter(autism == 1) %>%
+  #filter(autism == 1) %>%
    select(#id,
           sex_desc,
-          #age,
-          age_group,
+          age,
+          #age_group,
+          autism,
           commune_name,
           #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
           #medical_specialty_grouped,
-          #autism,
           #intdisab,
           ses_status,
           rurality,
@@ -2821,8 +2847,8 @@ patients_mca_imp <- patients_mca_small %>%
 # We have 416 rows and 406 patients
   
 res_mca_patients_imp <- FactoMineR::MCA(patients_mca_imp, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 8, # Needs to match number of features
-                                    graph = TRUE) 
+                                    ncp = 9, # Needs to match number of features
+                                    graph = FALSE) 
 
 # Plot features
 fviz_mca_var(res_mca_patients_imp, choice = "mca.cor", 
@@ -2831,67 +2857,82 @@ fviz_mca_var(res_mca_patients_imp, choice = "mca.cor",
 
 # Plot categories
 fviz_mca_var(res_mca_patients_imp,
-             col.var = "cos2",
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+             #habillage = grp,
+             col.var = "contrib",
+             #gradient.cols = c("#39568C", "#3CBB75", "#DCE319"),
+             gradient.cols = c(v_colours[1], v_colours[5], v_colours[7]),
              repel = TRUE, # Avoid text overlapping (slow if many points)
              ggtheme = theme_minimal())
 
 # Plot individual patients
-fviz_mca_ind(res_mca_patients_imp, col.ind = "cos2", 
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = FALSE, # Graphs is not meaningful if this is TRUE
-             ggtheme = theme_minimal())
+# fviz_mca_ind(res_mca_patients_noimp, 
+#              label = "none",
+#              #col.ind = "cos2", 
+#              #gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              addEllipses = TRUE,
+#              ellipse.level = 0.95,
+#              repel = FALSE, # Graphs is not meaningful if this is TRUE
+#              ggtheme = theme_minimal())
 # OR
-fviz_mca_ind(res_mca_patients_imp, 
+mca_imp_sex_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
              habillage = "sex_desc", # color by groups 
-             palette = c("green", "blue"),
+             #palette = c("green", "blue"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by sex",
              ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_imp, 
+mca_imp_age_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
-             habillage = "age_group", # color by groups 
+             habillage = "age", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by age",
+             ggtheme = theme_minimal()) +
+  theme(legend.position = "none")
+mca_imp_aut_plot <- fviz_mca_ind(res_mca_patients_imp, 
+             label = "none", # hide individual labels
+             habillage = "autism", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by autism status",
              ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_imp, 
+mca_imp_commune_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
              habillage = "commune_name", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by commune of residence",
-             ggtheme = theme_minimal()) # Really not meaningful
-fviz_mca_ind(res_mca_patients_imp, 
+             ggtheme = theme_minimal()) + #Really not meaningful
+  theme(legend.position = "none")
+mca_imp_ses_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
              habillage = "ses_status", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by SES status",
              ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_imp, 
+mca_imp_rural_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
              habillage = "rurality", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by rurality",
              ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_imp, 
+mca_imp_ethnic_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
              habillage = "ethnicity", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by ethnicity",
              ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_imp, 
+mca_imp_disab_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
              habillage = "disability_imp", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by disability status",
              ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_imp, 
+mca_imp_foster_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
              habillage = "foster_care_imp", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
@@ -2899,20 +2940,24 @@ fviz_mca_ind(res_mca_patients_imp,
              title = "Patients by foster care status",
              ggtheme = theme_minimal())
 
+grid.arrange(mca_imp_sex_plot, mca_imp_age_plot, mca_imp_aut_plot,
+             mca_imp_commune_plot, mca_imp_ses_plot, mca_imp_rural_plot,
+             mca_imp_ethnic_plot, mca_imp_disab_plot, mca_imp_foster_plot, ncol = 3, nrow = 3)
+
 #fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
 #fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
 #fviz_ellipses(res_mca_patients, 1, geom = "point")
 
-fviz_cos2(res_mca_patients_imp, choice = "var", axes = 1:2, xtickslab.rt = 90)
-round(res_mca_patients_imp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
-
-# Contributions of variable categories to dimension 1
-fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1, top = 15) 
-# Contributions of variable categories to dimension 2
-fviz_contrib(res_mca_patients_imp, choice = "var", axes = 2, top = 15)
-# Total contribution to dimension 1 and 2
-fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
-# "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
+# fviz_cos2(res_mca_patients_imp, choice = "var", axes = 1:2, xtickslab.rt = 90)
+# round(res_mca_patients_imp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
+# 
+# # Contributions of variable categories to dimension 1
+# fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1, top = 15) 
+# # Contributions of variable categories to dimension 2
+# fviz_contrib(res_mca_patients_imp, choice = "var", axes = 2, top = 15)
+# # Total contribution to dimension 1 and 2
+# fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
+# # "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
 
 
 ```
