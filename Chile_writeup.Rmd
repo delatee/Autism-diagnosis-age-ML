@@ -124,7 +124,7 @@ region_service_commune_lookup <- chile.adm3 %>%
          commune_name = ifelse(ADM3_PCODE == "CL01401", "Pozo Almonte", commune_name),
                         # For the Tocopilla in Tarapaca, use it's old name to avoid duplication issues
          health_service_name = 
-           ifelse(ADM3_PCODE == "CL01401", "Servicio de Salud Antofagasta", 
+           ifelse(ADM3_PCODE == "CL01401", "Servicio de Salud Iquique", 
            ifelse(ADM3_PCODE == "CL11201", "Servicio de Salud Aisén",
            ifelse(commune_name == "Isla de Pascua", "Servicio de Salud Metropolitano Oriente",
            ifelse(commune_name == "Los Alamos", "Servicio de Salud Arauco",
@@ -307,9 +307,12 @@ chile_bayes <- chile_merged %>%
                         ifelse(age_cat_code == 3, "12-14", "15-18"))),
           # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
          age_cat_name = factor(age_cat_name, levels = c("6-8", "9-11", "12-14", "15-18")),
-         ethnic_2_group = ifelse(ethnic_3_group == "Other ethnic group", "Other Indigenous group",
-                          ifelse(ethnic_3_group == "Aymara", "Other Indigenous group",
-                          ifelse(ethnic_3_group == "No Native Group", "No Indigenous group", ethnic_3_group))),
+         # ethnic_2_group = ifelse(ethnic_3_group == "Other ethnic group", "Other Indigenous group",
+         #                  ifelse(ethnic_3_group == "Aymara", "Other Indigenous group",
+         #                  ifelse(ethnic_3_group == "No Native Group", "No Indigenous group", ethnic_3_group))),
+         ethnic_2_group = ifelse(ethnicity == "Mapuche", "Mapuche", 
+                          ifelse(ethnicity == "No Native Group" | ethnicity == "No registry", "No Indigenous group",
+                                 "Other ethnic group")),
          school_rurality = ifelse(school_rurality_code == 0, "Urban", "Rural"),
          school_fee_temp = school_fee,
          school_fee = ifelse(school_fee == "", "No information", 
@@ -480,6 +483,9 @@ clinical <- rbind(clinical_large, clinical_small)
 
 clinical_communes <- clinical %>% group_by(commune_code) %>% summarise() %>% arrange() %>%
   mutate(commune_in_school_data = ifelse(commune_code %in% unique(chile_merged$commune_code), 1, 0)) # Needs to all be 1's
+
+#clinical_out <- clinical %>% filter(commune_code %in% araucsur_communes$commune_code)
+#write_csv(clinical_out, file = "04_Data/Outputs/clinical.csv")
 
 ```
 
@@ -810,524 +816,10 @@ TODO - table formatting
 ## School data
 
 TODO - table summarising data content
+Grouping features of sex, health service of residential commune, monthly school fee as a proxy for SES, ethnicity and school’s rurality were used, and calculations were made for aggregate, by sex, and by sex and age group.
 
-In the school data, `r chile_merged %>% filter(student_commune_code == "0") %>% nrow` (`r round(chile_merged %>% filter(student_commune_code == "0") %>% nrow / nrow(chile_merged) * 100, 2)`%) students were missing commune of residence. These missing values were imputed with their school's commune as most students are likely to go to school near their place of residence.
 
-## Clinical data
 
-TODO - table summarising data content. Number of unique patients
-
-## Probabilistic data linkage
-
-```{r patients}
-patients <- clinical %>%
-  filter(commune_code %in% araucsur_communes$commune_code) %>%
-  group_by(id, gender, dob, commune_name, region_name) %>%
-  summarise(ses_status = get.min.na(ses_status),
-            autism = get.max.na(autism),
-            aut_rank = get.min.na(aut_rank)) %>%
-  ungroup() %>% 
-  rename("student_commune_name" = "commune_name",
-         "student_region_name" = "region_name",
-         "sex_desc" = "gender") %>%
-  rowid_to_column("row_id") %>%
-  select(row_id, 
-         id,
-         dob, 
-         sex_desc,
-         student_commune_name,
-         autism,
-         ses_status,
-         #intdisab,
-         aut_rank) #, student_region_name) 
-
-```
-
-NB: there are 1688 unique ID's in patients and it's 1702 rows long because some people are represented in 2 communes.
-
-```{r school}
-school <- chile_merged %>%
-  select(-student_commune_name) %>%
-  left_join(region_service_commune_lookup %>% as.tibble %>% select(-geometry), by = "commune_code") %>%
-  filter(commune_code %in% araucsur_communes$commune_code) %>%
-  filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% 
-  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         aut_rank = 1,
-         dob = ymd(dob),
-         ses_status = ifelse(school_fee == "", NA, 
-                      ifelse(school_fee == "GRATUITO", 1, 
-                      ifelse(school_fee == "$1.000 A $10.000", 2,
-                      ifelse(school_fee == "$10.001 A $25.000", 2, 
-                      ifelse(school_fee == "$25.001 A $50.000", 2,
-                      ifelse(school_fee == "$50.001 A $100.000", 2, 
-                      ifelse(school_fee == "MAS DE $100.000", 2, 
-                      ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
-  filter(autism == 1) %>%
-    # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
-  rename(student_commune_name = commune_name) %>%
-  select(dob,
-         sex_desc,
-         student_commune_name,
-         #commune_name, 
-         #health_service_name,
-         autism,
-         ses_status,
-         #intdisab,
-         aut_rank#,
-         #student_region_name
-  ) %>%
-  rowid_to_column("id")
-
-# Add a fake row so that pairing works later
-school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-26", "Female", "Misc", 0, 3, 0)
-```
-
-### Number matched
-
-```{r manual linkage}
-patients_grouped <- patients %>%
-  group_by(sex_desc, 
-           dob, 
-           student_commune_name) %>%
-  summarise(count = n(),
-            ids = list(id))
-
-school_grouped <- school %>%
-  group_by(sex_desc, 
-           dob, 
-           student_commune_name) %>%
-  summarise(count = n(),
-            #ids = list(rowid)
-            ses = list(ses_status))
-
-merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name"), all = FALSE)
-#merged %>% filter(!is.na(id.x) & !is.na(id.y)) # 205 matches
-
-
-```
-
-Using perfect match on sex, date of birth and commune of residence, `r nrow(merged)` matches can be found between the school and patient records.
-`r length(unique(merged$id.x)) - 1` unique school records can be perfectly matched to clinical records. `r length(unique(merged$id.y))` patients can be linked to school records.
-
-```{r probabilistic weights}
-# formerly a2
-pairs_blocked <- compare.linkage(school,
-                     select(patients, -row_id),
-                     blockfld = c("sex_desc", "dob"), 
-                      # Block on sex and dob because we really want them to be the same and helps computation time
-                     phonetic = FALSE,
-                     strcmp = c(2), # Do string comparison on DOB
-                     exclude = c(1) # Exclude the id column in both datasets
-                     )
-
-pairs_weighted <- epiWeights(pairs_blocked, e = c(0.01, # Default for DOB
-                           0.01, # Default for sex
-                           0.01, # Default for commune because we want a good match
-                           0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
-                           0.4, # Have more error for ses_status because it is loosely defined 
-                           0.01)) # Allow some mismatch on whether autism is the primary diagnosis 
-                                  # so we take record with higher placed autism diagnosis when there 
-                                  # are multiple clinical record options for a single school record
-
-#summary(pairs_weighted)
-#allPairs2 <- getPairs(pairs_weighted)
-#head(allPairs2, n = 20)
-
-pairs_classified <- emClassify(pairs_weighted, threshold.upper = 1, threshold.lower = 0.8)
-
-pairs_blocked.df <- pairs_blocked$pairs %>%
-  mutate(weight = pairs_classified$Wdata,
-         pred = pairs_classified$prediction) %>%
-  rename(".x" = id1, ".y" = id2) %>%
-  select(-is_match)
-
-#finalPairs2 <- getPairs(b2, max.weight = 1, min.weight = 0, single.rows = TRUE) # Take them all when blocked on sex_desc and dob together
-
-# Turn into a 'pairs' type object so it can be fed to select_n_to_m()
-pairs_blocked.pairs <- pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
-         mutate(student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y])#,
-         #ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
-         ) %>%
-  left_join(pairs_blocked.df, by = c(".x", ".y")) %>%
-  select(c(-student_commune_name.x)) %>%
-  rename("student_commune_name" = "student_commune_name.y")
-
-matches <- select_n_to_m(pairs_blocked.pairs, threshold = 0.5, score = "weight", n = 1, m = 1, var = "match") %>%
-  filter(match == TRUE) %>%
-  rename("id" = ".x",
-         "row_id" = ".y") %>%
-  mutate(id = as.character(id))
-```
-
-
-```{r match school}
-
-# Now add the matched clinical records to the school records
-school_matched <- school %>%
-  filter(student_commune_name != "Misc") %>%
-  left_join(matches, by = "id") %>%
-  rename(id.school = id,
-         dob.school = dob.x,
-         sex_desc.school = sex_desc.x,
-         student_commune_name.school = student_commune_name.x,
-         ses_status.school = ses_status.x,
-         dob.matched = dob.y,
-         sex_desc.matched = sex_desc.y,
-         student_commune_name.matched = student_commune_name.y,
-         ses_status.matched = ses_status.y) %>%
-  select(c(-pred, -match)) %>%
-  left_join(patients, by = "row_id") %>%
-  rename(id.patient = row_id,
-         patient_id = id,
-         dob.patient = dob,
-         sex_desc.patient = sex_desc,
-         student_commune_name.patient = student_commune_name,
-         ses_status.patient = ses_status) %>%
-  select(id.school, id.patient, patient_id,
-         dob.school, dob.patient, dob.matched,
-         sex_desc.school, sex_desc.patient, sex_desc.matched,
-         student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
-         ses_status.school, ses_status.patient, ses_status.matched,
-         weight) %>%
-  arrange(desc(weight))
-
-school_matched_small <- school_matched %>%
-  mutate(matched = ifelse(is.na(patient_id), 0, 1),
-         sex.school = ifelse(sex_desc.school == "Male", 1,
-                      ifelse(sex_desc.school == "Female", 2, NA))) %>%
-  merge(region_service_commune_lookup %>% as.tibble() %>% select(-geometry),
-        by.x = "student_commune_name.school", by.y = "commune_name") %>% # doesn't include all.x = TRUE because that would keep the fake record.
-  select(id.school, 
-         dob.school, 
-         sex_desc.school, sex.school,
-         student_commune_name.school, commune_code,
-         ses_status.school, 
-         matched)
-
-```
-
-```{r match patient}
-
-# Now add the matched clinical records to the school records
-patients_matched <- patients %>%
-  left_join(matches, by = "row_id") %>%
-  rename(id.patient = row_id,
-         patient_id = id.x,
-         dob.patient = dob.x,
-         sex_desc.patient = sex_desc.x,
-         student_commune_name.patient = student_commune_name.x,
-         id = id.y,
-         ses_status.patient = ses_status.x,
-         dob.matched = dob.y,
-         sex_desc.matched = sex_desc.y,
-         student_commune_name.matched = student_commune_name.y,
-         ses_status.matched = ses_status.y) %>%
-  select(c(-pred, -match)) %>%
-  left_join(school, by = "id") %>%
-  rename(id.school = id,
-         dob.school = dob,
-         sex_desc.school = sex_desc,
-         student_commune_name.school = student_commune_name,
-         ses_status.school = ses_status) %>%
-  select(id.school, id.patient, patient_id,
-         dob.school, dob.patient, dob.matched,
-         sex_desc.school, sex_desc.patient, sex_desc.matched,
-         student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
-         ses_status.school, ses_status.patient, ses_status.matched,
-         weight) %>%
-  arrange(desc(weight))
-
-patients_matched_small <- patients_matched %>%
-  mutate(matched = ifelse(is.na(id.school), 0, 1),
-         sex.patient = ifelse(sex_desc.patient == "Male", 1,
-                       ifelse(sex_desc.patient == "Female", 2, NA))) %>%
-  merge(region_service_commune_lookup %>% as.tibble() %>% select(-geometry),
-        by.x = "student_commune_name.patient", by.y = "commune_name") %>%
-  select(patient_id, id.patient, 
-         dob.patient,
-         sex_desc.patient, sex.patient,
-         student_commune_name.patient, commune_code,
-         ses_status.patient,
-         matched)
-
-```
-
-
-```{r patients unique}
-patients_matched_unique <- patients_matched_small %>%
-  group_by(matched, patient_id) %>%
-  summarise(count = n())
-
-patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% select(patient_id)
-# No patient is inadvertently matched to two school records
-
-```
-
-There are no patients that lived in different communes therefore were in the patient dataset twice that are matched to multiple school records.
-
-### Differences between un/matched
-
-
-```{r kolmogorov tests school, warning = FALSE}
-
-school_yes <- school_matched_small %>% filter(matched == 1) #%>% select(sex.school)
-school_no <- school_matched_small %>% filter(matched == 0)
-
-# Kolmogorov tests for our matched results
-ks.school.sex <- ks.test(na.omit(school_yes$sex.school),
-                         na.omit(school_no$sex.school),
-                         alternative = "two.sided", simulate.p.value = TRUE)
-ks.school.sex
-
-ks.school.ses_status <- ks.test(as.numeric(na.omit(school_yes$ses_status.school)),
-                                as.numeric(na.omit(school_no$ses_status.school)),
-                                alternative = "two.sided", simulate.p.value = TRUE)
-ks.school.ses_status
-
-ks.school.commune_code<- ks.test(as.numeric(na.omit(school_yes$commune_code)),
-                                 as.numeric(na.omit(school_no$commune_code)),
-                                 alternative = "two.sided", simulate.p.value = TRUE)
-ks.school.commune_code
-
-# Kolmogorov tests with permutation distributions
-set.seed(123)
-nPerm <- 200 # change to 2000
-ks_perm.school.pvals <- data.frame(sex = numeric(nPerm),
-                                   commune_code = numeric(nPerm),
-                                   ses_status = numeric(nPerm))
-
-school_matched_small_perm <- school_matched_small
-
-for (i in 1:nPerm) {
-  #print(i)
-  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
-  school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
-  school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
-  
-  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school),
-                                na.omit(school_perm_no$sex.school), 
-                                alternative = "two.sided")
-  ks_perm.school.commune_code <- ks.test(as.numeric(na.omit(school_perm_yes$commune_code)),
-                                        as.numeric(na.omit(school_perm_no$commune_code)),
-                                        alternative = "two.sided")
-  ks_perm.school.ses_status <- ks.test(as.numeric(na.omit(school_perm_yes$ses_status.school)),
-                                       as.numeric(na.omit(school_perm_no$ses_status.school)),
-                                       alternative = "two.sided")
-  
-  ks_perm.school.pvals$sex[i] <- ks_perm.school.sex$p.value
-  ks_perm.school.pvals$commune_code[i] <- ks_perm.school.commune_code$p.value
-  ks_perm.school.pvals$ses_status[i] <- ks_perm.school.ses_status$p.value
-}
-
-# Results for sex
-school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
-  arrange(sex_desc, matched)
-
-ggplot(school_match.sex) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~sex_desc) +
-  labs(title = "Matching of school record to clinical record by sex",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.sex$p.value, color = "red")
-
-# Results for commune
-school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-school_match_no.student_commune_name <- school_no %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
-
-school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, school_match_no.student_commune_name) %>%
-  arrange(student_commune_name.school, matched)
-
-ggplot(school_match.student_commune_name) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~student_commune_name.school, scales = "fixed") +
-  #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of school record to clinical record by commune",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
-
-
-ggplot(ks_perm.school.pvals, aes(x = commune_code, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.commune_code$p.value, color = "red")
-
-# Results for ses status
-school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.ses_status) %>%
-  arrange(ses_status.school, matched)
-
-ggplot(school_match.ses_status) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~ses_status.school) +
-  labs(title = "Matching of school record to clinical record by SES status",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-ggplot(ks_perm.school.pvals, aes(x = ses_status, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.ses_status$p.value, color = "red")
-
-
-```
-
-Bit easier to match SES status of 1 (probably more common)
-
-Our matched/non-matched are not different by sex (p-value in Kolmog is same as most of distribution of permuted pvals) but are different by commune and ses status. Cohen's D test isn't suitable to compare the matched and un-matched because the data don't have standard deviations.
-
-??Add commune maps here with size of sample for school and clinical?? Also size of other features.
-
-
-
-```{r kolmogorov tests patient, warning = FALSE}
-
-patients_yes <- patients_matched_small %>% filter(matched == 1) #%>% select(sex.school)
-patients_no <- patients_matched_small %>% filter(matched == 0)
-
-# Kolmogorov tests for our matched results
-ks.patients.sex <- ks.test(na.omit(patients_yes$sex.patient),
-                         na.omit(patients_no$sex.patient),
-                         alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.sex
-
-ks.patients.ses_status <- ks.test(as.numeric(na.omit(patients_yes$ses_status.patient)),
-                                as.numeric(na.omit(patients_no$ses_status.patient)),
-                                alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.ses_status
-
-ks.patients.commune_code<- ks.test(as.numeric(na.omit(patients_yes$commune_code)),
-                                 as.numeric(na.omit(patients_no$commune_code)),
-                                 alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.commune_code
-
-
-# Kolmogorov tests with permutation distributions
-set.seed(123)
-nPerm <- 200 # change to 2000
-ks_perm.patients.pvals <- data.frame(sex = numeric(nPerm),
-                                   commune_code = numeric(nPerm),
-                                   ses_status = numeric(nPerm))
-
-patients_matched_small_perm <- patients_matched_small
-
-for (i in 1:nPerm) {
-  #print(i)
-  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] # permute matched status
-  patients_perm_yes <- patients_matched_small_perm %>% filter(matched == 1)
-  patients_perm_no <- patients_matched_small_perm %>% filter(matched == 0)
-  
-  ks_perm.patients.sex <- ks.test(na.omit(patients_perm_yes$sex.patient),
-                                na.omit(patients_perm_no$sex.patient), 
-                                alternative = "two.sided")
-  ks_perm.patients.commune_code <- ks.test(as.numeric(na.omit(patients_perm_yes$commune_code)),
-                                        as.numeric(na.omit(patients_perm_no$commune_code)),
-                                        alternative = "two.sided")
-  ks_perm.patients.ses_status <- ks.test(as.numeric(na.omit(patients_perm_yes$ses_status.patient)),
-                                       as.numeric(na.omit(patients_perm_no$ses_status.patient)),
-                                       alternative = "two.sided")
-  
-  ks_perm.patients.pvals$sex[i] <- ks_perm.patients.sex$p.value
-  ks_perm.patients.pvals$commune_code[i] <- ks_perm.patients.commune_code$p.value
-  ks_perm.patients.pvals$ses_status[i] <- ks_perm.patients.ses_status$p.value
-}
-
-# Results for sex
-patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-patients_match_no.sex <- patients_no %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.patient == 1, "Male", ifelse(sex.patient == 2, "Female", NA))) %>% 
-  arrange(sex_desc, matched)
-
-ggplot(patients_match.sex) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~sex_desc) +
-  labs(title = "Matching of clinical record to school record by sex",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-ggplot(ks_perm.patients.pvals, aes(x = sex, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.patients.sex$p.value, color = "red")
-
-# Results for commune
-patients_match_yes.student_commune_name <- patients_yes %>% group_by(student_commune_name.patient) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-patients_match_no.student_commune_name <- patients_no %>% group_by(student_commune_name.patient) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
-
-patients_match.student_commune_name <- rbind(patients_match_yes.student_commune_name, patients_match_no.student_commune_name) %>%
-  arrange(student_commune_name.patient, matched)
-
-ggplot(patients_match.student_commune_name) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~student_commune_name.patient, scales = "fixed") +
-  #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of clinical record to school record by commune",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
-
-
-ggplot(ks_perm.patients.pvals, aes(x = commune_code, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.patients.commune_code$p.value, color = "red")
-
-# Results for ses status
-patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-patients_match_no.ses_status <- patients_no %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-patients_match.ses_status <- rbind(patients_match_yes.ses_status, patients_match_no.ses_status) %>%
-  arrange(ses_status.patient, matched)
-
-ggplot(patients_match.ses_status) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~ses_status.patient) +
-  labs(title = "Matching of clinical record to school record by SES status",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-ggplot(ks_perm.patients.pvals, aes(x = ses_status, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.patients.ses_status$p.value, color = "red")
-
-
-```
-
-TODO - comment on whether any of the matched patients had only intellectual disability and not autism.
-
-### Prev delta
-
-```{r new prev}
-n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) # Use this version because accounts for non-unique patients with both match and non-match
-#n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
-#  dim(patients_matched_small %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
-```
-
-## Frequentist prevalence estimation
 
 ### Autism and ADHD prevalence by sex
 
@@ -2134,474 +1626,14 @@ ggplot(data = adhd_prev_rural_adj.long) +
 ```
 
 
-## Bayesian prevalence estimation
+## Frequentist prevalence estimation
 
-```{r bayes global params}
-nObs <- nrow(chile_bayes)
-nIter <- 1000
-nBurn <- 1000
-pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
 
-# Autism priors
-# All
-aut_theta_mu_prior <- aut_prev_adj$adjusted_rate
-aut_theta_sigma_prior <- (aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96)
-# Females
-aut_theta_mu_prior_f <- aut_prev_adj_f$adjusted_rate
-aut_theta_sigma_prior_f <- sqrt(aut_prev_adj_f$var)
-# Males
-theta_mu_prior_m <- aut_prev_adj_m$adjusted_rate
-theta_sigma_prior_m <- sqrt(aut_prev_adj_m$var)
-# Projections, use same sigma as before
-aut_theta_mu_proj <- c(0.005, 0.01, 0.02, 0.03) # 0.5%, 1%, 2%, 3% prevalence
-aut_theta_mu_proj_f <- c(0.0025, 0.005, 0.01, 0.02)
-aut_theta_mu_proj_m <- c(0.01, 0.02, 0.03, 0.05)
-aut_theta_sigma_proj <- c(rep((aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96), 4))
+## Clinical data
 
-# ADHD priors
-# All
-adhd_theta_mu_prior <- adhd_prev_adj$adjusted_rate
-adhd_theta_sigma_prior <- (adhd_prev_adj$adjusted_ci_upper - adhd_prev_adj$adjusted_ci_lower) / (2*1.96)
-# Females
-adhd_theta_mu_prior_f <- adhd_prev_adj_f$adjusted_rate
-adhd_theta_sigma_prior_f <- sqrt(adhd_prev_adj_f$var)
-# Males
-adhd_theta_mu_prior_m <- adhd_prev_adj_m$adjusted_rate
-adhd_theta_sigma_prior_m <- sqrt(adhd_prev_adj_m$var)
-# Projections, use same sigma as before
-adhd_theta_mu_proj <- c(0.02, 0.03, 0.05, 0.07) # 2%, 3%, 5%, 7% prevalence
-adhd_theta_mu_proj_f <- c(0.015, 0.02, 0.03, 0.05)
-adhd_theta_mu_proj_m <- c(0.02, 0.03, 0.05, 0.07)
-adhd_theta_sigma_proj <- c(rep((adhd_prev_adj$adjusted_ci_upper - adhd_prev_adj$adjusted_ci_lower) / (2*1.96), 4))
+TODO - table summarising data content. Number of unique patients
 
-rand_model <- "model {
-  for(i in 1:nFeat) { # For each category in the feature grouping
-    theta[i] ~ dbeta(theta_a, theta_b)
-    disease_sample[i] ~ dbin(theta[i], nObs[i])
-    disease_pred[i] ~ dbin(theta[i], nObs[i])
-  }
-}"
-```
 
-### Random effect on sex
-
-```{r bayes sex aut, fig.cap = "Posterior predictive distribution for autism with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
-aut_prev_sex_adj <- rbind(aut_prev_adj_m, aut_prev_adj_f) 
-# have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
-
-aut_prev_sex_post <- do_jags_rand_model(x = aut_prev_sex_adj,
-                              feat = "sex_desc",
-                              model = rand_model,
-                              theta_mu = aut_theta_mu_prior,
-                              theta_sigma = aut_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("sex_desc" = "Feat_names")
-
-plot_post_density(aut_prev_sex_post, aut_prev_sex_adj, 
-                  feat = "sex_desc", 
-                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
-                  disease = "Autism")
-```
-
-
-```{r bayes sex adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
-adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f) 
-# have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
-
-adhd_prev_sex_post <- do_jags_rand_model(x = adhd_prev_sex_adj,
-                              feat = "sex_desc",
-                              model = rand_model,
-                              theta_mu = adhd_theta_mu_prior,
-                              theta_sigma = adhd_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("sex_desc" = "Feat_names")
-
-plot_post_density(adhd_prev_sex_post, adhd_prev_sex_adj, 
-                  feat = "sex_desc", 
-                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
-                  disease = "ADHD")
-```
-
-### Random effect on health service
-
-```{r bayes health aut, fig.cap = "Posterior predictive distribution for autism with a random effect on student's health service, and with age- and sex-adjusted global prevalence prior."}
-aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
-                              feat = "health_service_name",
-                              model = rand_model,
-                              theta_mu = aut_theta_mu_prior,
-                              theta_sigma = aut_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("health_service_name" = "Feat_names")
-
-plot_post_density(aut_prev_health_post, aut_prev_health_adj, 
-                  feat = "health_service_name", 
-                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
-                  disease = "Autism")
-```
-
-```{r bayes health adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on health service, and with age- and sex-adjusted global prevalence prior."}
-adhd_prev_health_post <- do_jags_rand_model(x = adhd_prev_health_adj,
-                              feat = "health_service_name",
-                              model = rand_model,
-                              theta_mu = adhd_theta_mu_prior,
-                              theta_sigma = adhd_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("health_service_name" = "Feat_names")
-
-plot_post_density(adhd_prev_health_post, adhd_prev_health_adj, 
-                  feat = "health_service_name", 
-                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
-                  disease = "ADHD")
-```
-
-### Random effect on commune in Araucanía Sur health service
-
-```{r bayes araucS aut, fig.cap = "Posterior predictive distribution for autism with a random effect on commune within Araucanía Sur health service, and with age- and sex-adjusted global prevalence prior."}
-aut_prev_araucS_post <- do_jags_rand_model(x = aut_prev_araucS_adj,
-                              feat = "commune_name",
-                              model = rand_model,
-                              theta_mu = aut_theta_mu_prior,
-                              theta_sigma = aut_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("commune_name" = "Feat_names")
-
-plot_post_density(aut_prev_araucS_post, aut_prev_araucS_adj, 
-                  feat = "commune_name", 
-                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
-                  disease = "Autism")
-```
-
-### Random effect on socio-economic status
-
-```{r bayes economicAll aut, fig.cap = "Posterior predictive distribution for autism with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
-aut_prev_econA_post <- do_jags_rand_model(x = aut_prev_econA_adj,
-                              feat = "school_fee",
-                              model = rand_model,
-                              theta_mu = aut_theta_mu_prior,
-                              theta_sigma = aut_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("school_fee" = "Feat_names")
-
-plot_post_density(aut_prev_econA_post, aut_prev_econA_adj, 
-                  feat = "school_fee", 
-                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
-                  disease = "Autism")
-```
-
-```{r bayes economicAll adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
-adhd_prev_econA_post <- do_jags_rand_model(x = adhd_prev_econA_adj,
-                              feat = "school_fee",
-                              model = rand_model,
-                              theta_mu = adhd_theta_mu_prior,
-                              theta_sigma = adhd_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("school_fee" = "Feat_names")
-
-plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj, 
-                  feat = "school_fee", 
-                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
-                  disease = "ADHD")
-```
-
-### Random effect on ethnicity
-
-```{r bayes ethnicity aut, fig.cap = "Posterior predictive distribution for autism with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
-aut_prev_ethnic_post <- do_jags_rand_model(x = aut_prev_ethnic_adj,
-                              feat = "ethnic_2_group",
-                              model = rand_model,
-                              theta_mu = aut_theta_mu_prior,
-                              theta_sigma = aut_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("ethnic_2_group" = "Feat_names")
-
-plot_post_density(aut_prev_ethnic_post, aut_prev_ethnic_adj, 
-                  feat = "ethnic_2_group", 
-                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
-                  disease = "Autism")
-```
-
-```{r bayes ethnic adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
-adhd_prev_ethnic_post <- do_jags_rand_model(x = adhd_prev_ethnic_adj,
-                              feat = "ethnic_2_group",
-                              model = rand_model,
-                              theta_mu = adhd_theta_mu_prior,
-                              theta_sigma = adhd_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("ethnic_2_group" = "Feat_names")
-
-plot_post_density(adhd_prev_ethnic_post, adhd_prev_ethnic_adj, 
-                  feat = "ethnic_2_group", 
-                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
-                  disease = "ADHD")
-```
-
-### Random effect on school's rurality
-
-```{r bayes rurality aut, fig.cap = "Posterior predictive distribution for autism with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
-aut_prev_rural_post <- do_jags_rand_model(x = aut_prev_rural_adj,
-                              feat = "school_rurality",
-                              model = rand_model,
-                              theta_mu = aut_theta_mu_prior,
-                              theta_sigma = aut_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("school_rurality" = "Feat_names")
-
-plot_post_density(aut_prev_rural_post, aut_prev_rural_adj, 
-                  feat = "school_rurality", 
-                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
-                  disease = "Autism")
-```
-
-```{r bayes rurality adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
-adhd_prev_rural_post <- do_jags_rand_model(x = adhd_prev_rural_adj,
-                              feat = "school_rurality",
-                              model = rand_model,
-                              theta_mu = adhd_theta_mu_prior,
-                              theta_sigma = adhd_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("school_fee" = "Feat_names")
-
-plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj, 
-                  feat = "school_fee", 
-                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
-                  disease = "ADHD")
-```
-
-
-## Bayesian prevalence projection
-
-
-```{r new prev arauc}
-araucS_lower_prev <- aut_prev_health_adj %>%
-  filter(health_service_name == "Araucanía Sur") %>%
-  select(adjusted_rate) %>% as.numeric
-araucS_upper_prev <- n_aut_araucS / aut_prev_health_adj %>%
-  filter(health_service_name == "Araucanía Sur") %>%
-  select(sum_sample_pop_size) %>% as.numeric
-prev_delta <- araucS_upper_prev - araucS_lower_prev
-
-araucS_lower <- aut_prev_health_adj %>%
-  filter(health_service_name == "Araucanía Sur") %>%
-  select(adjusted_count) %>% as.numeric
-araucS_upper <- n_aut_araucS
-araucS_mean <- (araucS_upper + araucS_lower) / 2
-araucS_sd <- (araucS_upper - araucS_lower) / (2*1.96)
-
-aut_prev_health_adj$new_rate <- numeric(nrow(aut_prev_health_adj))
-aut_prev_health_adj$new_count <- numeric(nrow(aut_prev_health_adj))
-
-for(i in 1:nrow(aut_prev_health_adj)) {
-  if(aut_prev_health_adj$health_service_name[i] == "Servicio de Salud Araucanía Sur") {
-    aut_prev_health_adj$new_rate[i] <- araucS_upper_prev
-    aut_prev_health_adj$new_count[i] <- araucS_upper
-  }
-  else {
-    aut_prev_health_adj$new_rate[i] <- aut_prev_health_adj$adjusted_rate[i] + prev_delta
-    aut_prev_health_adj$new_count[i] <- round(aut_prev_health_adj$new_rate[i] * aut_prev_health_adj$sum_sample_pop_size[i], 0)
-  }
-}
-
-```
-
-
-```{r new prev health, include = FALSE}
-
-# Need to do all by health service code not name because name sorts in different orders.
-
-# Now have health service specific priors so need to provide them as vectors and index each as needed
-rand_model_new <- "model {
-  for(i in 1:nFeat) { # For each category in the feature grouping
-    theta[i] ~ dbeta(theta_a[i], theta_b[i])
-    disease_sample[i] ~ dbin(theta[i], nObs[i])
-    disease_pred[i] ~ dbin(theta[i], nObs[i])
-  }
-}"
-
-nFeat <- length(unique(aut_prev_health_adj$health_service_code))
-FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
-
-pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
-
-# Define beta prior
-theta_mu <- (aut_prev_health_adj$new_rate + aut_prev_health_adj$adjusted_rate) / 2
-theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
-theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-
-#x <- seq(0,1, by =0.01)
-#for(i in 1:29) {
-#  plot(x, dbeta(x, theta_a[i], theta_b[i]), type = "l", xlim = c(0,0.1))
-#}
-
-# Initial values for model chains
-rand_ini <- list(list(theta = rep(0.001, nFeat)),
-                 list(theta = rep(0.01, nFeat)))
-# Run JAGS model
-rand_data <- list(theta_a = theta_a,
-                  theta_b = theta_b,
-                  nObs = aut_prev_health_adj$sum_sample_pop_size,
-                  aut_sample = aut_prev_health_adj$adjusted_count,
-                  nFeat = nFeat)
-rand_jag <- jags.model(textConnection(rand_model_new),
-                       data = rand_data,
-                       inits = rand_ini,
-                       n.chains = 2,
-                       quiet = TRUE)
-update(rand_jag, n.iter = nBurn)
-rand_sam <- coda.samples(model = rand_jag,
-                         variable.names = pars,
-                         n.iter = nIter)
-
-convergence_check <- FALSE
-if(convergence_check) {
-  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
-                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
-                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
-                           "rhat") %>%
-        arrange(desc(rhat))
-  print(rand_summ)
-}
-
-aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
-    select(c("Iteration", contains("theta["))) %>%
-    pivot_longer(cols = contains("theta["),
-                 names_to = "health_service_code",
-                 values_to = "predicted_prev") %>%
-    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
-    select(Iteration, Feat_names, predicted_prev) %>%
-  rename(health_service_code = Feat_names) %>%
-  merge(health_service_lookup, by = "health_service_code") %>%
-  rename(health_service_name_long = health_service_name,
-         health_service_name = health_service_name_short)
-  
-
-# Plot manually because we need different CI's now
-aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
-  group_by(health_service_name) %>%
-  summarise(post_lower = quantile(predicted_prev, 0.025),
-            post_upper = quantile(predicted_prev, 0.975))
-  
-ggplot() +
-  geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev)) +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "red", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "red", linetype = "dashed") +
-  facet_wrap(~health_service_name) +
-  labs(title = "Region specific priors informed by clinical data from Araucanía Sur",
-       x = "Posterior predictive distribution",
-       y = "Density")
-
-```
-
-
-```{r new prev health uniform prior}
-
-####### Need to do all by health service code not name because name sorts in different orders.
-
-# Now have health service specific priors so need to provide them as vectors and index each as needed
-# OR Uniform prior https://stats.stackexchange.com/questions/555260/how-to-set-prior-for-bayesian-analysis 
-rand_model_new <- "model {
-  for(i in 1:nFeat) { # For each category in the feature grouping
-    theta[i] ~ dunif(theta_lower[i], theta_upper[i])     #dbeta(theta_a[i], theta_b[i])
-    disease_sample[i] ~ dbin(theta[i], nObs[i])
-    disease_pred[i] ~ dbin(theta[i], nObs[i])
-    #theta_a[i] <- theta_mu * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
-    #theta_b[i] <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
-  }
-  #theta_mu ~ dunif(0, 1)
-  #theta_sigma ~ dexp(1)
-}"
-
-# Increase burn in and iterations to get more precise predictions
-nIter <- 2000
-nBurn <- 2000
-nFeat <- length(unique(aut_prev_health_adj$health_service_code))
-FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
-
-pars <- c("theta", "disease_sample", "disease_pred")
-
-# Define uniform prior
-theta_lower <- aut_prev_health_adj$adjusted_rate
-theta_upper <- aut_prev_health_adj$new_rate
-
-# Initial values for model chains
-rand_ini <- list(list(theta = rep(0.001, nFeat)),
-                 list(theta = rep(0.01, nFeat)))
-# Run JAGS model
-rand_data <- list(theta_lower = theta_lower,
-                  theta_upper = theta_upper,
-                  nObs = aut_prev_health_adj$sum_sample_pop_size,
-                  aut_sample = aut_prev_health_adj$adjusted_count,
-                  nFeat = nFeat)
-rand_jag <- jags.model(textConnection(rand_model_new),
-                       data = rand_data,
-                       inits = rand_ini,
-                       n.chains = 2,
-                       quiet = TRUE)
-update(rand_jag, n.iter = nBurn)
-rand_sam <- coda.samples(model = rand_jag,
-                         variable.names = pars,
-                         n.iter = nIter)
-
-convergence_check <- FALSE
-if(convergence_check) {
-  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
-                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
-                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
-                           "rhat") %>%
-        arrange(desc(rhat))
-  print(rand_summ)
-}
-
-aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
-    select(c("Iteration", contains("theta["))) %>%
-    pivot_longer(cols = contains("theta["),
-                 names_to = "health_service_code",
-                 values_to = "predicted_prev") %>%
-    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
-    select(Iteration, Feat_names, predicted_prev) %>%
-  rename(health_service_code = Feat_names) %>%
-  merge(health_service_lookup, by = "health_service_code") %>%
-  rename(health_service_name_long = health_service_name,
-         health_service_name = health_service_name_short)
-  
-
-# Plot manually because we need different CI's now
-aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
-  group_by(health_service_name) %>%
-  summarise(post_lower = quantile(predicted_prev, 0.025),
-            post_upper = quantile(predicted_prev, 0.975))
-  
-ggplot() +
-  geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev)) +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "red", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "red", linetype = "dashed") +
-  facet_wrap(~health_service_name) +
-  labs(title = "Region specific priors informed by clinical data from Araucanía Sur",
-       x = "Posterior predictive distribution",
-       y = "Density")
-
-```
-
-Red is the prior 95% CI (adjusted sample rate and it + prev_delta), blue is posterior 95% CrI
 
 ## MCA
 
@@ -2962,6 +1994,759 @@ grid.arrange(mca_imp_sex_plot, mca_imp_age_plot, mca_imp_aut_plot,
 
 ```
 
+
+
+## Probabilistic data linkage
+
+```{r patients}
+patients <- clinical %>%
+  filter(commune_code %in% araucsur_communes$commune_code) %>%
+  group_by(id, gender, dob, commune_name, region_name) %>%
+  summarise(ses_status = get.min.na(ses_status),
+            autism = get.max.na(autism),
+            aut_rank = get.min.na(aut_rank)) %>%
+  ungroup() %>% 
+  rename("student_commune_name" = "commune_name",
+         "student_region_name" = "region_name",
+         "sex_desc" = "gender") %>%
+  rowid_to_column("row_id") %>%
+  select(row_id, 
+         id,
+         dob, 
+         sex_desc,
+         student_commune_name,
+         autism,
+         ses_status,
+         #intdisab,
+         aut_rank) #, student_region_name) 
+
+# patients_out <- clinical %>%
+#   filter(commune_code %in% araucsur_communes$commune_code) %>%
+#   group_by(id, gender, dob) %>%
+#   summarise(ses_status = get.min.na(socio_economic_level),
+#             autism = get.max.na(autism),
+#             intdisab = get.max.na(intdisab),
+#             commune_name = commune_name[which.max(apt_date)],
+#             commune_code = commune_code[which.max(apt_date)]) %>%
+#   ungroup() %>%
+#   rowid_to_column("row_id")
+# write_csv(patients_out, file = "04_Data/Outputs/patients.csv")
+
+```
+
+NB: there are 1688 unique ID's in patients and it's 1702 rows long because some people are represented in 2 communes.
+
+```{r school}
+school <- chile_merged %>%
+  select(-student_commune_name) %>%
+  left_join(region_service_commune_lookup %>% as.tibble %>% select(-geometry), by = "commune_code") %>%
+  filter(commune_code %in% araucsur_communes$commune_code) %>%
+  filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% 
+  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
+         aut_rank = 1,
+         dob = ymd(dob),
+         ses_status = ifelse(school_fee == "", NA, 
+                      ifelse(school_fee == "GRATUITO", 1, 
+                      ifelse(school_fee == "$1.000 A $10.000", 2,
+                      ifelse(school_fee == "$10.001 A $25.000", 2, 
+                      ifelse(school_fee == "$25.001 A $50.000", 2,
+                      ifelse(school_fee == "$50.001 A $100.000", 2, 
+                      ifelse(school_fee == "MAS DE $100.000", 2, 
+                      ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
+  filter(autism == 1) %>%
+    # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
+  rename(student_commune_name = commune_name) %>%
+  select(dob,
+         sex_desc,
+         student_commune_name,
+         #commune_name, 
+         #health_service_name,
+         autism,
+         ses_status,
+         #intdisab,
+         aut_rank#,
+         #student_region_name
+  ) %>%
+  rowid_to_column("id")
+
+# Add a fake row so that pairing works later
+school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-26", "Female", "Misc", 0, 3, 0)
+```
+
+### Number matched
+
+```{r manual linkage}
+patients_grouped <- patients %>%
+  group_by(sex_desc, 
+           dob, 
+           student_commune_name) %>%
+  summarise(count = n(),
+            ids = list(id))
+
+school_grouped <- school %>%
+  group_by(sex_desc, 
+           dob, 
+           student_commune_name) %>%
+  summarise(count = n(),
+            #ids = list(rowid)
+            ses = list(ses_status))
+
+merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name"), all = FALSE)
+#merged %>% filter(!is.na(id.x) & !is.na(id.y)) # 205 matches
+
+
+```
+
+Using perfect match on sex, date of birth and commune of residence, `r nrow(merged)` matches can be found between the school and patient records.
+`r length(unique(merged$id.x)) - 1` unique school records can be perfectly matched to clinical records. `r length(unique(merged$id.y))` patients can be linked to school records.
+
+```{r probabilistic weights}
+# formerly a2
+pairs_blocked <- compare.linkage(school,
+                     select(patients, -row_id),
+                     blockfld = c("sex_desc", "dob"), 
+                      # Block on sex and dob because we really want them to be the same and helps computation time
+                     phonetic = FALSE,
+                     strcmp = c(2), # Do string comparison on DOB
+                     exclude = c(1) # Exclude the id column in both datasets
+                     )
+
+pairs_weighted <- epiWeights(pairs_blocked, e = c(0.01, # Default for DOB
+                           0.01, # Default for sex
+                           0.01, # Default for commune because we want a good match
+                           0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
+                           0.4, # Have more error for ses_status because it is loosely defined 
+                           0.01)) # Allow some mismatch on whether autism is the primary diagnosis 
+                                  # so we take record with higher placed autism diagnosis when there 
+                                  # are multiple clinical record options for a single school record
+
+#summary(pairs_weighted)
+#allPairs2 <- getPairs(pairs_weighted)
+#head(allPairs2, n = 20)
+
+pairs_classified <- emClassify(pairs_weighted, threshold.upper = 1, threshold.lower = 0.8)
+
+pairs_blocked.df <- pairs_blocked$pairs %>%
+  mutate(weight = pairs_classified$Wdata,
+         pred = pairs_classified$prediction) %>%
+  rename(".x" = id1, ".y" = id2) %>%
+  select(-is_match)
+
+#finalPairs2 <- getPairs(b2, max.weight = 1, min.weight = 0, single.rows = TRUE) # Take them all when blocked on sex_desc and dob together
+
+# Turn into a 'pairs' type object so it can be fed to select_n_to_m()
+pairs_blocked.pairs <- pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
+         mutate(student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y])#,
+         #ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
+         ) %>%
+  left_join(pairs_blocked.df, by = c(".x", ".y")) %>%
+  select(c(-student_commune_name.x)) %>%
+  rename("student_commune_name" = "student_commune_name.y")
+
+matches <- select_n_to_m(pairs_blocked.pairs, threshold = 0.5, score = "weight", n = 1, m = 1, var = "match") %>%
+  filter(match == TRUE) %>%
+  rename("id" = ".x",
+         "row_id" = ".y") %>%
+  mutate(id = as.character(id))
+```
+
+
+```{r match school}
+
+# Now add the matched clinical records to the school records
+school_matched <- school %>%
+  filter(student_commune_name != "Misc") %>%
+  left_join(matches, by = "id") %>%
+  rename(id.school = id,
+         dob.school = dob.x,
+         sex_desc.school = sex_desc.x,
+         student_commune_name.school = student_commune_name.x,
+         ses_status.school = ses_status.x,
+         dob.matched = dob.y,
+         sex_desc.matched = sex_desc.y,
+         student_commune_name.matched = student_commune_name.y,
+         ses_status.matched = ses_status.y) %>%
+  select(c(-pred, -match)) %>%
+  left_join(patients, by = "row_id") %>%
+  rename(id.patient = row_id,
+         patient_id = id,
+         dob.patient = dob,
+         sex_desc.patient = sex_desc,
+         student_commune_name.patient = student_commune_name,
+         ses_status.patient = ses_status) %>%
+  select(id.school, id.patient, patient_id,
+         dob.school, dob.patient, dob.matched,
+         sex_desc.school, sex_desc.patient, sex_desc.matched,
+         student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
+         ses_status.school, ses_status.patient, ses_status.matched,
+         weight) %>%
+  arrange(desc(weight))
+
+school_matched_small <- school_matched %>%
+  mutate(matched = ifelse(is.na(patient_id), 0, 1),
+         sex.school = ifelse(sex_desc.school == "Male", 1,
+                      ifelse(sex_desc.school == "Female", 2, NA))) %>%
+  merge(region_service_commune_lookup %>% as.tibble() %>% select(-geometry),
+        by.x = "student_commune_name.school", by.y = "commune_name") %>% # doesn't include all.x = TRUE because that would keep the fake record.
+  select(id.school, 
+         dob.school, 
+         sex_desc.school, sex.school,
+         student_commune_name.school, commune_code,
+         ses_status.school, 
+         matched)
+
+```
+
+```{r match patient}
+
+# Now add the matched clinical records to the school records
+patients_matched <- patients %>%
+  left_join(matches, by = "row_id") %>%
+  rename(id.patient = row_id,
+         patient_id = id.x,
+         dob.patient = dob.x,
+         sex_desc.patient = sex_desc.x,
+         student_commune_name.patient = student_commune_name.x,
+         id = id.y,
+         ses_status.patient = ses_status.x,
+         dob.matched = dob.y,
+         sex_desc.matched = sex_desc.y,
+         student_commune_name.matched = student_commune_name.y,
+         ses_status.matched = ses_status.y) %>%
+  select(c(-pred, -match)) %>%
+  left_join(school, by = "id") %>%
+  rename(id.school = id,
+         dob.school = dob,
+         sex_desc.school = sex_desc,
+         student_commune_name.school = student_commune_name,
+         ses_status.school = ses_status) %>%
+  select(id.school, id.patient, patient_id,
+         dob.school, dob.patient, dob.matched,
+         sex_desc.school, sex_desc.patient, sex_desc.matched,
+         student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
+         ses_status.school, ses_status.patient, ses_status.matched,
+         weight) %>%
+  arrange(desc(weight))
+
+patients_matched_small <- patients_matched %>%
+  mutate(matched = ifelse(is.na(id.school), 0, 1),
+         sex.patient = ifelse(sex_desc.patient == "Male", 1,
+                       ifelse(sex_desc.patient == "Female", 2, NA))) %>%
+  merge(region_service_commune_lookup %>% as.tibble() %>% select(-geometry),
+        by.x = "student_commune_name.patient", by.y = "commune_name") %>%
+  select(patient_id, id.patient, 
+         dob.patient,
+         sex_desc.patient, sex.patient,
+         student_commune_name.patient, commune_code,
+         ses_status.patient,
+         matched)
+
+```
+
+
+```{r patients unique}
+patients_matched_unique <- patients_matched_small %>%
+  group_by(matched, patient_id) %>%
+  summarise(count = n())
+
+patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% select(patient_id)
+# No patient is inadvertently matched to two school records
+
+```
+
+There are no patients that lived in different communes therefore were in the patient dataset twice that are matched to multiple school records.
+
+### Differences between un/matched
+
+
+```{r kolmogorov tests school, warning = FALSE}
+
+school_yes <- school_matched_small %>% filter(matched == 1) #%>% select(sex.school)
+school_no <- school_matched_small %>% filter(matched == 0)
+
+# Kolmogorov tests for our matched results
+ks.school.sex <- ks.test(na.omit(school_yes$sex.school),
+                         na.omit(school_no$sex.school),
+                         alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.sex
+
+ks.school.ses_status <- ks.test(as.numeric(na.omit(school_yes$ses_status.school)),
+                                as.numeric(na.omit(school_no$ses_status.school)),
+                                alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.ses_status
+
+ks.school.commune_code<- ks.test(as.numeric(na.omit(school_yes$commune_code)),
+                                 as.numeric(na.omit(school_no$commune_code)),
+                                 alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.commune_code
+
+# Kolmogorov tests with permutation distributions
+set.seed(123)
+nPerm <- 200 # change to 2000
+ks_perm.school.pvals <- data.frame(sex = numeric(nPerm),
+                                   commune_code = numeric(nPerm),
+                                   ses_status = numeric(nPerm))
+
+school_matched_small_perm <- school_matched_small
+
+for (i in 1:nPerm) {
+  #print(i)
+  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
+  school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
+  school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
+  
+  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school),
+                                na.omit(school_perm_no$sex.school), 
+                                alternative = "two.sided")
+  ks_perm.school.commune_code <- ks.test(as.numeric(na.omit(school_perm_yes$commune_code)),
+                                        as.numeric(na.omit(school_perm_no$commune_code)),
+                                        alternative = "two.sided")
+  ks_perm.school.ses_status <- ks.test(as.numeric(na.omit(school_perm_yes$ses_status.school)),
+                                       as.numeric(na.omit(school_perm_no$ses_status.school)),
+                                       alternative = "two.sided")
+  
+  ks_perm.school.pvals$sex[i] <- ks_perm.school.sex$p.value
+  ks_perm.school.pvals$commune_code[i] <- ks_perm.school.commune_code$p.value
+  ks_perm.school.pvals$ses_status[i] <- ks_perm.school.ses_status$p.value
+}
+
+# Results for sex
+school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
+  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
+  arrange(sex_desc, matched)
+
+ggplot(school_match.sex) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Matching of school record to clinical record by sex",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.sex$p.value, color = "red")
+
+# Results for commune
+school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
+  #merge(commune_, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 1) 
+school_match_no.student_commune_name <- school_no %>% group_by(student_commune_name.school) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 0)
+
+school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, school_match_no.student_commune_name) %>%
+  arrange(student_commune_name.school, matched)
+
+ggplot(school_match.student_commune_name) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~student_commune_name.school, scales = "fixed") +
+  #facet_wrap(~student_commune_name.school, scales = "free") +
+  labs(title = "Matching of school record to clinical record by commune",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
+
+
+ggplot(ks_perm.school.pvals, aes(x = commune_code, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.commune_code$p.value, color = "red")
+
+# Results for ses status
+school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.ses_status) %>%
+  arrange(ses_status.school, matched)
+
+ggplot(school_match.ses_status) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~ses_status.school) +
+  labs(title = "Matching of school record to clinical record by SES status",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+ggplot(ks_perm.school.pvals, aes(x = ses_status, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.ses_status$p.value, color = "red")
+
+
+```
+
+Bit easier to match SES status of 1 (probably more common)
+
+Our matched/non-matched are not different by sex (p-value in Kolmog is same as most of distribution of permuted pvals) but are different by commune and ses status. Cohen's D test isn't suitable to compare the matched and un-matched because the data don't have standard deviations.
+
+??Add commune maps here with size of sample for school and clinical?? Also size of other features.
+
+
+
+```{r kolmogorov tests patient, warning = FALSE}
+
+patients_yes <- patients_matched_small %>% filter(matched == 1) #%>% select(sex.school)
+patients_no <- patients_matched_small %>% filter(matched == 0)
+
+# Kolmogorov tests for our matched results
+ks.patients.sex <- ks.test(na.omit(patients_yes$sex.patient),
+                         na.omit(patients_no$sex.patient),
+                         alternative = "two.sided", simulate.p.value = TRUE)
+ks.patients.sex
+
+ks.patients.ses_status <- ks.test(as.numeric(na.omit(patients_yes$ses_status.patient)),
+                                as.numeric(na.omit(patients_no$ses_status.patient)),
+                                alternative = "two.sided", simulate.p.value = TRUE)
+ks.patients.ses_status
+
+ks.patients.commune_code<- ks.test(as.numeric(na.omit(patients_yes$commune_code)),
+                                 as.numeric(na.omit(patients_no$commune_code)),
+                                 alternative = "two.sided", simulate.p.value = TRUE)
+ks.patients.commune_code
+
+
+# Kolmogorov tests with permutation distributions
+set.seed(123)
+nPerm <- 200 # change to 2000
+ks_perm.patients.pvals <- data.frame(sex = numeric(nPerm),
+                                   commune_code = numeric(nPerm),
+                                   ses_status = numeric(nPerm))
+
+patients_matched_small_perm <- patients_matched_small
+
+for (i in 1:nPerm) {
+  #print(i)
+  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] # permute matched status
+  patients_perm_yes <- patients_matched_small_perm %>% filter(matched == 1)
+  patients_perm_no <- patients_matched_small_perm %>% filter(matched == 0)
+  
+  ks_perm.patients.sex <- ks.test(na.omit(patients_perm_yes$sex.patient),
+                                na.omit(patients_perm_no$sex.patient), 
+                                alternative = "two.sided")
+  ks_perm.patients.commune_code <- ks.test(as.numeric(na.omit(patients_perm_yes$commune_code)),
+                                        as.numeric(na.omit(patients_perm_no$commune_code)),
+                                        alternative = "two.sided")
+  ks_perm.patients.ses_status <- ks.test(as.numeric(na.omit(patients_perm_yes$ses_status.patient)),
+                                       as.numeric(na.omit(patients_perm_no$ses_status.patient)),
+                                       alternative = "two.sided")
+  
+  ks_perm.patients.pvals$sex[i] <- ks_perm.patients.sex$p.value
+  ks_perm.patients.pvals$commune_code[i] <- ks_perm.patients.commune_code$p.value
+  ks_perm.patients.pvals$ses_status[i] <- ks_perm.patients.ses_status$p.value
+}
+
+# Results for sex
+patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+patients_match_no.sex <- patients_no %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
+  mutate(sex_desc = ifelse(sex.patient == 1, "Male", ifelse(sex.patient == 2, "Female", NA))) %>% 
+  arrange(sex_desc, matched)
+
+ggplot(patients_match.sex) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Matching of clinical record to school record by sex",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+ggplot(ks_perm.patients.pvals, aes(x = sex, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.patients.sex$p.value, color = "red")
+
+# Results for commune
+patients_match_yes.student_commune_name <- patients_yes %>% group_by(student_commune_name.patient) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
+  #merge(commune_, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 1) 
+patients_match_no.student_commune_name <- patients_no %>% group_by(student_commune_name.patient) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 0)
+
+patients_match.student_commune_name <- rbind(patients_match_yes.student_commune_name, patients_match_no.student_commune_name) %>%
+  arrange(student_commune_name.patient, matched)
+
+ggplot(patients_match.student_commune_name) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~student_commune_name.patient, scales = "fixed") +
+  #facet_wrap(~student_commune_name.school, scales = "free") +
+  labs(title = "Matching of clinical record to school record by commune",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
+
+
+ggplot(ks_perm.patients.pvals, aes(x = commune_code, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.patients.commune_code$p.value, color = "red")
+
+# Results for ses status
+patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+patients_match_no.ses_status <- patients_no %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+patients_match.ses_status <- rbind(patients_match_yes.ses_status, patients_match_no.ses_status) %>%
+  arrange(ses_status.patient, matched)
+
+ggplot(patients_match.ses_status) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~ses_status.patient) +
+  labs(title = "Matching of clinical record to school record by SES status",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+ggplot(ks_perm.patients.pvals, aes(x = ses_status, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.patients.ses_status$p.value, color = "red")
+
+
+```
+
+TODO - comment on whether any of the matched patients had only intellectual disability and not autism.
+
+### Prev delta
+
+```{r new prev}
+n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) # Use this version because accounts for non-unique patients with both match and non-match
+#n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
+#  dim(patients_matched_small %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
+```
+
+
+
+
+
+## Bayesian prevalence projection
+
+
+```{r new prev arauc}
+araucS_lower_prev <- aut_prev_health_adj %>%
+  filter(health_service_name == "Araucanía Sur") %>%
+  select(adjusted_rate) %>% as.numeric
+araucS_upper_prev <- n_aut_araucS / aut_prev_health_adj %>%
+  filter(health_service_name == "Araucanía Sur") %>%
+  select(sum_sample_pop_size) %>% as.numeric
+prev_delta <- araucS_upper_prev - araucS_lower_prev
+
+araucS_lower <- aut_prev_health_adj %>%
+  filter(health_service_name == "Araucanía Sur") %>%
+  select(adjusted_count) %>% as.numeric
+araucS_upper <- n_aut_araucS
+araucS_mean <- (araucS_upper + araucS_lower) / 2
+araucS_sd <- (araucS_upper - araucS_lower) / (2*1.96)
+
+aut_prev_health_adj$new_rate <- numeric(nrow(aut_prev_health_adj))
+aut_prev_health_adj$new_count <- numeric(nrow(aut_prev_health_adj))
+
+for(i in 1:nrow(aut_prev_health_adj)) {
+  if(aut_prev_health_adj$health_service_name[i] == "Servicio de Salud Araucanía Sur") {
+    aut_prev_health_adj$new_rate[i] <- araucS_upper_prev
+    aut_prev_health_adj$new_count[i] <- araucS_upper
+  }
+  else {
+    aut_prev_health_adj$new_rate[i] <- aut_prev_health_adj$adjusted_rate[i] + prev_delta
+    aut_prev_health_adj$new_count[i] <- round(aut_prev_health_adj$new_rate[i] * aut_prev_health_adj$sum_sample_pop_size[i], 0)
+  }
+}
+
+```
+
+
+```{r new prev health, include = FALSE}
+
+# Need to do all by health service code not name because name sorts in different orders.
+
+# Now have health service specific priors so need to provide them as vectors and index each as needed
+rand_model_new <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dbeta(theta_a[i], theta_b[i])
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+nFeat <- length(unique(aut_prev_health_adj$health_service_code))
+FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
+
+pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
+
+# Define beta prior
+theta_mu <- (aut_prev_health_adj$new_rate + aut_prev_health_adj$adjusted_rate) / 2
+theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+#x <- seq(0,1, by =0.01)
+#for(i in 1:29) {
+#  plot(x, dbeta(x, theta_a[i], theta_b[i]), type = "l", xlim = c(0,0.1))
+#}
+
+# Initial values for model chains
+rand_ini <- list(list(theta = rep(0.001, nFeat)),
+                 list(theta = rep(0.01, nFeat)))
+# Run JAGS model
+rand_data <- list(theta_a = theta_a,
+                  theta_b = theta_b,
+                  nObs = aut_prev_health_adj$sum_sample_pop_size,
+                  aut_sample = aut_prev_health_adj$adjusted_count,
+                  nFeat = nFeat)
+rand_jag <- jags.model(textConnection(rand_model_new),
+                       data = rand_data,
+                       inits = rand_ini,
+                       n.chains = 2,
+                       quiet = TRUE)
+update(rand_jag, n.iter = nBurn)
+rand_sam <- coda.samples(model = rand_jag,
+                         variable.names = pars,
+                         n.iter = nIter)
+
+convergence_check <- FALSE
+if(convergence_check) {
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+        arrange(desc(rhat))
+  print(rand_summ)
+}
+
+aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "health_service_code",
+                 values_to = "predicted_prev") %>%
+    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
+    select(Iteration, Feat_names, predicted_prev) %>%
+  rename(health_service_code = Feat_names) %>%
+  merge(health_service_lookup, by = "health_service_code") %>%
+  rename(health_service_name_long = health_service_name,
+         health_service_name = health_service_name_short)
+  
+
+# Plot manually because we need different CI's now
+aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
+  group_by(health_service_name) %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+ggplot() +
+  geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev)) +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "red", linetype = "dashed") +
+  facet_wrap(~health_service_name) +
+  labs(title = "Region specific priors informed by clinical data from Araucanía Sur",
+       x = "Posterior predictive distribution",
+       y = "Density")
+
+```
+
+
+```{r new prev health uniform prior}
+
+####### Need to do all by health service code not name because name sorts in different orders.
+
+# Now have health service specific priors so need to provide them as vectors and index each as needed
+# OR Uniform prior https://stats.stackexchange.com/questions/555260/how-to-set-prior-for-bayesian-analysis 
+rand_model_new <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dunif(theta_lower[i], theta_upper[i])     #dbeta(theta_a[i], theta_b[i])
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+    #theta_a[i] <- theta_mu * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+    #theta_b[i] <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+  }
+  #theta_mu ~ dunif(0, 1)
+  #theta_sigma ~ dexp(1)
+}"
+
+nObs <- nrow(chile_bayes_aut)
+nIter <- 2000
+nBurn <- 2000
+nFeat <- length(unique(aut_prev_health_adj$health_service_code))
+FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
+
+pars <- c("theta", "disease_sample", "disease_pred")
+
+# Define uniform prior
+theta_lower <- aut_prev_health_adj$adjusted_rate
+theta_upper <- aut_prev_health_adj$new_rate
+
+# Initial values for model chains
+rand_ini <- list(list(theta = rep(0.001, nFeat)),
+                 list(theta = rep(0.01, nFeat)))
+# Run JAGS model
+rand_data <- list(theta_lower = theta_lower,
+                  theta_upper = theta_upper,
+                  nObs = aut_prev_health_adj$sum_sample_pop_size,
+                  aut_sample = aut_prev_health_adj$adjusted_count,
+                  nFeat = nFeat)
+rand_jag <- jags.model(textConnection(rand_model_new),
+                       data = rand_data,
+                       inits = rand_ini,
+                       n.chains = 2,
+                       quiet = TRUE)
+update(rand_jag, n.iter = nBurn)
+rand_sam <- coda.samples(model = rand_jag,
+                         variable.names = pars,
+                         n.iter = nIter)
+
+convergence_check <- FALSE
+if(convergence_check) {
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+        arrange(desc(rhat))
+  print(rand_summ)
+}
+
+aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "health_service_code",
+                 values_to = "predicted_prev") %>%
+    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
+    select(Iteration, Feat_names, predicted_prev) %>%
+  rename(health_service_code = Feat_names) %>%
+  merge(health_service_lookup, by = "health_service_code") %>%
+  rename(health_service_name_long = health_service_name,
+         health_service_name = health_service_name_short)
+  
+
+# Plot manually because we need different CI's now
+aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
+  group_by(health_service_name) %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+ggplot() +
+  geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev)) +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "red", linetype = "dashed") +
+  facet_wrap(~health_service_name) +
+  labs(title = "Region specific priors informed by clinical data from Araucanía Sur",
+       x = "Posterior predictive distribution",
+       y = "Density")
+
+```
+
+Red is the prior 95% CI (adjusted sample rate and it + prev_delta), blue is posterior 95% CrI
+
+
 # Supplementary materials
 
 
@@ -3185,4 +2970,247 @@ ggplot(data = adhd_prev_rural.age.sex) +
 ```
 
 
+## Bayesian prevalence estimation
+
+```{r bayes global params}
+nObs <- nrow(chile_bayes)
+nIter <- 1000
+nBurn <- 1000
+pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
+
+# Autism priors
+# All
+aut_theta_mu_prior <- aut_prev_adj$adjusted_rate
+aut_theta_sigma_prior <- (aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96)
+# Females
+aut_theta_mu_prior_f <- aut_prev_adj_f$adjusted_rate
+aut_theta_sigma_prior_f <- sqrt(aut_prev_adj_f$var)
+# Males
+theta_mu_prior_m <- aut_prev_adj_m$adjusted_rate
+theta_sigma_prior_m <- sqrt(aut_prev_adj_m$var)
+# Projections, use same sigma as before
+aut_theta_mu_proj <- c(0.005, 0.01, 0.02, 0.03) # 0.5%, 1%, 2%, 3% prevalence
+aut_theta_mu_proj_f <- c(0.0025, 0.005, 0.01, 0.02)
+aut_theta_mu_proj_m <- c(0.01, 0.02, 0.03, 0.05)
+aut_theta_sigma_proj <- c(rep((aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96), 4))
+
+# ADHD priors
+# All
+adhd_theta_mu_prior <- adhd_prev_adj$adjusted_rate
+adhd_theta_sigma_prior <- (adhd_prev_adj$adjusted_ci_upper - adhd_prev_adj$adjusted_ci_lower) / (2*1.96)
+# Females
+adhd_theta_mu_prior_f <- adhd_prev_adj_f$adjusted_rate
+adhd_theta_sigma_prior_f <- sqrt(adhd_prev_adj_f$var)
+# Males
+adhd_theta_mu_prior_m <- adhd_prev_adj_m$adjusted_rate
+adhd_theta_sigma_prior_m <- sqrt(adhd_prev_adj_m$var)
+# Projections, use same sigma as before
+adhd_theta_mu_proj <- c(0.02, 0.03, 0.05, 0.07) # 2%, 3%, 5%, 7% prevalence
+adhd_theta_mu_proj_f <- c(0.015, 0.02, 0.03, 0.05)
+adhd_theta_mu_proj_m <- c(0.02, 0.03, 0.05, 0.07)
+adhd_theta_sigma_proj <- c(rep((adhd_prev_adj$adjusted_ci_upper - adhd_prev_adj$adjusted_ci_lower) / (2*1.96), 4))
+
+rand_model <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dbeta(theta_a, theta_b)
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+```
+
+### Random effect on sex
+
+```{r bayes sex aut, fig.cap = "Posterior predictive distribution for autism with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_sex_adj <- rbind(aut_prev_adj_m, aut_prev_adj_f) 
+# have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
+
+aut_prev_sex_post <- do_jags_rand_model(x = aut_prev_sex_adj,
+                              feat = "sex_desc",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("sex_desc" = "Feat_names")
+
+plot_post_density(aut_prev_sex_post, aut_prev_sex_adj, 
+                  feat = "sex_desc", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+
+```{r bayes sex adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f) 
+# have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
+
+adhd_prev_sex_post <- do_jags_rand_model(x = adhd_prev_sex_adj,
+                              feat = "sex_desc",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("sex_desc" = "Feat_names")
+
+plot_post_density(adhd_prev_sex_post, adhd_prev_sex_adj, 
+                  feat = "sex_desc", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
+
+### Random effect on health service
+
+```{r bayes health aut, fig.cap = "Posterior predictive distribution for autism with a random effect on student's health service, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
+                              feat = "health_service_name",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("health_service_name" = "Feat_names")
+
+plot_post_density(aut_prev_health_post, aut_prev_health_adj, 
+                  feat = "health_service_name", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+```{r bayes health adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on health service, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_health_post <- do_jags_rand_model(x = adhd_prev_health_adj,
+                              feat = "health_service_name",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("health_service_name" = "Feat_names")
+
+plot_post_density(adhd_prev_health_post, adhd_prev_health_adj, 
+                  feat = "health_service_name", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
+
+### Random effect on commune in Araucanía Sur health service
+
+```{r bayes araucS aut, fig.cap = "Posterior predictive distribution for autism with a random effect on commune within Araucanía Sur health service, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_araucS_post <- do_jags_rand_model(x = aut_prev_araucS_adj,
+                              feat = "commune_name",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("commune_name" = "Feat_names")
+
+plot_post_density(aut_prev_araucS_post, aut_prev_araucS_adj, 
+                  feat = "commune_name", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+### Random effect on socio-economic status
+
+```{r bayes economicAll aut, fig.cap = "Posterior predictive distribution for autism with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_econA_post <- do_jags_rand_model(x = aut_prev_econA_adj,
+                              feat = "school_fee",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("school_fee" = "Feat_names")
+
+plot_post_density(aut_prev_econA_post, aut_prev_econA_adj, 
+                  feat = "school_fee", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+```{r bayes economicAll adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_econA_post <- do_jags_rand_model(x = adhd_prev_econA_adj,
+                              feat = "school_fee",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("school_fee" = "Feat_names")
+
+plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj, 
+                  feat = "school_fee", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
+
+### Random effect on ethnicity
+
+```{r bayes ethnicity aut, fig.cap = "Posterior predictive distribution for autism with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_ethnic_post <- do_jags_rand_model(x = aut_prev_ethnic_adj,
+                              feat = "ethnic_2_group",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("ethnic_2_group" = "Feat_names")
+
+plot_post_density(aut_prev_ethnic_post, aut_prev_ethnic_adj, 
+                  feat = "ethnic_2_group", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+```{r bayes ethnic adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_ethnic_post <- do_jags_rand_model(x = adhd_prev_ethnic_adj,
+                              feat = "ethnic_2_group",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("ethnic_2_group" = "Feat_names")
+
+plot_post_density(adhd_prev_ethnic_post, adhd_prev_ethnic_adj, 
+                  feat = "ethnic_2_group", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
+
+### Random effect on school's rurality
+
+```{r bayes rurality aut, fig.cap = "Posterior predictive distribution for autism with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
+aut_prev_rural_post <- do_jags_rand_model(x = aut_prev_rural_adj,
+                              feat = "school_rurality",
+                              model = rand_model,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("school_rurality" = "Feat_names")
+
+plot_post_density(aut_prev_rural_post, aut_prev_rural_adj, 
+                  feat = "school_rurality", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+```{r bayes rurality adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
+adhd_prev_rural_post <- do_jags_rand_model(x = adhd_prev_rural_adj,
+                              feat = "school_rurality",
+                              model = rand_model,
+                              theta_mu = adhd_theta_mu_prior,
+                              theta_sigma = adhd_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("school_fee" = "Feat_names")
+
+plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj, 
+                  feat = "school_fee", 
+                  theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
+                  disease = "ADHD")
+```
 
