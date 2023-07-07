@@ -370,6 +370,12 @@ chile_bayes <- chile_merged %>%
 
 chile_bayes_aut <- chile_bayes %>% select(-adhd)
 chile_bayes_adhd <- chile_bayes %>% select(-autism)
+
+mapuche_regions <- c("09", "11", "09", "10", "14", "12", "13")
+chile_bayes_aut_ethnic <- chile_bayes_aut %>%
+  filter(region_code %in% mapuche_regions)
+chile_bayes_adhd_ethnic <- chile_bayes_adhd %>%
+  filter(region_code %in% mapuche_regions)
 ```
 
 ```{r import clinical data}
@@ -1314,7 +1320,7 @@ ggplot(data = adhd_prev_econA.agecat_sex) +
 
 ```{r adj prev ethnic}
 # Autism
-aut_prev_ethnic <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+aut_prev_ethnic <- get_grouped_prev(x = chile_bayes_aut_ethnic, stdpop = chile_stdpop, 
                                     grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
                                     disease = "autism")
 
@@ -1323,7 +1329,7 @@ aut_prev_ethnic_adj <- get_adjusted_prev(aut_prev_ethnic, grouping_vars = "ethni
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 # ADHD
-adhd_prev_ethnic <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
+adhd_prev_ethnic <- get_grouped_prev(x = chile_bayes_adhd_ethnic, stdpop = chile_stdpop, 
                                     grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
                                     disease = "adhd")
 
@@ -1332,11 +1338,11 @@ adhd_prev_ethnic_adj <- get_adjusted_prev(adhd_prev_ethnic, grouping_vars = "eth
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
 
-Autism prevalence is slightly lower among Mapuche students than students with no Indigenous group, and slightly higher in those belonging to another Indigenous group, but age distribution is consistent across ethnicities. ADHD prevalence is also consistent across ethnic groups with slightly higher prevalence in older non-Indigenous students compared to Indigenous.
+Autism prevalence and distribution by age is very similar between Mapuche and non-Indigenous students in the Araucanía, Aysén, Biobío, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions. ADHD prevalence is also consistent across Mapuche and non-Indigenous students. Among students of other Indigenous groups, autism and ADHD prevalence appear to peak in older age groups, however this result is based on very few cases. 
 
 ```{r prev age ethnic aut table}
 # Autism
-aut_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
+aut_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "autism"),
                                                     disease = "autism") %>%
   arrange(age_june30)
@@ -1351,14 +1357,14 @@ kbl(aut_prev_ethnic.age_sex.table,
   booktabs = TRUE,
   longtable = TRUE,
   linesep = c("", "", "\\hline"), # Extra white space after every 3rd line
-  caption = "Count and prevalence of Autism cases by ethnicity and age in Chile school data for females and males with normal confidence intervals.") %>%
+  caption = "Count and prevalence of Autism cases by ethnicity and age in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
 ```{r prev age ethnic adhd table}
 # Autism
-adhd_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
+adhd_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "adhd"),
                                                     disease = "adhd") %>%
   arrange(age_june30)
@@ -1373,14 +1379,14 @@ kbl(adhd_prev_ethnic.age_sex.table,
   booktabs = TRUE,
   longtable = TRUE,
   linesep = c("", "", "\\hline"), # Extra white space after every 3rd line
-  caption = "Count and prevalence of ADHD cases by ethnicity and age in Chile school data for females and males with normal confidence intervals.") %>%
+  caption = "Count and prevalence of ADHD cases by ethnicity and age in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
 add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-```{r prev agecat ethnic aut plot, fig.cap = "Sample prevalence of autism by ethnicity, age band and sex. Bars show 95% normal confidence intervals."}
+```{r prev agecat ethnic aut plot, fig.cap = "Sample prevalence of autism by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only."}
 # Autism
-aut_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
+aut_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "autism"),
                                                     disease = "autism") %>%
   arrange(age_cat_name)
@@ -1397,9 +1403,9 @@ ggplot(data = aut_prev_ethnic.agecat_sex) +
 ```
 
 
-```{r prev agecat ethnic adhd plot, fig.cap = "Sample prevalence of ADHD by ethnicity, age band and sex. Bars show 95% normal confidence intervals."}
+```{r prev agecat ethnic adhd plot, fig.cap = "Sample prevalence of ADHD by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only."}
 # ADHD
-adhd_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
+adhd_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "adhd"),
                                                     disease = "adhd") %>%
   mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
@@ -1620,14 +1626,7 @@ kbl(adhd_prev_rural_adj.table,
 ```
 
 
-
 ## Clinical data
-
-TODO - table summarising data content. Number of unique patients
-
-
-
-## MCA
 
 ```{r MCA patients small}
 patients_mca_small <- clinical_small_raw %>% 
@@ -1638,13 +1637,13 @@ patients_mca_small <- clinical_small_raw %>%
   mutate(gender = str_to_title(gender),
          autism = ifelse(cod_dg_1 %in% aut_codes | 
                            cod_dg_2 %in% aut_codes | 
-                           cod_dg_3 %in% aut_codes, 1, 0),
+                           cod_dg_3 %in% aut_codes, "Yes autism", "No autism"),
          aut_rank = ifelse(cod_dg_1 %in% aut_codes, 1,
                     ifelse(cod_dg_2 %in% aut_codes, 2,
                     ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
          intdisab = ifelse(cod_dg_1 %in% intdisab_codes | 
                            cod_dg_2 %in% intdisab_codes | 
-                           cod_dg_3 %in% intdisab_codes, 1, 0),
+                           cod_dg_3 %in% intdisab_codes, "Yes intellectual disability", "No intellectual disability"),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
          commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
                         ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
@@ -1656,6 +1655,7 @@ patients_mca_small <- clinical_small_raw %>%
                         ifelse(comuna == "MACHALI", "MACHALÍ",
                         ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
          ses_status = ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level),
+         rurality = ifelse(rurality == "URBAN", "Urban", "Rural"),
          ethnicity = ifelse(ethnicity == "CHILENO", "Chilean",
                      ifelse(ethnicity == "MAPUCHE", "Mapuche",
                      ifelse(ethnicity == "EXTRANJERO", "Foreign", "No ethnicity information"))),
@@ -1687,26 +1687,106 @@ patients_mca_small <- clinical_small_raw %>%
   rename("sex_desc" = "gender",
          "age" = "age_june30") %>%
   mutate(sex_desc = as.factor(sex_desc),
-         age_group = as.factor(ifelse(age <= 2, "Age 0-2", 
-                               ifelse(age >= 3 & age <= 5, "Age 3-5",
-                               ifelse(age >=6 & age <= 8, "Age 6-8", 
-                               ifelse(age >=9 & age <=11, "Age 9-11", 
-                               ifelse(age >=12 & age <= 14, "Age 12-14", 
-                               ifelse(age >= 15 & age <= 18, "Age 15-18", "Adult"))))))), # Shouldn't be any adults in this dataset
+         age_group = factor(ifelse(age <= 2, "Age 0-2", 
+                            ifelse(age >= 3 & age <= 5, "Age 3-5",
+                            ifelse(age >=6 & age <= 8, "Age 6-8", 
+                            ifelse(age >=9 & age <=11, "Age 9-11", 
+                            ifelse(age >=12 & age <= 14, "Age 12-14", 
+                            ifelse(age >= 15 & age <= 18, "Age 15-18", "Adult")))))),
+                            levels = c("Age 0-2", "Age 3-5", "Age 6-8", "Age 9-11", "Age 12-14", "Age 15-18", "Adult")), 
+                            # Shouldn't be any adults in this dataset
          age = as.factor(age),
          commune_name = as.factor(commune_name),
          ses_status = as.factor(ses_status),
          rurality = as.factor(rurality),
-         ethnicity = as.factor(ethnicity),
+         ethnicity = factor(ethnicity, levels = c("Mapuche", "Chilean", "Foreign", "No ethnicity information")),
          disability_imp = as.factor(ifelse(disability == "No disability information", "No disability", disability)),
-         disability = as.factor(disability),
+         disability = factor(disability, levels = c("Yes disability", "No disability", "No disability information")),
          foster_care_imp = as.factor(ifelse(foster_care == "No foster care information", "No foster care", foster_care)),
-         foster_care = as.factor(foster_care),
-         autism = as.factor(autism),
-         intdisab = as.factor(intdisab),
+         foster_care = factor(foster_care, levels = c("Yes foster care", "No foster care", "No foster care information")),
+         autism = factor(autism, levels = c("Yes autism", "No autism")),
+         intdisab = factor(intdisab, levels = c("Yes intellectual disability", "No intellectual disability")),
          medical_specialty_grouped = as.factor(medical_specialty_grouped),
          hospital = as.factor(hospital))
 ```
+
+
+The small clinical dataset has data on `r nrow(clinical_small)` appointments for `r length(unique(clinical_small$id))` unique patients aged 1-18 in 2021. `r patients_mca_small %>% filter(sex_desc == "Female") %>% nrow` (`r round(patients_mca_small %>% filter(sex_desc == "Female") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) are female, `r patients_mca_small %>% filter(ethnicity == "Mapuche") %>% nrow` (`r round(patients_mca_small %>% filter(ethnicity == "Mapuche") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) are Mapuche, `r patients_mca_small %>% filter(rurality == "URBAN") %>% nrow` (`r round(patients_mca_small %>% filter(rurality == "URBAN") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) live in an urban area, `r patients_mca_small %>% filter(disability == "Yes disability") %>% nrow` (`r round(patients_mca_small %>% filter(disability == "Yes disability") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have a disability and `r patients_mca_small %>% filter(foster_care == "Yes foster care") %>% nrow` (`r round(patients_mca_small %>% filter(foster_care == "Yes foster care") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have experienced foster care. `r patients_mca_small %>% filter(autism == 1) %>% nrow` (`r round(patients_mca_small %>% filter(autism == 1) %>% nrow / nrow(patients_mca_small) * 100, 2)`%) patients have autism, `r patients_mca_small %>% filter(intdisab == 1) %>% nrow` (`r round(patients_mca_small %>% filter(intdisab == 1) %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have an intellectual disability and `r patients_mca_small %>% filter(autism == 1 & intdisab == 1) %>% nrow` (`r round(patients_mca_small %>% filter(autism == 1 & intdisab == 1) %>% nrow / nrow(patients_mca_small) * 100, 2)`%).
+
+TODO - table summarising data content. Number of unique patients
+
+```{r patients mca small table}
+patients_mca_small.table <- patients_mca_small %>%
+  group_by(sex_desc) %>% 
+  summarise(variable = "Sex",
+            count = n(), 
+            perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+  rename(values = sex_desc) %>%
+  rbind(patients_mca_small %>%
+          group_by(age_group) %>% 
+          summarise(variable = "Age band",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = age_group),
+        patients_mca_small %>%
+          group_by(ses_status) %>% 
+          summarise(variable = "Private health level",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = ses_status),
+        patients_mca_small %>%
+          group_by(commune_name) %>% 
+          summarise(variable = "Commune",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = commune_name),
+        patients_mca_small %>%
+          group_by(rurality) %>% 
+          summarise(variable = "Rurality",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = rurality),
+        patients_mca_small %>%
+          group_by(ethnicity) %>% 
+          summarise(variable = "Ethnicity",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = ethnicity),
+        patients_mca_small %>%
+          group_by(disability) %>% 
+          summarise(variable = "Disability",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = disability),
+        patients_mca_small %>%
+          group_by(foster_care) %>% 
+          summarise(variable = "Foster care",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = foster_care),
+        patients_mca_small %>%
+          group_by(autism) %>% 
+          summarise(variable = "Autism",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = autism),
+        patients_mca_small %>%
+          group_by(intdisab) %>% 
+          summarise(variable = "Intellectual disability",
+                    count = n(), 
+                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
+          rename(values = intdisab)) %>%
+  mutate(count_perc = paste0(count, " (", perc, "%)")) %>%
+  select(variable, values, count_perc)
+
+kbl(patients_mca_small.table,
+    col.names = c("Feature", "Available values", "Count (%)"),
+    align = "llr",
+    booktabs = TRUE,
+    caption = "Count and percentage of features' values in the small clinical dataset.")
+```
+
+## MCA
 
 ```{r MCA no imp}
 patients_mca_noimp <- patients_mca_small %>%
