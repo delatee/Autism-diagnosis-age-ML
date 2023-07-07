@@ -73,7 +73,7 @@ library(tidyverse)
 ```
 
 
-```{r import geographic data}
+```{r importGeographicData}
 
 # Import region and commune boundaries
 # https://data.humdata.org/dataset/cod-ab-chl
@@ -175,7 +175,7 @@ araucsur_communes <- region_service_commune_lookup %>%
 
 ```
 
-```{r import standard population data}
+```{r importStandardPopulationData}
 chile_stdpop_raw <- read_excel("04_Data/pop_chile_2021_single_age.xlsx") %>%
   clean_names() 
 
@@ -185,7 +185,7 @@ chile_stdpop <- chile_stdpop_raw %>%
   mutate(pop_prop = std_pop / sum(std_pop))
 ```
 
-```{r import chile demog data}
+```{r importChileDemogData}
 # https://www.ine.gob.cl/estadisticas/sociales/demografia-y-vitales/proyecciones-de-poblacion
 chile_regionpop_raw <- read_excel("04_Data/ine_estimaciones-y-proyecciones-2002-2035_base-2017_region_area_tabulados.xlsx", sheet = "Region summary 2021") %>%
   clean_names()
@@ -220,7 +220,7 @@ chile_regionincome <- chile_regionincome_raw %>%
 
 ```
 
-```{r import school data}
+```{r importSchoolData}
 
 chile_merged_raw <- read.csv("04_Data/Data_Chile_Merge.csv") %>% clean_names()
 
@@ -266,9 +266,10 @@ chile_merged <- chile_merged_raw %>%
          teaching_code_new = ens) %>%
   mutate(commune_code_temp = ifelse(student_commune_code == "0", school_commune_code, student_commune_code),
                              # If there is no commune code for the student, use their school's code instead
-          commune_code_old = ifelse(nchar(as.character(commune_code_temp)) == 4,
-                               paste0("0", as.character(commune_code_temp)),
-                               as.character(commune_code_temp)),
+         commune_code_old = ifelse(nchar(as.character(commune_code_temp)) == 4,
+                                   paste0("0", as.character(commune_code_temp)),
+                                   as.character(commune_code_temp)),
+         # Fix Biobio to Nuble communes
          commune_code = ifelse(commune_code_old == "08401", "16101",
                         ifelse(commune_code_old == "08402", "16102",
                         ifelse(commune_code_old == "08403", "16202",
@@ -292,7 +293,7 @@ chile_merged <- chile_merged_raw %>%
                         ifelse(commune_code_old == "08421", "16109", commune_code_old))))))))))))))))))))))
 ```
 
-```{r restructure data}
+```{r restructureData}
 chile_bayes <- chile_merged %>%
   #select(-student_commune_name) %>%
   left_join(region_service_commune_lookup %>% as.tibble() %>% select(-geometry), by = "commune_code") %>%
@@ -304,17 +305,17 @@ chile_bayes <- chile_merged %>%
          age_cat_code = ifelse(age_june30 <= 8, 1, 
                    ifelse(age_june30 <= 11, 2, 
                    ifelse(age_june30 <= 14, 3, 4))),
-         age_cat_name = ifelse(age_cat_code == 1, "6-8", 
-                        ifelse(age_cat_code == 2, "9-11", 
-                        ifelse(age_cat_code == 3, "12-14", "15-18"))),
-          # 1 = 6-8, 2 = 9-11, 3 = 12-14, 4 = 15-18
-         age_cat_name = factor(age_cat_name, levels = c("6-8", "9-11", "12-14", "15-18")),
+         age_cat_name = factor(ifelse(age_cat_code == 1, "6-8", 
+                               ifelse(age_cat_code == 2, "9-11", 
+                               ifelse(age_cat_code == 3, "12-14", "15-18"))),
+                               levels = c("6-8", "9-11", "12-14", "15-18")),
          # ethnic_2_group = ifelse(ethnic_3_group == "Other ethnic group", "Other Indigenous group",
          #                  ifelse(ethnic_3_group == "Aymara", "Other Indigenous group",
          #                  ifelse(ethnic_3_group == "No Native Group", "No Indigenous group", ethnic_3_group))),
-         ethnic_2_group = ifelse(ethnicity == "Mapuche", "Mapuche", 
+         ethnic_2_group = factor(ifelse(ethnicity == "Mapuche", "Mapuche", 
                           ifelse(ethnicity == "No Native Group" | ethnicity == "No registry", "No Indigenous group",
-                                 "Other ethnic group")),
+                                 "Other Indigenous group")), 
+                          levels = c("Mapuche", "Other Indigenous group", "No Indigenous group")),
          school_rurality = ifelse(school_rurality_code == 0, "Urban", "Rural"),
          school_fee_temp = school_fee,
          school_fee = ifelse(school_fee == "", "No information", 
@@ -378,7 +379,7 @@ chile_bayes_adhd_ethnic <- chile_bayes_adhd %>%
   filter(region_code %in% mapuche_regions)
 ```
 
-```{r import clinical data}
+```{r importClinicalData}
 clinical_large_raw <- read_excel("04_Data/dataset_ssas_2015_2021.xlsx") %>% clean_names
 #describe(clinical_raw)
 
@@ -500,7 +501,7 @@ clinical_communes <- clinical %>% group_by(commune_code) %>% summarise() %>% arr
 ```
 
 
-```{r functions bayes}
+```{r functionsBayes}
 
 get_grouped_prev_plot <- function(x, grouping_vars, disease) {
   # Calculates sample prevalence and its confidence intervals for supplied feature grouping
@@ -680,7 +681,7 @@ plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigm
 }
 ```
 
-```{r functions restructure}
+```{r functionsRestructure}
 # Define some functions to help with restructuring clinical data into patient level data
 get.min.na <- function(x) ifelse( !all(is.na(x)), min(x, na.rm = TRUE), NA)
 
@@ -718,9 +719,9 @@ get.yes.fostercare <- function(x) {
 
 
 ```{r colours}
-plasma_colours <- viridis(10, option = "C")
-#"#0D0887FF" "#47039FFF" "#7301A8FF" "#9C179EFF" "#BD3786FF" "#D8576BFF" "#ED7953FF" "#FA9E3BFF" "#FDC926FF" "#F0F921FF"
-viridis_colours <- viridis(10, option = "G")
+plasma_colours <- viridis(10, option = "C") #"#0D0887FF" "#47039FFF" "#7301A8FF" "#9C179EFF" "#BD3786FF" "#D8576BFF" "#ED7953FF" "#FA9E3BFF" "#FDC926FF" "#F0F921FF"
+viridis_colours <- viridis(10, option = "G") #"#0B0405FF" "#28192FFF" "#3B2F5EFF" "#40498EFF" "#366A9FFF" "#348AA6FF" "#38AAACFF" "#54C9ADFF" "#A0DFB9FF" "#DEF5E5FF"
+turbo_colours <- viridis(10, option = "H") #"#30123BFF" "#4662D7FF" "#36AAF9FF" "#1AE4B6FF" "#72FE5EFF" "#C7EF34FF" "#FABA39FF" "#F66B19FF" "#CB2A04FF" "#7A0403FF"
   
 ```
 
@@ -763,7 +764,7 @@ demog_geom <- chile.adm1 %>%
 #  select(-region)
 ```
 
-```{r map pop, include = TRUE, fig.cap = "Population of 0-14 year olds in Chile in 2021 by region, from 2017 census projections."}
+```{r mapPop, include = TRUE, fig.cap = "Population of 0-14 year olds in Chile in 2021 by region, from 2017 census projections."}
 # Population
 ggplot(demog_geom) + 
   geom_sf(mapping = aes(geometry = geometry, fill = youth_pop_2021), linewidth = 0.01) +
@@ -775,7 +776,7 @@ ggplot(demog_geom) +
   coord_sf(xlim = c(-85, -50), ylim = c(-60, -15))
 ```
 
-```{r map income, include = TRUE, fig.cap = "Net income from main job in Chile in 2021 by region, from the INE's Supplementary Income Survey."}
+```{r mapIncome, include = TRUE, fig.cap = "Net income from main job in Chile in 2021 by region, from the INE's Supplementary Income Survey."}
 # Income
 ggplot(demog_geom) + 
   geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.01) +
@@ -788,7 +789,7 @@ ggplot(demog_geom) +
 ```
 
 
-```{r health to region, fig.cap = "Residential communes aggregated to region level and the health services associated with the aggregated communes, with counts of the number of students resident in the communes in each health service's catchment area."}
+```{r healthRegion, fig.cap = "Residential communes aggregated to region level and the health services associated with the aggregated communes, with counts of the number of students resident in the communes in each health service's catchment area."}
 map_tab_df <- as.data.frame(table(chile_bayes$region_name, chile_bayes$health_service_name))
 ggplot(map_tab_df, aes(x = Var1, y = Var2, fill = Freq)) +
   geom_tile() +
@@ -799,10 +800,9 @@ ggplot(map_tab_df, aes(x = Var1, y = Var2, fill = Freq)) +
   scale_y_discrete(limits = rev(levels(map_tab_df$Var2))) +
   labs(title = "Students' residential region and health service",
        x = "Region", y = "Health service", fill = "Count")
-
 ```
 
-```{r map health services, include = FALSE, fig.cap = "Health services in Chile, coloured by region they serve."}
+```{r mapHealthServices, include = FALSE, fig.cap = "Health services in Chile, coloured by region they serve."}
 # Income
 
 # health_service_geom <- region_service_commune_lookup %>%
@@ -824,7 +824,7 @@ ggplot(map_tab_df, aes(x = Var1, y = Var2, fill = Freq)) +
 #   summarise(geometry = st_union(geometry))
 ```
 
-```{r map arauc, fig.cap = "Communes in the Araucanía region, coloured red for the Araucanía Norte (north Araucanía) health services and blue for the Araucanía Sur (south Araucanía) health service."}
+```{r mapArauc, fig.cap = "Communes in the Araucanía region, coloured red for the Araucanía Norte (north Araucanía) health services and blue for the Araucanía Sur (south Araucanía) health service."}
 # ARAUC communes
 arauc <- region_service_commune_lookup %>%
   filter(ADM1_PCODE == "CL09")
@@ -847,7 +847,7 @@ TODO - copy in methods
 
 ## School data
 
-```{r adj prev}
+```{r adjPrev}
 # Autism
 aut_prev <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
                              grouping_vars = c("age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
@@ -895,9 +895,9 @@ adhd_prev_adj <- adhd_prev %>% # Don't use get_adjusted_prev here because we hav
 
 The school dataset contained records for `r format(nrow(chile_bayes), big.mark = ",", trim = TRUE)` Chilean students aged 6-18 in 2021. Of these, `r format(chile_bayes %>% filter(sex_desc == "Female") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(sex_desc == "Female") %>% nrow() / nrow(chile_bayes) * 100, 2)`%) were female and the rest were male.  A special needs code was recorded for `r format(chile_bayes %>% filter(special_needs_status == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(special_needs_status == 1) %>% nrow() / nrow(chile_bayes) * 100, 2)`%) students, indicating they received SEED during that school year. Of these students, `r format(chile_bayes %>% filter(autism == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(autism == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for autism and `r format(chile_bayes %>% filter(adhd == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(adhd == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for ADHD. Thus the global crude prevalence of autism in the school data was `r round(aut_prev_adj$crude_rate * 100, 3)`% (`r round(aut_prev_adj$crude_ci_lower * 100, 3)`-`r round(aut_prev_adj$crude_ci_upper * 100, 3)`%) and the global crude prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$crude_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$crude_ci_lower * 100, 2))`-`r round(adhd_prev_adj$crude_ci_upper * 100, 2)`%).
 
-Tables \@ref(tab:prev age aut table) and \@ref(tab:prev age adhd table) and Supplementary Figure x show the crude prevalences of autism and ADHD by age and Figure 5 shows these by 2-year age band. Autism prevalence is highest in the youngest ages and decreases with age while ADHD prevalence peaks at age 11 then decreases. Both conditions show a small increase in prevalence for age 18.
+Tables \@ref(tab:prevAgeAutTable) and \@ref(tab:prevAgeAdhdTable) and Supplementary Figure x show the crude prevalences of autism and ADHD by age and Figure 5 shows these by 2-year age band. Autism prevalence is highest in the youngest ages and decreases with age while ADHD prevalence peaks at age 11 then decreases. Both conditions show a small increase in prevalence for age 18.
 
-```{r prev age aut table}
+```{r prevAgeAutTable}
 # Autism
 aut_prev.age <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                           grouping_vars = c("age_june30", "autism"),
@@ -911,11 +911,11 @@ kbl(aut_prev.age.table,
     col.names = c("Age", "Autism cases", "Prevalence % (95% CI)"),
     align = "rrr",
     booktabs = TRUE,
-    linesep = c("", "", "\\hline"), # Extra white space after every 3rd line to match age bands
+    linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of autism cases by age in Chile school data with normal confidence intervals.")
 ```
 
-```{r prev age adhd table}
+```{r prevAgeAdhdTable}
 # ADHD
 adhd_prev.age <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("age_june30", "adhd"),
@@ -929,11 +929,11 @@ kbl(adhd_prev.age.table,
     col.names = c("Age", "ADHD cases", "Prevalence % (95% CI)"),
     align = "rrr",
     booktabs = TRUE,
-    linesep = c("", "", "\\hline"), # Extra white space after every 3rd line to match age bands
+    linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of ADHD cases by age in Chile school data with normal confidence intervals.")
 ```
 
-```{r prev agecat plot, fig.cap = "Sample prevalence of autism and ADHD by age band. Bars show 95% normal confidence intervals.", fig.height = 4}
+```{r prevAgecatPlot, fig.cap = "Sample prevalence of autism and ADHD by age band. Bars show 95% normal confidence intervals.", fig.height = 3}
 # Plot both by age category
 # Autism
 aut_prev.agecat <- get_grouped_prev_plot(x = chile_bayes_aut, 
@@ -973,7 +973,7 @@ grid.arrange(aut_prev.agecat.plot, adhd_prev.agecat.plot, ncol = 2)
 ```
 
 
-```{r adj prev sex}
+```{r adjPrevSex}
 # Seperate sexes so that standardisation is correct
 chile_stdpop_f <- chile_stdpop %>%
   filter(sex == 2) %>%
@@ -1021,7 +1021,7 @@ adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f)
 
 Tables 3 and 4 and figure 6 show prevalence by sex. Autism prevalence is `r round(aut_prev_sex_adj$crude_rate[2] * 100, 3)`% (`r round(aut_prev_sex_adj$crude_ci_lower[2] * 100, 3)`-`r round(aut_prev_sex_adj$crude_ci_upper[2] * 100, 3)`%) for females and `r sprintf("%.2f", round(aut_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(aut_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males. ADHD prevalence is `r round(adhd_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$crude_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(adhd_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(adhd_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males. Autism and ADHD prevalences are higher in males than females for all ages.
 
-```{r prev age sex aut table}
+```{r prevAgeSexAutTable}
 # Autism
 aut_prev.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                           grouping_vars = c("age_june30", "sex_desc", "autism"),
@@ -1036,12 +1036,15 @@ kbl(aut_prev.age_sex.table,
     col.names = c("Age", "Autism cases", "Prevalence % (95% CI)", "Autism cases", "Prevalence % (95% CI)"),
     align = "rrrrr",
     booktabs = TRUE,
-    linesep = c("", "", "\\hline"), # Extra white space after every 3rd line to match age bands
+    linesep = c("", "", "\\addlinespace",
+                "", "", "\\addlinespace",
+                "", "", "\\addlinespace",
+                "", "", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of autism cases by age in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 1, "Female" = 2, "Male" = 2))
 ```
 
-```{r prev age sex adhd table}
+```{r prevAgeSexAdhdTable}
 # ADHD
 adhd_prev.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("age_june30", "sex_desc", "adhd"),
@@ -1056,12 +1059,15 @@ kbl(adhd_prev.age_sex.table,
     col.names = c("Age", "ADHD cases", "Prevalence % (95% CI)", "ADHD cases", "Prevalence % (95% CI)"),
     align = "rrrrr",
     booktabs = TRUE,
-    linesep = c("", "", "\\hline"), # Extra white space after every 3rd line to match age bands
+    linesep = c("", "", "\\addlinespace",
+                "", "", "\\addlinespace",
+                "", "", "\\addlinespace",
+                "", "", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of ADHD cases by age in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 1, "Female" = 2, "Male" = 2))
 ```
 
-```{r prev agecat sex plot, fig.cap = "Sample prevalence of autism and ADHD by age band and sex. Bars show 95% normal confidence intervals.", fig.height = 4}
+```{r prevAgecatSexPlot, fig.cap = "Sample prevalence of autism and ADHD by age band and sex. Bars show 95% normal confidence intervals.", fig.height = 4}
 # Plot both by age category and sex
 # Autism
 aut_prev.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
@@ -1096,7 +1102,7 @@ adhd_prev.agecat_sex.plot <- ggplot(data = adhd_prev.agecat_sex) +
 grid.arrange(aut_prev.agecat_sex.plot, adhd_prev.agecat_sex.plot, ncol = 2)
 ```
 
-```{r adj prev health}
+```{r adjPrevHealth}
 # Autism
 aut_prev_health <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
                                     grouping_vars = c("health_service_code", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
@@ -1126,7 +1132,7 @@ Autism varies by health service, as shown in Table 5 and Figure 7. Autism preval
 
 ADHD prevalence also varies across health services, as shown in Table 6 and Figure 8. ADHD prevalence is highest in Magallanes at `r round(adhd_prev_health_adj$crude_rate[17] * 100, 2)`% (`r round(adhd_prev_health_adj$crude_ci_lower[17] * 100, 2)` - `r sprintf("%.2f", round(adhd_prev_health_adj$crude_ci_upper[17] * 100, 2))`%) and Talcahuano at `r round(adhd_prev_health_adj$crude_rate[25] * 100, 2)`% (`r round(adhd_prev_health_adj$crude_ci_lower[25] * 100, 2)`- `r round(adhd_prev_health_adj$crude_ci_upper[25] * 100, 2)`%), and is lowest in Atacama at `r round(adhd_prev_health_adj$crude_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$crude_ci_lower[8] * 100, 2)` - `r sprintf("%.2f", round(adhd_prev_health_adj$crude_ci_upper[8] * 100, 2))`%) and Antofagasta at `r sprintf("%.2f", round(adhd_prev_health_adj$crude_rate[3] * 100, 2))`% (`r round(adhd_prev_health_adj$crude_ci_lower[3] * 100, 2)`- `r round(adhd_prev_health_adj$crude_ci_upper[3] * 100, 2)`%). 
 
-```{r prev age health aut table}
+```{r prevAgeHealthAutTable}
 # Autism
 aut_prev_health.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("health_service_name", "age_june30", "sex_desc", "autism"),
@@ -1146,13 +1152,14 @@ kbl(aut_prev_health.age_sex.table,
               "", "", "", "", "",
               "", "", "", "", "",
               "", "", "", "", "",
-              "", "", "", "\\hline"), # Extra white space after every 29th line
+              "", "", "", "", "",
+              "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of autism cases by health service and age in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-```{r prev age health adhd table}
+```{r prevAgeHealthAdhdTable}
 # ADHD
 adhd_prev_health.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("health_service_name", "age_june30", "sex_desc", "adhd"),
@@ -1172,14 +1179,15 @@ kbl(adhd_prev_health.age_sex.table,
               "", "", "", "", "",
               "", "", "", "", "",
               "", "", "", "", "",
-              "", "", "", "\\hline"), # Extra white space after every 29th line
+              "", "", "", "", "",
+              "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of ADHD cases by health service and age in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
   kable_styling(latex_options = c("repeat_header"))
 
 ```
 
-```{r prev agecat health aut plot, fig.cap = "Sample prevalence of autism by health service, age band and sex. Bars show 95% normal confidence intervals.", fig.height = 10, fig.width = 8.5}
+```{r prevAgecatHealthAutPlot, fig.cap = "Sample prevalence of autism by health service, age band and sex. Bars show 95% normal confidence intervals.", fig.height = 10, fig.width = 8.5}
 # Autism
 aut_prev_health.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                           grouping_vars = c("health_service_name" ,"age_cat_name", "sex_desc", "autism"),
@@ -1197,7 +1205,7 @@ ggplot(data = aut_prev_health.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prev agecat health adhd plot, fig.cap = "Sample prevalence of ADHD by health service, age band and sex. Bars show 95% normal confidence intervals.", fig.height = 10, fig.width = 8.5}
+```{r prevAgecatHealthAdhdPlot, fig.cap = "Sample prevalence of ADHD by health service, age band and sex. Bars show 95% normal confidence intervals.", fig.height = 10, fig.width = 8.5}
 # ADHD
 adhd_prev_health.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "adhd"),
@@ -1216,7 +1224,7 @@ ggplot(data = adhd_prev_health.agecat_sex) +
 
 ```
 
-```{r adj prev econA}
+```{r adjPrevEconA}
 # Autism
 aut_prev_econA <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
                                     grouping_vars = c("school_fee", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
@@ -1238,7 +1246,7 @@ adhd_prev_econA_adj <- get_adjusted_prev(adhd_prev_econA, grouping_vars = "schoo
 
 For school fees, which are used here as a proxy for SES, autism prevalence is highest among students that receive free or low fee education, though the sample size for students that pay \$1,000-\$10,000 monthly is very small. ADHD prevalence is more consistent across school fee levels, except for the  \$1,000-\$10,000 band which has low prevalence and very few cases. Prevalence is higher among older students for higher fee bands. For both autism and ADHD, prevalence is very low among students paying more than \$100,000 monthly, suggesting students from wealthier families may not be accessing SEED or may not be eligible for it due to attending private schools.
 
-```{r prev age econA aut table}
+```{r prevAgeEconAAutTable}
 # Autism
 aut_prev_econA.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_fee", "age_june30", "sex_desc", "autism"),
@@ -1254,13 +1262,13 @@ kbl(aut_prev_econA.age_sex.table,
   align = "lrrrrr",
   booktabs = TRUE,
   longtable = TRUE,
-  linesep = c("", "", "", "", "", "", "\\hline"), # Extra white space after every 7th line
+  linesep = c("", "", "", "", "", "", "\\addlinespace"), # Extra white space after every 7th line
   caption = "Count and prevalence of Autism cases by school fee and age in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-```{r prev age econA adhd table}
+```{r prevAgeEconAAdhdTable}
 # Autism
 adhd_prev_econA.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
                                                     grouping_vars = c("school_fee", "age_june30", "sex_desc", "adhd"),
@@ -1273,16 +1281,16 @@ adhd_prev_econA.age_sex.table <- adhd_prev_econA.age_sex %>% filter(sex_desc == 
 
 kbl(adhd_prev_econA.age_sex.table, 
   col.names = c("School fee", "Age", "ADHD cases", "Prevalence % (95% CI)", "ADHD cases", "Prevalence % (95% CI)"),
-  align = "rrrrrr",
+  align = "lrrrrr",
   booktabs = TRUE,
   longtable = TRUE,
-  linesep = c("", "", "", "", "", "", "\\hline"), # Extra white space after every 7th line
+  linesep = c("", "", "", "", "", "", "\\addlinespace"), # Extra white space after every 7th line
   caption = "Count and prevalence of ADHD cases by school fee and age in Chile school data for females and males with normal confidence intervals.") %>%
 add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-```{r prev agecat econA aut plot, fig.cap = "Sample prevalence of autism by student's monthly school fee (Peso), age band and sex. Bars show 95% normal confidence intervals.", fig.height=6}
+```{r prevAgecatEconAAutPlot, fig.cap = "Sample prevalence of autism by student's monthly school fee (Peso), age band and sex. Bars show 95% normal confidence intervals.", fig.height=6}
 # Autism
 aut_prev_econA.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "autism"),
@@ -1300,7 +1308,7 @@ ggplot(data = aut_prev_econA.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prev agecat econA adhd plot, fig.cap = "Sample prevalence of ADHD by student's monthly school fee (Peso), age band and sex. Bars show 95% normal confidence intervals.", fig.height=6}
+```{r prevAgecatEconAAdhdPlot, fig.cap = "Sample prevalence of ADHD by student's monthly school fee (Peso), age band and sex. Bars show 95% normal confidence intervals.", fig.height=6}
 # ADHD
 adhd_prev_econA.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
                                                     grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "adhd"),
@@ -1318,7 +1326,7 @@ ggplot(data = adhd_prev_econA.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r adj prev ethnic}
+```{r adjPrevEthnic}
 # Autism
 aut_prev_ethnic <- get_grouped_prev(x = chile_bayes_aut_ethnic, stdpop = chile_stdpop, 
                                     grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
@@ -1340,7 +1348,7 @@ adhd_prev_ethnic_adj <- get_adjusted_prev(adhd_prev_ethnic, grouping_vars = "eth
 
 Autism prevalence and distribution by age is very similar between Mapuche and non-Indigenous students in the Araucanía, Aysén, Biobío, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions. ADHD prevalence is also consistent across Mapuche and non-Indigenous students. Among students of other Indigenous groups, autism and ADHD prevalence appear to peak in older age groups, however this result is based on very few cases. 
 
-```{r prev age ethnic aut table}
+```{r prevAgeEthnicAutTable}
 # Autism
 aut_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "autism"),
@@ -1356,13 +1364,13 @@ kbl(aut_prev_ethnic.age_sex.table,
   align = "lrrrrr",
   booktabs = TRUE,
   longtable = TRUE,
-  linesep = c("", "", "\\hline"), # Extra white space after every 3rd line
+  linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of Autism cases by ethnicity and age in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-```{r prev age ethnic adhd table}
+```{r prevAgeEthnicAdhdTable}
 # Autism
 adhd_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "adhd"),
@@ -1378,13 +1386,13 @@ kbl(adhd_prev_ethnic.age_sex.table,
   align = "lrrrrr",
   booktabs = TRUE,
   longtable = TRUE,
-  linesep = c("", "", "\\hline"), # Extra white space after every 3rd line
+  linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of ADHD cases by ethnicity and age in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
 add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-```{r prev agecat ethnic aut plot, fig.cap = "Sample prevalence of autism by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only."}
+```{r prevAgecatEthnicAutPlot, fig.cap = "Sample prevalence of autism by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only."}
 # Autism
 aut_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "autism"),
@@ -1403,7 +1411,7 @@ ggplot(data = aut_prev_ethnic.agecat_sex) +
 ```
 
 
-```{r prev agecat ethnic adhd plot, fig.cap = "Sample prevalence of ADHD by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only."}
+```{r prevAgecatEthnicAdhdPlot, fig.cap = "Sample prevalence of ADHD by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only."}
 # ADHD
 adhd_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "adhd"),
@@ -1422,7 +1430,7 @@ ggplot(data = adhd_prev_ethnic.agecat_sex) +
 ```
 
 
-```{r adj prev rurality}
+```{r adjPrevRurality}
 # Autism
 aut_prev_rural <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
                                     grouping_vars = c("school_rurality", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
@@ -1442,9 +1450,9 @@ adhd_prev_rural_adj <- get_adjusted_prev(adhd_prev_rural, grouping_vars = "schoo
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
 
-Autism and ADHD are slightly more prevalence for students at rural schools and both follow the same age patterns observed earlier.
+Autism and ADHD are slightly more prevalent for students at rural schools and both follow the same age patterns observed earlier.
 
-```{r prev age rural aut table}
+```{r prevAgeRuralAutTable}
 # Autism
 aut_prev_rural.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_rurality", "age_june30", "sex_desc", "autism"),
@@ -1460,13 +1468,13 @@ kbl(aut_prev_rural.age_sex.table,
   align = "lrrrrr",
   booktabs = TRUE,
   #longtable = TRUE,
-  linesep = c("", "\\hline"), # Extra white space after every 2nd line
+  linesep = c("", "\\addlinespace"), # Extra white space after every 2nd line
   caption = "Count and prevalence of Autism cases by school's rurality and age in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) #%>%
   #kable_styling(latex_options = c("repeat_header"))
 ```
 
-```{r prev age rural adhd table}
+```{r prevAgeRuralAdhdTable}
 # Autism
 adhd_prev_rural.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
                                                     grouping_vars = c("school_rurality", "age_june30", "sex_desc", "adhd"),
@@ -1482,14 +1490,14 @@ kbl(adhd_prev_rural.age_sex.table,
   align = "lrrrrr",
   booktabs = TRUE,
   #longtable = TRUE,
-  linesep = c("", "\\hline"), # Extra white space after every 2nd line
+  linesep = c("", "\\addlinespace"), # Extra white space after every 2nd line
   caption = "Count and prevalence of ADHD cases by school's rurality and age in Chile school data for females and males with normal confidence intervals.") %>%
 add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) #%>%
   #kable_styling(latex_options = c("repeat_header"))
 ```
 
 
-```{r prev agecat rural aut plot, fig.cap = "Sample prevalence of autism by school's rurality, age band and sex. Bars show 95% normal confidence intervals."}
+```{r prevAgecatRuralAutPlot, fig.cap = "Sample prevalence of autism by school's rurality, age band and sex. Bars show 95% normal confidence intervals."}
 # Autism
 aut_prev_rural.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_rurality", "age_cat_name", "sex_desc", "autism"),
@@ -1507,7 +1515,7 @@ ggplot(data = aut_prev_rural.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prev agecat rural adhd plot, fig.cap = "Sample prevalence of ADHD by school's rurality, age band and sex. Bars show 95% normal confidence intervals."}
+```{r prevAgecatRuralAdhdPlot, fig.cap = "Sample prevalence of ADHD by school's rurality, age band and sex. Bars show 95% normal confidence intervals."}
 # By age and sex
 # Age categories
 adhd_prev_rural.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
@@ -1530,30 +1538,30 @@ ggplot(data = adhd_prev_rural.agecat_sex) +
 
 ## Frequentist prevalence estimation
 
-LOWER BOUNDS
-
 After using frequentist methods to adjust for the age and sex distribution of the child population of Chile in 2021, the adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 3)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 3)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 3)`%) and the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). Among females, the adjusted prevalence of autism was `r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 3)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[2] * 100, 3)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[2] * 100, 3)`%) and among males it was `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 3)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[1] * 100, 3)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[1] * 100, 3)`%). Among females, the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[1] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[1] * 100, 2)`%).
 
-As we know the prevalences of autism and ADHD in this data are likely to be an underestimate, the age- and sex-adjusted prevalences can be considered a lower bound on the true prevalence of autism and of ADHD. Considering school data by health service, the adjusted prevalence of autism is much higher in Ñuble at `r round(aut_prev_health_adj$adjusted_rate[29] * 100, 2)`% (`r round(aut_prev_health_adj$adjusted_ci_lower[29] * 100, 2)` - `r round(aut_prev_health_adj$adjusted_ci_upper[29] * 100, 2)`%) than other health services and is low in rural areas such as Araucanía. It is also low in the Metropolitano health services which serve Santiago, Chile's largest city. Adjusted ADHD prevalence is medial for Metropolitano health services and very low for Atacama, a fairly urbanised region, at `r round(adhd_prev_health_adj$adjusted_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$adjusted_ci_lower[8] * 100, 2)` - `r round(adhd_prev_health_adj$adjusted_ci_upper[8] * 100, 2)`%).
+As we know the prevalences of autism and ADHD in this data are likely to be underestimates, the age- and sex-adjusted prevalences can be considered a lower bound on the true prevalence of autism and of ADHD in Chile. Considering school data by health service, the adjusted prevalence of autism is much higher in Ñuble at `r round(aut_prev_health_adj$adjusted_rate[29] * 100, 2)`% (`r round(aut_prev_health_adj$adjusted_ci_lower[29] * 100, 2)` - `r round(aut_prev_health_adj$adjusted_ci_upper[29] * 100, 2)`%) than other health services and is low in rural areas such as Araucanía. It is also low in the Metropolitano health services which serve Santiago, Chile's largest city. Adjusted ADHD prevalence is medial for Metropolitano health services and very low for Atacama, a fairly urbanised region, at `r round(adhd_prev_health_adj$adjusted_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$adjusted_ci_lower[8] * 100, 2)` - `r round(adhd_prev_health_adj$adjusted_ci_upper[8] * 100, 2)`%).
 
-```{r adj prev health aut table}
+```{r adjPrevHealthAutTable}
 aut_prev_health_adj.table <- aut_prev_health_adj %>% 
   select(health_service_name, crude_prev_ci, adjusted_prev_ci)
 kbl(aut_prev_health_adj.table,
     col.names = c("Health service", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted autism prevalence by health service in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
 ```
 
-```{r adj prev health adhd table}
+```{r adjPrevHealthAdhdTable}
 adhd_prev_health_adj.table <- adhd_prev_health_adj %>% 
   select(health_service_name, crude_prev_ci, adjusted_prev_ci)
 kbl(adhd_prev_health_adj.table,
     col.names = c("Health service", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted ADHD prevalence by health service in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
 ```
@@ -1562,65 +1570,71 @@ kbl(adhd_prev_health_adj.table,
 For autism and ADHD, Adjusted prevalences by school fees, ethnicity and school's rurality show similar patterns to crude prevalences, except for students at rural schools which have notably lower adjusted prevalence for both conditions. See tables x, x, x, x, x, and x. These results indicate that there are differences in the prevalence of autism and of ADHD across location and demographic features.
 
 
-```{r adj prev econA aut table}
+```{r adjPrevEconAAutTable}
 aut_prev_econA_adj.table <- aut_prev_econA_adj %>% 
   select(school_fee, crude_prev_ci, adjusted_prev_ci)
 kbl(aut_prev_econA_adj.table,
     col.names = c("School fee", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted autism prevalence by monthly school fee (Peso) in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-```{r adj prev econA adhd table}
+```{r adjPrevEconAAdhdTable}
 adhd_prev_econA_adj.table <- adhd_prev_econA_adj %>% 
   select(school_fee, crude_prev_ci, adjusted_prev_ci)
 kbl(adhd_prev_econA_adj.table,
     col.names = c("School fee", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted ADHD prevalence by monthly school fee (Peso) in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
 ```
 
-```{r adj prev ethnic aut table}
+```{r adjPrevEthnicAutTable}
 aut_prev_ethnic_adj.table <- aut_prev_ethnic_adj %>% 
   select(ethnic_2_group, crude_prev_ci, adjusted_prev_ci)
 kbl(aut_prev_ethnic_adj.table,
     col.names = c("Ethnicity", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted autism prevalence by ethnicity in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-```{r adj prev ethnic adhd table}
+```{r adjPrevEthnicAdhdTable}
 adhd_prev_ethnic_adj.table <- adhd_prev_ethnic_adj %>% 
   select(ethnic_2_group, crude_prev_ci, adjusted_prev_ci)
 kbl(adhd_prev_ethnic_adj.table,
     col.names = c("Ethnicity", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted ADHD prevalence by ethnicity in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
 ```
 
-```{r adj prev rural aut table}
+```{r adjPrevRuralAutTable}
 aut_prev_rural_adj.table <- aut_prev_rural_adj %>% 
   select(school_rurality, crude_prev_ci, adjusted_prev_ci)
 kbl(aut_prev_rural_adj.table,
     col.names = c("School rurality", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    linesep = c(""), # NO extra white space
     caption = "Crude and age- and sex-adjusted autism prevalence by school's rurality in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-```{r adj prev rural adhd table}
+```{r adjPrevRuralAdhdTable}
 adhd_prev_rural_adj.table <- adhd_prev_rural_adj %>% 
   select(school_rurality, crude_prev_ci, adjusted_prev_ci)
 kbl(adhd_prev_rural_adj.table,
     col.names = c("School rurality", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted ADHD prevalence by school's rurality in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
 ```
@@ -1628,7 +1642,7 @@ kbl(adhd_prev_rural_adj.table,
 
 ## Clinical data
 
-```{r MCA patients small}
+```{r mcaPatientsSmall}
 patients_mca_small <- clinical_small_raw %>% 
   rename("rurality" = "procedence",
          "dob" = "fecha_nacimiento",
@@ -1715,7 +1729,7 @@ The small clinical dataset has data on `r nrow(clinical_small)` appointments for
 
 TODO - table summarising data content. Number of unique patients
 
-```{r patients mca small table}
+```{r macPatientsSmallTable}
 patients_mca_small.table <- patients_mca_small %>%
   group_by(sex_desc) %>% 
   summarise(variable = "Sex",
@@ -1783,51 +1797,80 @@ kbl(patients_mca_small.table,
     col.names = c("Feature", "Available values", "Count (%)"),
     align = "llr",
     booktabs = TRUE,
-    caption = "Count and percentage of features' values in the small clinical dataset.")
+    linesep = c("", "\\addlinespace", # Sex
+                "", "", "", "", "", "\\addlinespace", # Age band
+                "", "", "", "", "\\addlinespace", # SES
+                "", "", "", "", "", 
+                "", "", "", "", "",
+                "", "", "", "", "",
+                "", "", "", "", "\\addlinespace", # Commune
+                "", "\\addlinespace", # Rurality
+                "", "", "", "\\addlinespace", # Ethnicity
+                "", "", "\\addlinespace", # Disability
+                "", "", "\\addlinespace", # Foster care
+                "", "\\addlinespace", # Autism
+                "", "\\addlinespace"), # Intdisab
+    caption = "Count and percentage of features' values in the small clinical dataset.") %>%
+  kable_styling(latex_options = c("repeat_header"))
 ```
 
-## MCA
+## Multiple Correspondence Analysis
 
-```{r MCA no imp}
+```{r mcaNoimp}
 patients_mca_noimp <- patients_mca_small %>%
-  #filter(autism == 1) %>%
-   select(#id,
-          sex_desc,
-          age,
-          #age_group,
+   select(sex_desc,
+          age_group,
           autism,
           commune_name,
-          #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
-          #medical_specialty_grouped,
-          #intdisab,
           ses_status,
           rurality,
           ethnicity,
           disability,
-          #disability_imp,
-          foster_care#,
-          #foster_care_imp
-          )
+          foster_care) %>%
+  rename("Sex" = sex_desc,
+         "Age band" = age_group,
+         "Autism" = autism,
+         "Commune" = commune_name,
+         "Health insurance" = ses_status,
+         "Rurality" = rurality,
+         "Ethnicity" = ethnicity,
+         "Disability" = disability,
+         "Foster care" = foster_care)
 
-  
 res_mca_patients_noimp <- FactoMineR::MCA(patients_mca_noimp, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 9, # Needs to match number of features
-                                    graph = FALSE) 
+                                          ncp = 9, # Needs to match number of features
+                                          graph = FALSE) 
+```
 
+```{r mcaNoimpFeatures, fig.cap="Categorical features of the small clinical dataset by its first two dimensions after multiple correspondence analysis."}
 # Plot features
-fviz_mca_var(res_mca_patients_noimp, choice = "mca.cor", 
-            repel = TRUE, # Avoid text overlapping
-            ggtheme = theme_minimal())
+fviz_mca_var(res_mca_patients_noimp, 
+             choice = "mca.cor", 
+             labelsize = 4, 
+             pointsize = 3, 
+             col.var = turbo_colours[9],
+             repel = TRUE, # Avoid text overlapping
+             ggtheme = theme_minimal()) +
+  labs(title = "Categorical features by first two dimensions, no imputation")
+```
 
+```{r mcaNoimpCategories, fig.cap="The available categories of the categorical features of the small clinical dataset by its first two dimensions after multiple correspondence analysis. Colour shows the category's contribution to the first two dimensions.", fig.height=11}
 # Plot categories
-fviz_mca_var(res_mca_patients_noimp,
-             #habillage = grp,
+grid.arrange(fviz_mca_var(res_mca_patients_noimp,
              col.var = "contrib",
-             #gradient.cols = c("#39568C", "#3CBB75", "#DCE319"),
-             gradient.cols = c(viridis_colours[1], viridis_colours[5], viridis_colours[7]),
+             labelsize = 4, 
+             pointsize = 3, 
+             gradient.cols = c(turbo_colours[2], turbo_colours[4], turbo_colours[8]),
              repel = TRUE, # Avoid text overlapping (slow if many points)
-             ggtheme = theme_minimal())
+             ggtheme = theme_minimal()) +
+  labs(title = "Categories of features, no imputation",
+       colour = "Contribution"),
 
+# Total contribution to dimension 1 and 2
+fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15), nrow = 2)
+```
+
+```{r mcaNoimpFeatures, fig.cap="Categorical features of the small clinical dataset by its first two dimensions after multiple correspondence analysis."}
 # Plot individual patients
 # fviz_mca_ind(res_mca_patients_noimp, 
 #              label = "none",
@@ -1840,73 +1883,88 @@ fviz_mca_var(res_mca_patients_noimp,
 # OR
 mca_noimp_sex_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "sex_desc", # color by groups 
+             habillage = "Sex", # color by groups 
              #palette = c("green", "blue"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by sex",
              ggtheme = theme_minimal()) 
 mca_noimp_age_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "age", # color by groups 
+             habillage = "Age band", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by age",
-             ggtheme = theme_minimal()) +
-  theme(legend.position = "none")
+             ggtheme = theme_minimal()) #+
+  #theme(legend.position = "none")
 mca_noimp_aut_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "autism", # color by groups 
+             habillage = "Autism", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by autism status",
              ggtheme = theme_minimal()) 
 mca_noimp_commune_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "commune_name", # color by groups 
+             habillage = "Commune", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by commune of residence",
-             ggtheme = theme_minimal()) + #Really not meaningful
-  theme(legend.position = "none")
+             ggtheme = theme_minimal()) #+ #Really not meaningful
+  #theme(legend.position = "none")
 mca_noimp_ses_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "ses_status", # color by groups 
+             habillage = "Health insurance", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by SES status",
              ggtheme = theme_minimal()) 
 mca_noimp_rural_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "rurality", # color by groups 
+             habillage = "Rurality", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by rurality",
              ggtheme = theme_minimal())
 mca_noimp_ethnic_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "ethnicity", # color by groups 
+             habillage = "Ethnicity", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by ethnicity",
              ggtheme = theme_minimal())
 mca_noimp_disab_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "disability", # color by groups 
+             habillage = "Disability", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by disability status",
              ggtheme = theme_minimal())
 mca_noimp_foster_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
-             habillage = "foster_care", # color by groups 
+             habillage = "Foster care", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by foster care status",
              ggtheme = theme_minimal())
 
-grid.arrange(mca_noimp_sex_plot, mca_noimp_age_plot, mca_noimp_aut_plot,
-             mca_noimp_commune_plot, mca_noimp_ses_plot, mca_noimp_rural_plot,
-             mca_noimp_ethnic_plot, mca_noimp_disab_plot, mca_noimp_foster_plot, ncol = 3, nrow = 3)
+
+grid.arrange(mca_noimp_age_plot)
+
+grid.arrange(mca_noimp_commune_plot)
+
+grid.arrange(mca_noimp_ethnic_plot)
+
+grid.arrange(mca_noimp_ses_plot)
+
+grid.arrange(mca_noimp_aut_plot)
+
+grid.arrange(mca_noimp_sex_plot, mca_noimp_rural_plot, nrow = 2)
+
+grid.arrange(mca_noimp_disab_plot, mca_noimp_foster_plot, nrow = 2)
+
+
+fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
+
 
 #fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
 #fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
@@ -1919,8 +1977,7 @@ grid.arrange(mca_noimp_sex_plot, mca_noimp_age_plot, mca_noimp_aut_plot,
 #fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1, top = 15) 
 # Contributions of variable categories to dimension 2
 #fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 2, top = 15)
-# Total contribution to dimension 1 and 2
-#fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15)
+
 # "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
 
 
@@ -1931,8 +1988,8 @@ patients_mca_imp <- patients_mca_small %>%
   #filter(autism == 1) %>%
    select(#id,
           sex_desc,
-          age,
-          #age_group,
+          #age,
+          age_group,
           autism,
           commune_name,
           #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
@@ -1986,7 +2043,7 @@ mca_imp_sex_plot <- fviz_mca_ind(res_mca_patients_imp,
              ggtheme = theme_minimal()) 
 mca_imp_age_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
-             habillage = "age", # color by groups 
+             habillage = "age_group", # color by groups 
              #palette = c("#00AFBB", "#E7B800"),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by age",
@@ -2043,9 +2100,19 @@ mca_imp_foster_plot <- fviz_mca_ind(res_mca_patients_imp,
              title = "Patients by foster care status",
              ggtheme = theme_minimal())
 
-grid.arrange(mca_imp_sex_plot, mca_imp_age_plot, mca_imp_aut_plot,
-             mca_imp_commune_plot, mca_imp_ses_plot, mca_imp_rural_plot,
-             mca_imp_ethnic_plot, mca_imp_disab_plot, mca_imp_foster_plot, ncol = 3, nrow = 3)
+grid.arrange(mca_imp_age_plot)
+
+grid.arrange(mca_imp_commune_plot)
+
+grid.arrange(mca_imp_ethnic_plot)
+
+grid.arrange(mca_imp_ses_plot)
+
+grid.arrange(mca_imp_aut_plot)
+
+grid.arrange(mca_imp_sex_plot, mca_imp_rural_plot, nrow = 2)
+
+grid.arrange(mca_imp_disab_plot, mca_imp_foster_plot, nrow = 2)
 
 #fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
 #fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
@@ -2055,11 +2122,120 @@ grid.arrange(mca_imp_sex_plot, mca_imp_age_plot, mca_imp_aut_plot,
 # round(res_mca_patients_imp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
 # 
 # # Contributions of variable categories to dimension 1
-# fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1, top = 15) 
+fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1, top = 15) 
 # # Contributions of variable categories to dimension 2
-# fviz_contrib(res_mca_patients_imp, choice = "var", axes = 2, top = 15)
+fviz_contrib(res_mca_patients_imp, choice = "var", axes = 2, top = 15)
 # # Total contribution to dimension 1 and 2
-# fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
+fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
+# # "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
+
+
+```
+
+```{r MCA aut}
+patients_mca_aut <- patients_mca_small %>%
+  #filter(autism == "Yes autism") %>%
+   select(#id,
+          #sex_desc,
+          #age,
+          age_group,
+          #autism,
+          commune_name,
+          #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
+          #medical_specialty_grouped,
+          #intdisab,
+          #ses_status,
+          #rurality,
+          ethnicity#,
+          #disability,
+          #disability_imp,
+          #foster_care,
+          #foster_care_imp
+          )
+# Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
+# We have 416 rows and 406 patients
+  
+res_mca_patients_aut <- FactoMineR::MCA(patients_mca_aut, # Can only take categorical variables and they have to be cast to factors
+                                    ncp = 4, # Needs to match number of features
+                                    graph = FALSE) 
+
+# Plot features
+fviz_mca_var(res_mca_patients_aut, choice = "mca.cor", 
+            repel = TRUE, # Avoid text overlapping
+            ggtheme = theme_minimal())
+
+# Plot categories
+fviz_mca_var(res_mca_patients_aut,
+             #habillage = grp,
+             col.var = "contrib",
+             #gradient.cols = c("#39568C", "#3CBB75", "#DCE319"),
+             gradient.cols = c(viridis_colours[1], viridis_colours[5], viridis_colours[7]),
+             repel = TRUE, # Avoid text overlapping (slow if many points)
+             ggtheme = theme_minimal())
+
+# Plot individual patients
+# fviz_mca_ind(res_mca_patients_noimp, 
+#              label = "none",
+#              #col.ind = "cos2", 
+#              #gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
+#              addEllipses = TRUE,
+#              ellipse.level = 0.95,
+#              repel = FALSE, # Graphs is not meaningful if this is TRUE
+#              ggtheme = theme_minimal())
+# OR
+
+mca_aut_age_plot <- fviz_mca_ind(res_mca_patients_aut, 
+             label = "none", # hide individual labels
+             habillage = "age_group", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by age",
+             ggtheme = theme_minimal())
+# mca_aut_aut_plot <- fviz_mca_ind(res_mca_patients_aut,
+#              label = "none", # hide individual labels
+#              habillage = "autism", # color by groups
+#              #palette = c("#00AFBB", "#E7B800"),
+#              addEllipses = TRUE, ellipse.type = "confidence",
+#              title = "Patients by autism status",
+#              ggtheme = theme_minimal())
+mca_aut_commune_plot <- fviz_mca_ind(res_mca_patients_aut, 
+             label = "none", # hide individual labels
+             habillage = "commune_name", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by commune of residence",
+             ggtheme = theme_minimal())
+
+mca_aut_ethnic_plot <- fviz_mca_ind(res_mca_patients_aut, 
+             label = "none", # hide individual labels
+             habillage = "ethnicity", # color by groups 
+             #palette = c("#00AFBB", "#E7B800"),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by ethnicity",
+             ggtheme = theme_minimal())
+
+grid.arrange(mca_aut_age_plot)
+
+grid.arrange(mca_aut_commune_plot)
+
+grid.arrange(mca_aut_ethnic_plot)
+
+#grid.arrange(mca_aut_aut_plot)
+
+
+#fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
+#fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
+#fviz_ellipses(res_mca_patients, 1, geom = "point")
+
+# fviz_cos2(res_mca_patients_imp, choice = "var", axes = 1:2, xtickslab.rt = 90)
+# round(res_mca_patients_imp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
+# 
+# # Contributions of variable categories to dimension 1
+fviz_contrib(res_mca_patients_aut, choice = "var", axes = 1, top = 15) 
+# # Contributions of variable categories to dimension 2
+fviz_contrib(res_mca_patients_aut, choice = "var", axes = 2, top = 15)
+# # Total contribution to dimension 1 and 2
+fviz_contrib(res_mca_patients_aut, choice = "var", axes = 1:2, top = 15)
 # # "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
 
 
@@ -2091,16 +2267,16 @@ patients <- clinical %>%
          #intdisab,
          aut_rank) #, student_region_name) 
 
-# patients_out <- clinical %>%
-#   filter(commune_code %in% araucsur_communes$commune_code) %>%
-#   group_by(id, gender, dob) %>%
-#   summarise(ses_status = get.min.na(socio_economic_level),
-#             autism = get.max.na(autism),
-#             intdisab = get.max.na(intdisab),
-#             commune_name = commune_name[which.max(apt_date)],
-#             commune_code = commune_code[which.max(apt_date)]) %>%
-#   ungroup() %>%
-#   rowid_to_column("row_id")
+patients_out <- clinical %>%
+  filter(commune_code %in% araucsur_communes$commune_code) %>%
+  group_by(id, gender, dob) %>%
+  summarise(ses_status = get.min.na(socio_economic_level),
+            autism = get.max.na(autism),
+            intdisab = get.max.na(intdisab),
+            commune_name = commune_name[which.max(apt_date)],
+            commune_code = commune_code[which.max(apt_date)]) %>%
+  ungroup() %>%
+  rowid_to_column("row_id")
 # write_csv(patients_out, file = "04_Data/Outputs/patients.csv")
 
 ```
