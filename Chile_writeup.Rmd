@@ -3078,23 +3078,23 @@ ggplot(data = adhd_prev_health.age_sex) +
 ```
 
 
-```{r adj prev araucS plot aut age, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age and sex. Bars show 95% normal confidence intervals."}
+```{r adj prev araucS plot aut age, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age and sex. Bars show 95% normal confidence intervals.", include=FALSE}
 # Single ages
-aut_prev_araucS.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut_araucS, 
-                                                 grouping_vars = c("commune_name", "age_june30", "sex_desc", "autism"),
-                                                 disease = "autism") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = aut_prev_araucS.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~commune_name) +
-  labs(title = "Autism prevalence by commune in Araucanía Sur",
-       x = "Sex",
-       y = "Sample prevalence",
-       fill = "Age")
+# aut_prev_araucS.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut_araucS, 
+#                                                  grouping_vars = c("commune_name", "age_june30", "sex_desc", "autism"),
+#                                                  disease = "autism") %>%
+#   mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+# 
+# ggplot(data = aut_prev_araucS.age_sex) +
+#   geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
+#   geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
+#   scale_fill_viridis_c(option = "plasma") +
+#   #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
+#   facet_wrap(~commune_name) +
+#   labs(title = "Autism prevalence by commune in Araucanía Sur",
+#        x = "Sex",
+#        y = "Sample prevalence",
+#        fill = "Age")
 ```
 
 
@@ -3344,20 +3344,20 @@ plot_post_density(adhd_prev_health_post, adhd_prev_health_adj,
 
 ### Random effect on commune in Araucanía Sur health service
 
-```{r bayes araucS aut, fig.cap = "Posterior predictive distribution for autism with a random effect on commune within Araucanía Sur health service, and with age- and sex-adjusted global prevalence prior."}
-aut_prev_araucS_post <- do_jags_rand_model(x = aut_prev_araucS_adj,
-                              feat = "commune_name",
-                              model = rand_model,
-                              theta_mu = aut_theta_mu_prior,
-                              theta_sigma = aut_theta_sigma_prior,
-                              pars = pars, 
-                              convergence_checks = FALSE) %>%
-  rename("commune_name" = "Feat_names")
-
-plot_post_density(aut_prev_araucS_post, aut_prev_araucS_adj, 
-                  feat = "commune_name", 
-                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
-                  disease = "Autism")
+```{r bayes araucS aut, fig.cap = "Posterior predictive distribution for autism with a random effect on commune within Araucanía Sur health service, and with age- and sex-adjusted global prevalence prior.", include=FALSE}
+# aut_prev_araucS_post <- do_jags_rand_model(x = aut_prev_araucS_adj,
+#                               feat = "commune_name",
+#                               model = rand_model,
+#                               theta_mu = aut_theta_mu_prior,
+#                               theta_sigma = aut_theta_sigma_prior,
+#                               pars = pars, 
+#                               convergence_checks = FALSE) %>%
+#   rename("commune_name" = "Feat_names")
+# 
+# plot_post_density(aut_prev_araucS_post, aut_prev_araucS_adj, 
+#                   feat = "commune_name", 
+#                   theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+#                   disease = "Autism")
 ```
 
 ### Random effect on socio-economic status
