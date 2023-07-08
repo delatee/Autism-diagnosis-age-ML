@@ -687,9 +687,23 @@ get.min.na <- function(x) ifelse( !all(is.na(x)), min(x, na.rm = TRUE), NA)
 
 get.max.na <- function(x) ifelse( !all(is.na(x)), max(x, na.rm = TRUE), NA)
 
-get.mode <- function(x) {
-  ux <- unique(x)
+get.mode.na <- function(x) {
+  ux <- na.omit(unique(x))
   ux[which.max(tabulate(match(x, ux)))]
+}
+
+get.mapuche.ethnicity <- function(x) {
+  y <- NA
+  if(any(x == "Mapuche")) {
+    y <- "Mapuche"
+  } else if(any(x == "Chilean")) {
+    y <- "Chilean"
+  } else if(any(x == "Foreign")) {
+    y <- "Foreign"
+  } else {
+    y <- "No ethnicity information"
+  }
+  return(y)
 }
 
 get.yes.disability <- function(x) {
@@ -1686,14 +1700,14 @@ patients_mca_small <- clinical_small_raw %>%
          ) %>%
   left_join(region_service_commune_lookup, by = "commune_name_upper") %>%
   group_by(id, gender, age_june30) %>%
-  summarise(ses_status = get.min.na(ses_status), # Fortunately the available values are in alphabetical order by status
+  summarise(ses_status = get.mode.na(ses_status), # Fortunately the available values are in alphabetical order by status
             autism = get.max.na(autism),
             intdisab = get.max.na(intdisab),
-            medical_specialty_grouped = get.mode(medical_specialty_grouped), # Most common medical specialty across visits
+            medical_specialty_grouped = get.mode.na(medical_specialty_grouped), # Most common medical specialty across visits
             hospital = hospital[which.max(apt_date)], # most recent hospital
             commune_name = commune_name[which.max(apt_date)],
-            rurality = get.mode(rurality),
-            ethnicity = get.mode(ethnicity),
+            rurality = rurality[which.max(apt_date)],
+            ethnicity = get.mapuche.ethnicity(ethnicity),
             disability = get.yes.disability(disability),
             foster_care = get.yes.fostercare(foster_care)
             ) %>%
@@ -1818,18 +1832,19 @@ kbl(patients_mca_small.table,
 
 ```{r mcaNoimp}
 patients_mca_noimp <- patients_mca_small %>%
+  filter(autism == "Yes autism") %>%
    select(sex_desc,
           age_group,
-          autism,
+          #autism,
           commune_name,
           ses_status,
-          rurality,
           ethnicity,
+          rurality,
           disability,
           foster_care) %>%
   rename("Sex" = sex_desc,
          "Age band" = age_group,
-         "Autism" = autism,
+         #"Autism" = autism,
          "Commune" = commune_name,
          "Health insurance" = ses_status,
          "Rurality" = rurality,
@@ -1838,7 +1853,7 @@ patients_mca_noimp <- patients_mca_small %>%
          "Foster care" = foster_care)
 
 res_mca_patients_noimp <- FactoMineR::MCA(patients_mca_noimp, # Can only take categorical variables and they have to be cast to factors
-                                          ncp = 9, # Needs to match number of features
+                                          ncp = 8, # Needs to match number of features
                                           graph = FALSE) 
 ```
 
@@ -1856,7 +1871,7 @@ fviz_mca_var(res_mca_patients_noimp,
 
 ```{r mcaNoimpCategories, fig.cap="The available categories of the categorical features of the small clinical dataset by its first two dimensions after multiple correspondence analysis. Colour shows the category's contribution to the first two dimensions.", fig.height=11}
 # Plot categories
-grid.arrange(fviz_mca_var(res_mca_patients_noimp,
+fviz_mca_var(res_mca_patients_noimp,
              col.var = "contrib",
              labelsize = 4, 
              pointsize = 3, 
@@ -1864,10 +1879,16 @@ grid.arrange(fviz_mca_var(res_mca_patients_noimp,
              repel = TRUE, # Avoid text overlapping (slow if many points)
              ggtheme = theme_minimal()) +
   labs(title = "Categories of features, no imputation",
-       colour = "Contribution"),
+       colour = "Contribution")
+```
+
+```{r mcaNoimpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of MCA., fig.height = 4}
 
 # Total contribution to dimension 1 and 2
-fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15), nrow = 2)
+fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15) +
+  labs(title = "Contribution of categories, no imputation",
+       x = "Category",
+       y = "Contribution (%)")
 ```
 
 ```{r mcaNoimpFeatures, fig.cap="Categorical features of the small clinical dataset by its first two dimensions after multiple correspondence analysis."}
@@ -1896,13 +1917,13 @@ mca_noimp_age_plot <- fviz_mca_ind(res_mca_patients_noimp,
              title = "Patients by age",
              ggtheme = theme_minimal()) #+
   #theme(legend.position = "none")
-mca_noimp_aut_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-             label = "none", # hide individual labels
-             habillage = "Autism", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by autism status",
-             ggtheme = theme_minimal()) 
+# mca_noimp_aut_plot <- fviz_mca_ind(res_mca_patients_noimp, 
+#              label = "none", # hide individual labels
+#              habillage = "Autism", # color by groups 
+#              #palette = c("#00AFBB", "#E7B800"),
+#              addEllipses = TRUE, ellipse.type = "confidence",
+#              title = "Patients by autism status",
+#              ggtheme = theme_minimal()) 
 mca_noimp_commune_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "Commune", # color by groups 
@@ -1956,7 +1977,7 @@ grid.arrange(mca_noimp_ethnic_plot)
 
 grid.arrange(mca_noimp_ses_plot)
 
-grid.arrange(mca_noimp_aut_plot)
+#grid.arrange(mca_noimp_aut_plot)
 
 grid.arrange(mca_noimp_sex_plot, mca_noimp_rural_plot, nrow = 2)
 
@@ -1985,12 +2006,12 @@ fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
 
 ```{r MCA imp}
 patients_mca_imp <- patients_mca_small %>%
-  #filter(autism == 1) %>%
+  filter(autism == "Yes autism") %>%
    select(#id,
           sex_desc,
           #age,
           age_group,
-          autism,
+          #autism,
           commune_name,
           #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
           #medical_specialty_grouped,
@@ -2007,7 +2028,7 @@ patients_mca_imp <- patients_mca_small %>%
 # We have 416 rows and 406 patients
   
 res_mca_patients_imp <- FactoMineR::MCA(patients_mca_imp, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 9, # Needs to match number of features
+                                    ncp = 8, # Needs to match number of features
                                     graph = FALSE) 
 
 # Plot features
@@ -2049,13 +2070,13 @@ mca_imp_age_plot <- fviz_mca_ind(res_mca_patients_imp,
              title = "Patients by age",
              ggtheme = theme_minimal()) +
   theme(legend.position = "none")
-mca_imp_aut_plot <- fviz_mca_ind(res_mca_patients_imp, 
-             label = "none", # hide individual labels
-             habillage = "autism", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by autism status",
-             ggtheme = theme_minimal()) 
+# mca_imp_aut_plot <- fviz_mca_ind(res_mca_patients_imp, 
+#              label = "none", # hide individual labels
+#              habillage = "autism", # color by groups 
+#              #palette = c("#00AFBB", "#E7B800"),
+#              addEllipses = TRUE, ellipse.type = "confidence",
+#              title = "Patients by autism status",
+#              ggtheme = theme_minimal()) 
 mca_imp_commune_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
              habillage = "commune_name", # color by groups 
@@ -2108,7 +2129,7 @@ grid.arrange(mca_imp_ethnic_plot)
 
 grid.arrange(mca_imp_ses_plot)
 
-grid.arrange(mca_imp_aut_plot)
+#grid.arrange(mca_imp_aut_plot)
 
 grid.arrange(mca_imp_sex_plot, mca_imp_rural_plot, nrow = 2)
 
@@ -2134,7 +2155,7 @@ fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
 
 ```{r MCA aut}
 patients_mca_aut <- patients_mca_small %>%
-  #filter(autism == "Yes autism") %>%
+  filter(autism == "Yes autism") %>%
    select(#id,
           #sex_desc,
           #age,
