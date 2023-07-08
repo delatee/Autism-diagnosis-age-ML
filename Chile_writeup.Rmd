@@ -926,6 +926,7 @@ kbl(aut_prev.age.table,
     col.names = c("Age", "Autism cases", "Prevalence % (95% CI)"),
     align = "rrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of autism cases by age in Chile school data with normal confidence intervals.")
 ```
@@ -944,6 +945,7 @@ kbl(adhd_prev.age.table,
     col.names = c("Age", "ADHD cases", "Prevalence % (95% CI)"),
     align = "rrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of ADHD cases by age in Chile school data with normal confidence intervals.")
 ```
@@ -1051,6 +1053,7 @@ kbl(aut_prev.age_sex.table,
     col.names = c("Age", "Autism cases", "Prevalence % (95% CI)", "Autism cases", "Prevalence % (95% CI)"),
     align = "rrrrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c("", "", "\\addlinespace",
                 "", "", "\\addlinespace",
                 "", "", "\\addlinespace",
@@ -1074,6 +1077,7 @@ kbl(adhd_prev.age_sex.table,
     col.names = c("Age", "ADHD cases", "Prevalence % (95% CI)", "ADHD cases", "Prevalence % (95% CI)"),
     align = "rrrrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c("", "", "\\addlinespace",
                 "", "", "\\addlinespace",
                 "", "", "\\addlinespace",
@@ -1162,6 +1166,7 @@ kbl(aut_prev_health.age_sex.table,
   col.names = c("Health service", "Age", "Autism cases", "Prevalence % (95% CI)", "Autism cases", "Prevalence % (95% CI)"),
   align = "lrrrrr",
   booktabs = TRUE,
+  format = "pandoc",
   longtable = TRUE,
   linesep = c("", "", "", "", "",
               "", "", "", "", "",
@@ -1189,6 +1194,7 @@ kbl(adhd_prev_health.age_sex.table,
   col.names = c("Health service", "Age", "ADHD cases", "Prevalence % (95% CI)", "ADHD cases", "Prevalence % (95% CI)"),
   align = "lrrrrr",
   booktabs = TRUE,
+  format = "pandoc",
   longtable = TRUE,
   linesep = c("", "", "", "", "",
               "", "", "", "", "",
@@ -1276,6 +1282,7 @@ kbl(aut_prev_econA.age_sex.table,
   col.names = c("School fee", "Age", "Autism cases", "Prevalence % (95% CI)", "Autism cases", "Prevalence % (95% CI)"),
   align = "lrrrrr",
   booktabs = TRUE,
+  format = "pandoc",
   longtable = TRUE,
   linesep = c("", "", "", "", "", "", "\\addlinespace"), # Extra white space after every 7th line
   caption = "Count and prevalence of Autism cases by school fee and age in Chile school data for females and males with normal confidence intervals.") %>%
@@ -1298,6 +1305,7 @@ kbl(adhd_prev_econA.age_sex.table,
   col.names = c("School fee", "Age", "ADHD cases", "Prevalence % (95% CI)", "ADHD cases", "Prevalence % (95% CI)"),
   align = "lrrrrr",
   booktabs = TRUE,
+  format = "pandoc",
   longtable = TRUE,
   linesep = c("", "", "", "", "", "", "\\addlinespace"), # Extra white space after every 7th line
   caption = "Count and prevalence of ADHD cases by school fee and age in Chile school data for females and males with normal confidence intervals.") %>%
@@ -1378,6 +1386,7 @@ kbl(aut_prev_ethnic.age_sex.table,
   col.names = c("Ethnicity", "Age", "Autism cases", "Prevalence % (95% CI)", "Autism cases", "Prevalence % (95% CI)"),
   align = "lrrrrr",
   booktabs = TRUE,
+  format = "pandoc",
   longtable = TRUE,
   linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of Autism cases by ethnicity and age in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
@@ -1400,6 +1409,7 @@ kbl(adhd_prev_ethnic.age_sex.table,
   col.names = c("Ethnicity", "Age", "ADHD cases", "Prevalence % (95% CI)", "ADHD cases", "Prevalence % (95% CI)"),
   align = "lrrrrr",
   booktabs = TRUE,
+  format = "pandoc",
   longtable = TRUE,
   linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of ADHD cases by ethnicity and age in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
@@ -1482,6 +1492,7 @@ kbl(aut_prev_rural.age_sex.table,
   col.names = c("School rurality", "Age", "Autism cases", "Prevalence % (95% CI)", "Autism cases", "Prevalence % (95% CI)"),
   align = "lrrrrr",
   booktabs = TRUE,
+  format = "pandoc",
   #longtable = TRUE,
   linesep = c("", "\\addlinespace"), # Extra white space after every 2nd line
   caption = "Count and prevalence of Autism cases by school's rurality and age in Chile school data for females and males with normal confidence intervals.") %>%
@@ -1504,6 +1515,7 @@ kbl(adhd_prev_rural.age_sex.table,
   col.names = c("School rurality", "Age", "ADHD cases", "Prevalence % (95% CI)", "ADHD cases", "Prevalence % (95% CI)"),
   align = "lrrrrr",
   booktabs = TRUE,
+  format = "pandoc",
   #longtable = TRUE,
   linesep = c("", "\\addlinespace"), # Extra white space after every 2nd line
   caption = "Count and prevalence of ADHD cases by school's rurality and age in Chile school data for females and males with normal confidence intervals.") %>%
@@ -1564,9 +1576,10 @@ kbl(aut_prev_health_adj.table,
     col.names = c("Health service", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c(""), # No extra white space
+    format = "pandoc",
     caption = "Crude and age- and sex-adjusted autism prevalence by health service in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
-
 ```
 
 ```{r adjPrevHealthAdhdTable}
@@ -1576,7 +1589,9 @@ kbl(adhd_prev_health_adj.table,
     col.names = c("Health service", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c(""), # No extra white space
+    format = "pandoc",
     caption = "Crude and age- and sex-adjusted ADHD prevalence by health service in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
 ```
@@ -1592,6 +1607,7 @@ kbl(aut_prev_econA_adj.table,
     col.names = c("School fee", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted autism prevalence by monthly school fee (Peso) in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
@@ -1603,6 +1619,7 @@ kbl(adhd_prev_econA_adj.table,
     col.names = c("School fee", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted ADHD prevalence by monthly school fee (Peso) in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
@@ -1615,6 +1632,7 @@ kbl(aut_prev_ethnic_adj.table,
     col.names = c("Ethnicity", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted autism prevalence by ethnicity in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
@@ -1626,6 +1644,7 @@ kbl(adhd_prev_ethnic_adj.table,
     col.names = c("Ethnicity", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted ADHD prevalence by ethnicity in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
@@ -1638,6 +1657,7 @@ kbl(aut_prev_rural_adj.table,
     col.names = c("School rurality", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c(""), # NO extra white space
     caption = "Crude and age- and sex-adjusted autism prevalence by school's rurality in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
@@ -1649,6 +1669,7 @@ kbl(adhd_prev_rural_adj.table,
     col.names = c("School rurality", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c(""), # No extra white space
     caption = "Crude and age- and sex-adjusted ADHD prevalence by school's rurality in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
@@ -1812,6 +1833,7 @@ kbl(patients_mca_small.table,
     col.names = c("Feature", "Available values", "Count (%)"),
     align = "llr",
     booktabs = TRUE,
+    format = "pandoc",
     linesep = c("", "\\addlinespace", # Sex
                 "", "", "", "", "", "\\addlinespace", # Age band
                 "", "", "", "", "\\addlinespace", # SES
@@ -1829,6 +1851,7 @@ kbl(patients_mca_small.table,
   kable_styling(latex_options = c("repeat_header"))
 ```
 
+
 ## Multiple Correspondence Analysis
 
 ```{r mcaNoimp}
@@ -1836,7 +1859,6 @@ patients_mca_noimp <- patients_mca_small %>%
   filter(autism == "Yes autism") %>%
    select(sex_desc,
           age_group,
-          #autism,
           commune_name,
           ses_status,
           ethnicity,
@@ -1845,7 +1867,6 @@ patients_mca_noimp <- patients_mca_small %>%
           foster_care) %>%
   rename("Sex" = sex_desc,
          "Age band" = age_group,
-         #"Autism" = autism,
          "Commune" = commune_name,
          "Health insurance" = ses_status,
          "Rurality" = rurality,
@@ -1853,7 +1874,7 @@ patients_mca_noimp <- patients_mca_small %>%
          "Disability" = disability,
          "Foster care" = foster_care)
 
-res_mca_patients_noimp <- FactoMineR::MCA(patients_mca_noimp, # Can only take categorical variables and they have to be cast to factors
+res_mca_patients_noimp <- FactoMineR::MCA(patients_mca_noimp,
                                           ncp = 8, # Needs to match number of features
                                           graph = FALSE) 
 ```
@@ -1864,20 +1885,20 @@ fviz_mca_var(res_mca_patients_noimp,
              choice = "mca.cor", 
              labelsize = 4, 
              pointsize = 3, 
-             col.var = turbo_colours[9],
-             repel = TRUE, # Avoid text overlapping
+             col.var = turbo_colours[16],
+             repel = TRUE,
              ggtheme = theme_minimal()) +
   labs(title = "Categorical features by first two dimensions, no imputation")
 ```
 
-```{r mcaNoimpCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation.", fig.height=11}
+```{r mcaNoimpCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation.", fig.height=10, fig.width=8.5}
 # Plot categories
 fviz_mca_var(res_mca_patients_noimp,
              col.var = "contrib",
              labelsize = 4, 
              pointsize = 3, 
-             gradient.cols = c(turbo_colours[2], turbo_colours[4], turbo_colours[8]),
-             repel = TRUE, # Avoid text overlapping (slow if many points)
+             gradient.cols = c(turbo_colours[2], turbo_colours[5], turbo_colours[8], turbo_colours[10]),
+             repel = TRUE,
              ggtheme = theme_minimal()) +
   labs(title = "Categories by first two dimensions, no imputation",
        colour = "Contribution")
@@ -1967,272 +1988,244 @@ grid.arrange(mca_noimp_ethnic_plot)
 grid.arrange(mca_noimp_ses_plot)
 ```
 
-```{r mcaNoimpSexRural, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by sex and by rurality of residence."}
+```{r mcaNoimpSexRural, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by sex and by rurality of residence.", fig.height=8}
 grid.arrange(mca_noimp_sex_plot, mca_noimp_rural_plot, nrow = 2)
 ```
 
-```{r mcaNoimpDisabFoster, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by disability status and by foster care status."}
+```{r mcaNoimpDisabFoster, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by disability status and by foster care status.", fig.height=8}
 grid.arrange(mca_noimp_disab_plot, mca_noimp_foster_plot, nrow = 2)
 ```
 
 
-```{r MCAimp}
+```{r mcaImp}
 patients_mca_imp <- patients_mca_small %>%
   filter(autism == "Yes autism") %>%
-   select(#id,
-          sex_desc,
-          #age,
+   select(sex_desc,
           age_group,
-          #autism,
           commune_name,
-          #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
-          #medical_specialty_grouped,
-          #intdisab,
           ses_status,
-          rurality,
           ethnicity,
-          #disability,
+          rurality,
           disability_imp,
-          #foster_care,
-          foster_care_imp
-          )
-# Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
-# We have 416 rows and 406 patients
-  
-res_mca_patients_imp <- FactoMineR::MCA(patients_mca_imp, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 8, # Needs to match number of features
-                                    graph = FALSE) 
+          foster_care_imp) %>%
+  rename("Sex" = sex_desc,
+         "Age band" = age_group,
+         "Commune" = commune_name,
+         "Health insurance" = ses_status,
+         "Rurality" = rurality,
+         "Ethnicity" = ethnicity,
+         "Disability imputed" = disability_imp,
+         "Foster care imputed" = foster_care_imp)
 
+res_mca_patients_imp <- FactoMineR::MCA(patients_mca_imp,
+                                          ncp = 8, # Needs to match number of features
+                                          graph = FALSE) 
+```
+
+```{r mcaImpFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation."}
 # Plot features
-fviz_mca_var(res_mca_patients_imp, choice = "mca.cor", 
-            repel = TRUE, # Avoid text overlapping
-            ggtheme = theme_minimal())
+fviz_mca_var(res_mca_patients_imp, 
+             choice = "mca.cor", 
+             labelsize = 4, 
+             pointsize = 3, 
+             col.var = turbo_colours[16],
+             repel = TRUE,
+             ggtheme = theme_minimal()) +
+  labs(title = "Categorical features by first two dimensions, with imputation")
+```
 
+```{r mcaImpCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation.", fig.height=10, fig.width=8.5}
 # Plot categories
 fviz_mca_var(res_mca_patients_imp,
-             #habillage = grp,
              col.var = "contrib",
-             #gradient.cols = c("#39568C", "#3CBB75", "#DCE319"),
-             gradient.cols = c(viridis_colours[1], viridis_colours[5], viridis_colours[7]),
-             repel = TRUE, # Avoid text overlapping (slow if many points)
-             ggtheme = theme_minimal())
+             labelsize = 4, 
+             pointsize = 3, 
+             gradient.cols = c(turbo_colours[2], turbo_colours[5], turbo_colours[8], turbo_colours[10]),
+             repel = TRUE,
+             ggtheme = theme_minimal()) +
+  labs(title = "Categories by first two dimensions, with imputation",
+       colour = "Contribution")
+```
 
-# Plot individual patients
-# fviz_mca_ind(res_mca_patients_noimp, 
-#              label = "none",
-#              #col.ind = "cos2", 
-#              #gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#              addEllipses = TRUE,
-#              ellipse.level = 0.95,
-#              repel = FALSE, # Graphs is not meaningful if this is TRUE
-#              ggtheme = theme_minimal())
-# OR
+```{r mcaImpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation. The red line shows the expected average if contributions were uniform.", fig.height = 4}
+
+# Total contribution to dimension 1 and 2
+fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15) +
+  labs(title = "Contribution of categories to first two dimensions, with imputation",
+       x = "Category",
+       y = "Contribution (%)")
+```
+
+```{r mcaImpPlots}
 mca_imp_sex_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none", # hide individual labels
-             habillage = "sex_desc", # color by groups 
-             #palette = c("green", "blue"),
+             habillage = "Sex", # color by groups 
+             palette = c(turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by sex",
+             title = "Patients by sex, with imputation",
              ggtheme = theme_minimal()) 
 mca_imp_age_plot <- fviz_mca_ind(res_mca_patients_imp, 
-             label = "none", # hide individual labels
-             habillage = "age_group", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Age band",
+             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by age",
-             ggtheme = theme_minimal()) +
-  theme(legend.position = "none")
-# mca_imp_aut_plot <- fviz_mca_ind(res_mca_patients_imp, 
-#              label = "none", # hide individual labels
-#              habillage = "autism", # color by groups 
-#              #palette = c("#00AFBB", "#E7B800"),
-#              addEllipses = TRUE, ellipse.type = "confidence",
-#              title = "Patients by autism status",
-#              ggtheme = theme_minimal()) 
+             title = "Patients by age band, with imputation",
+             ggtheme = theme_minimal()) 
 mca_imp_commune_plot <- fviz_mca_ind(res_mca_patients_imp, 
-             label = "none", # hide individual labels
-             habillage = "commune_name", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Commune",
+             palette = turbo_colours,
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by commune of residence",
-             ggtheme = theme_minimal()) + #Really not meaningful
-  theme(legend.position = "none")
+             title = "Patients by commune of residence, with imputation",
+             ggtheme = theme_minimal())
 mca_imp_ses_plot <- fviz_mca_ind(res_mca_patients_imp, 
-             label = "none", # hide individual labels
-             habillage = "ses_status", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Health insurance",
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by SES status",
+             title = "Patients by SES status, with imputation",
              ggtheme = theme_minimal()) 
 mca_imp_rural_plot <- fviz_mca_ind(res_mca_patients_imp, 
-             label = "none", # hide individual labels
-             habillage = "rurality", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Rurality",
+             palette = c(turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by rurality",
+             title = "Patients by rurality, with imputation",
              ggtheme = theme_minimal())
 mca_imp_ethnic_plot <- fviz_mca_ind(res_mca_patients_imp, 
-             label = "none", # hide individual labels
-             habillage = "ethnicity", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Ethnicity",
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by ethnicity",
+             title = "Patients by ethnicity, with imputation",
              ggtheme = theme_minimal())
 mca_imp_disab_plot <- fviz_mca_ind(res_mca_patients_imp, 
-             label = "none", # hide individual labels
-             habillage = "disability_imp", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Disability imputed",
+             palette = c(turbo_colours[3], turbo_colours[7]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by disability status",
+             title = "Patients by disability status, with imputation",
              ggtheme = theme_minimal())
 mca_imp_foster_plot <- fviz_mca_ind(res_mca_patients_imp, 
-             label = "none", # hide individual labels
-             habillage = "foster_care_imp", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Foster care imputed",
+             palette = c(turbo_colours[3], turbo_colours[7]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by foster care status",
+             title = "Patients by foster care status, with imputation",
              ggtheme = theme_minimal())
-
-grid.arrange(mca_imp_age_plot)
-
-grid.arrange(mca_imp_commune_plot)
-
-grid.arrange(mca_imp_ethnic_plot)
-
-grid.arrange(mca_imp_ses_plot)
-
-#grid.arrange(mca_imp_aut_plot)
-
-grid.arrange(mca_imp_sex_plot, mca_imp_rural_plot, nrow = 2)
-
-grid.arrange(mca_imp_disab_plot, mca_imp_foster_plot, nrow = 2)
-
-#fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
-#fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
-#fviz_ellipses(res_mca_patients, 1, geom = "point")
-
-# fviz_cos2(res_mca_patients_imp, choice = "var", axes = 1:2, xtickslab.rt = 90)
-# round(res_mca_patients_imp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
-# 
-# # Contributions of variable categories to dimension 1
-fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1, top = 15) 
-# # Contributions of variable categories to dimension 2
-fviz_contrib(res_mca_patients_imp, choice = "var", axes = 2, top = 15)
-# # Total contribution to dimension 1 and 2
-fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
-# # "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
-
-
 ```
 
-```{r MCAaut}
+```{r mcaImpAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by age band."}
+grid.arrange(mca_imp_age_plot)
+```
+
+```{r mcaImpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by commune of residence."}
+grid.arrange(mca_imp_commune_plot)
+```
+
+```{r mcaImpEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by ethnicity."}
+grid.arrange(mca_imp_ethnic_plot)
+```
+
+```{r mcaImpSES, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by health insurance level."}
+grid.arrange(mca_imp_ses_plot)
+```
+
+```{r mcaImpSexRural, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by sex and by rurality of residence.", fig.height=8}
+grid.arrange(mca_imp_sex_plot, mca_imp_rural_plot, nrow = 2)
+```
+
+```{r mcaImpDisabFoster, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by disability status and by foster care status.", fig.height=8}
+grid.arrange(mca_imp_disab_plot, mca_imp_foster_plot, nrow = 2)
+```
+
+
+```{r mcaAut}
 patients_mca_aut <- patients_mca_small %>%
   filter(autism == "Yes autism") %>%
-   select(#id,
-          #sex_desc,
-          #age,
-          age_group,
-          #autism,
+   select(age_group,
           commune_name,
-          #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
-          #medical_specialty_grouped,
-          #intdisab,
-          #ses_status,
-          #rurality,
-          ethnicity#,
-          #disability,
-          #disability_imp,
-          #foster_care,
-          #foster_care_imp
-          )
-# Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
-# We have 416 rows and 406 patients
-  
-res_mca_patients_aut <- FactoMineR::MCA(patients_mca_aut, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 4, # Needs to match number of features
-                                    graph = FALSE) 
+          ethnicity) %>%
+  rename("Age band" = age_group,
+         "Commune" = commune_name,
+         "Ethnicity" = ethnicity)
 
+res_mca_patients_aut <- FactoMineR::MCA(patients_mca_aut, 
+                                          ncp = 3, # Needs to match number of features
+                                          graph = FALSE) 
+```
+
+```{r mcaAutFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using patients' age band, commune of residence and ethnicity."}
 # Plot features
-fviz_mca_var(res_mca_patients_aut, choice = "mca.cor", 
-            repel = TRUE, # Avoid text overlapping
-            ggtheme = theme_minimal())
+fviz_mca_var(res_mca_patients_aut, 
+             choice = "mca.cor", 
+             labelsize = 4, 
+             pointsize = 3, 
+             col.var = turbo_colours[16],
+             repel = TRUE,
+             ggtheme = theme_minimal()) +
+  labs(title = "Categorical features by first two dimensions for age band, commune and ethnicity")
+```
 
+```{r mcaAutCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using patients' age band, commune and ethnicity.", fig.height=10, fig.width=8.5}
 # Plot categories
 fviz_mca_var(res_mca_patients_aut,
-             #habillage = grp,
              col.var = "contrib",
-             #gradient.cols = c("#39568C", "#3CBB75", "#DCE319"),
-             gradient.cols = c(viridis_colours[1], viridis_colours[5], viridis_colours[7]),
-             repel = TRUE, # Avoid text overlapping (slow if many points)
-             ggtheme = theme_minimal())
-
-# Plot individual patients
-# fviz_mca_ind(res_mca_patients_noimp, 
-#              label = "none",
-#              #col.ind = "cos2", 
-#              #gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#              addEllipses = TRUE,
-#              ellipse.level = 0.95,
-#              repel = FALSE, # Graphs is not meaningful if this is TRUE
-#              ggtheme = theme_minimal())
-# OR
-
-mca_aut_age_plot <- fviz_mca_ind(res_mca_patients_aut, 
-             label = "none", # hide individual labels
-             habillage = "age_group", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by age",
-             ggtheme = theme_minimal())
-# mca_aut_aut_plot <- fviz_mca_ind(res_mca_patients_aut,
-#              label = "none", # hide individual labels
-#              habillage = "autism", # color by groups
-#              #palette = c("#00AFBB", "#E7B800"),
-#              addEllipses = TRUE, ellipse.type = "confidence",
-#              title = "Patients by autism status",
-#              ggtheme = theme_minimal())
-mca_aut_commune_plot <- fviz_mca_ind(res_mca_patients_aut, 
-             label = "none", # hide individual labels
-             habillage = "commune_name", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by commune of residence",
-             ggtheme = theme_minimal())
-
-mca_aut_ethnic_plot <- fviz_mca_ind(res_mca_patients_aut, 
-             label = "none", # hide individual labels
-             habillage = "ethnicity", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by ethnicity",
-             ggtheme = theme_minimal())
-
-grid.arrange(mca_aut_age_plot)
-
-grid.arrange(mca_aut_commune_plot)
-
-grid.arrange(mca_aut_ethnic_plot)
-
-#grid.arrange(mca_aut_aut_plot)
-
-
-#fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
-#fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
-#fviz_ellipses(res_mca_patients, 1, geom = "point")
-
-# fviz_cos2(res_mca_patients_imp, choice = "var", axes = 1:2, xtickslab.rt = 90)
-# round(res_mca_patients_imp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
-# 
-# # Contributions of variable categories to dimension 1
-fviz_contrib(res_mca_patients_aut, choice = "var", axes = 1, top = 15) 
-# # Contributions of variable categories to dimension 2
-fviz_contrib(res_mca_patients_aut, choice = "var", axes = 2, top = 15)
-# # Total contribution to dimension 1 and 2
-fviz_contrib(res_mca_patients_aut, choice = "var", axes = 1:2, top = 15)
-# # "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
-
-
+             labelsize = 4, 
+             pointsize = 3, 
+             gradient.cols = c(turbo_colours[2], turbo_colours[5], turbo_colours[8], turbo_colours[10]),
+             repel = TRUE,
+             ggtheme = theme_minimal()) +
+  labs(title = "Categories by first two dimensions for age band, commune and ethnicity",
+       colour = "Contribution")
 ```
+
+```{r mcaAutGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using patients' age band, commune and ethnicity. The red line shows the expected average if contributions were uniform.", fig.height = 4}
+
+# Total contribution to dimension 1 and 2
+fviz_contrib(res_mca_patients_aut, choice = "var", axes = 1:2, top = 15) +
+  labs(title = "Contribution of categories to first two dimensions for age band, commune and ethnicity",
+       x = "Category",
+       y = "Contribution (%)")
+```
+
+```{r mcaAutPlots}
+mca_aut_age_plot <- fviz_mca_ind(res_mca_patients_aut, 
+             label = "none",
+             habillage = "Age band",
+             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by age band for age band, commune and ethnicity",
+             ggtheme = theme_minimal()) 
+mca_aut_commune_plot <- fviz_mca_ind(res_mca_patients_aut, 
+             label = "none",
+             habillage = "Commune",
+             palette = turbo_colours,
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by commune of residence for age band, commune and ethnicity",
+             ggtheme = theme_minimal())
+mca_aut_ethnic_plot <- fviz_mca_ind(res_mca_patients_aut, 
+             label = "none",
+             habillage = "Ethnicity",
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14]),
+             addEllipses = TRUE, ellipse.type = "confidence",
+             title = "Patients by ethnicity, with imputation for age band, commune and ethnicity",
+             ggtheme = theme_minimal())
+```
+
+```{r mcaAutAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using patients' age band, commune and ethnicity, coloured by age band."}
+grid.arrange(mca_aut_age_plot)
+```
+
+```{r mcaAutCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using age band, commune and ethnicity, coloured by commune of residence."}
+grid.arrange(mca_aut_commune_plot)
+```
+
+```{r mcaAutEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using age band, commune and ethnicity, coloured by ethnicity."}
+grid.arrange(mca_aut_ethnic_plot)
+```
+
+
 
 
 
@@ -2518,131 +2511,6 @@ patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% 
 
 ```
 
-There are no patients that lived in different communes therefore were in the patient dataset twice that are matched to multiple school records.
-
-### Differences between un/matched
-
-
-```{r kolmogorovSchool, warning = FALSE}
-
-school_yes <- school_matched_small %>% filter(matched == 1) #%>% select(sex.school)
-school_no <- school_matched_small %>% filter(matched == 0)
-
-# Kolmogorov tests for our matched results
-ks.school.sex <- ks.test(na.omit(school_yes$sex.school),
-                         na.omit(school_no$sex.school),
-                         alternative = "two.sided", simulate.p.value = TRUE)
-ks.school.sex
-
-ks.school.ses_status <- ks.test(as.numeric(na.omit(school_yes$ses_status.school)),
-                                as.numeric(na.omit(school_no$ses_status.school)),
-                                alternative = "two.sided", simulate.p.value = TRUE)
-ks.school.ses_status
-
-ks.school.commune_code<- ks.test(as.numeric(na.omit(school_yes$commune_code)),
-                                 as.numeric(na.omit(school_no$commune_code)),
-                                 alternative = "two.sided", simulate.p.value = TRUE)
-ks.school.commune_code
-
-# Kolmogorov tests with permutation distributions
-set.seed(123)
-nPerm <- 200 # change to 2000
-ks_perm.school.pvals <- data.frame(sex = numeric(nPerm),
-                                   commune_code = numeric(nPerm),
-                                   ses_status = numeric(nPerm))
-
-school_matched_small_perm <- school_matched_small
-
-for (i in 1:nPerm) {
-  #print(i)
-  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
-  school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
-  school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
-  
-  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school),
-                                na.omit(school_perm_no$sex.school), 
-                                alternative = "two.sided")
-  ks_perm.school.commune_code <- ks.test(as.numeric(na.omit(school_perm_yes$commune_code)),
-                                        as.numeric(na.omit(school_perm_no$commune_code)),
-                                        alternative = "two.sided")
-  ks_perm.school.ses_status <- ks.test(as.numeric(na.omit(school_perm_yes$ses_status.school)),
-                                       as.numeric(na.omit(school_perm_no$ses_status.school)),
-                                       alternative = "two.sided")
-  
-  ks_perm.school.pvals$sex[i] <- ks_perm.school.sex$p.value
-  ks_perm.school.pvals$commune_code[i] <- ks_perm.school.commune_code$p.value
-  ks_perm.school.pvals$ses_status[i] <- ks_perm.school.ses_status$p.value
-}
-
-# Results for sex
-school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
-  arrange(sex_desc, matched)
-
-ggplot(school_match.sex) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~sex_desc) +
-  labs(title = "Matching of school record to clinical record by sex",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.sex$p.value, color = "red")
-
-# Results for commune
-school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-school_match_no.student_commune_name <- school_no %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
-
-school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, school_match_no.student_commune_name) %>%
-  arrange(student_commune_name.school, matched)
-
-ggplot(school_match.student_commune_name) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~student_commune_name.school, scales = "fixed") +
-  #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of school record to clinical record by commune",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
-
-
-ggplot(ks_perm.school.pvals, aes(x = commune_code, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.commune_code$p.value, color = "red")
-
-# Results for ses status
-school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.ses_status) %>%
-  arrange(ses_status.school, matched)
-
-ggplot(school_match.ses_status) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~ses_status.school) +
-  labs(title = "Matching of school record to clinical record by SES status",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-ggplot(ks_perm.school.pvals, aes(x = ses_status, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.ses_status$p.value, color = "red")
-
-
-```
-
 Bit easier to match SES status of 1 (probably more common)
 
 Our matched/non-matched are not different by sex (p-value in Kolmog is same as most of distribution of permuted pvals) but are different by commune and ses status. Cohen's D test isn't suitable to compare the matched and un-matched because the data don't have standard deviations.
@@ -2650,127 +2518,7 @@ Our matched/non-matched are not different by sex (p-value in Kolmog is same as m
 ??Add commune maps here with size of sample for school and clinical?? Also size of other features.
 
 
-
-```{r kolmogorovPatient, warning = FALSE}
-
-patients_yes <- patients_matched_small %>% filter(matched == 1) #%>% select(sex.school)
-patients_no <- patients_matched_small %>% filter(matched == 0)
-
-# Kolmogorov tests for our matched results
-ks.patients.sex <- ks.test(na.omit(patients_yes$sex.patient),
-                         na.omit(patients_no$sex.patient),
-                         alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.sex
-
-ks.patients.ses_status <- ks.test(as.numeric(na.omit(patients_yes$ses_status.patient)),
-                                as.numeric(na.omit(patients_no$ses_status.patient)),
-                                alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.ses_status
-
-ks.patients.commune_code<- ks.test(as.numeric(na.omit(patients_yes$commune_code)),
-                                 as.numeric(na.omit(patients_no$commune_code)),
-                                 alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.commune_code
-
-
-# Kolmogorov tests with permutation distributions
-set.seed(123)
-nPerm <- 200 # change to 2000
-ks_perm.patients.pvals <- data.frame(sex = numeric(nPerm),
-                                   commune_code = numeric(nPerm),
-                                   ses_status = numeric(nPerm))
-
-patients_matched_small_perm <- patients_matched_small
-
-for (i in 1:nPerm) {
-  #print(i)
-  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] # permute matched status
-  patients_perm_yes <- patients_matched_small_perm %>% filter(matched == 1)
-  patients_perm_no <- patients_matched_small_perm %>% filter(matched == 0)
-  
-  ks_perm.patients.sex <- ks.test(na.omit(patients_perm_yes$sex.patient),
-                                na.omit(patients_perm_no$sex.patient), 
-                                alternative = "two.sided")
-  ks_perm.patients.commune_code <- ks.test(as.numeric(na.omit(patients_perm_yes$commune_code)),
-                                        as.numeric(na.omit(patients_perm_no$commune_code)),
-                                        alternative = "two.sided")
-  ks_perm.patients.ses_status <- ks.test(as.numeric(na.omit(patients_perm_yes$ses_status.patient)),
-                                       as.numeric(na.omit(patients_perm_no$ses_status.patient)),
-                                       alternative = "two.sided")
-  
-  ks_perm.patients.pvals$sex[i] <- ks_perm.patients.sex$p.value
-  ks_perm.patients.pvals$commune_code[i] <- ks_perm.patients.commune_code$p.value
-  ks_perm.patients.pvals$ses_status[i] <- ks_perm.patients.ses_status$p.value
-}
-
-# Results for sex
-patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-patients_match_no.sex <- patients_no %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.patient == 1, "Male", ifelse(sex.patient == 2, "Female", NA))) %>% 
-  arrange(sex_desc, matched)
-
-ggplot(patients_match.sex) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~sex_desc) +
-  labs(title = "Matching of clinical record to school record by sex",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-ggplot(ks_perm.patients.pvals, aes(x = sex, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.patients.sex$p.value, color = "red")
-
-# Results for commune
-patients_match_yes.student_commune_name <- patients_yes %>% group_by(student_commune_name.patient) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-patients_match_no.student_commune_name <- patients_no %>% group_by(student_commune_name.patient) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
-
-patients_match.student_commune_name <- rbind(patients_match_yes.student_commune_name, patients_match_no.student_commune_name) %>%
-  arrange(student_commune_name.patient, matched)
-
-ggplot(patients_match.student_commune_name) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~student_commune_name.patient, scales = "fixed") +
-  #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of clinical record to school record by commune",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
-
-
-ggplot(ks_perm.patients.pvals, aes(x = commune_code, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.patients.commune_code$p.value, color = "red")
-
-# Results for ses status
-patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-patients_match_no.ses_status <- patients_no %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-patients_match.ses_status <- rbind(patients_match_yes.ses_status, patients_match_no.ses_status) %>%
-  arrange(ses_status.patient, matched)
-
-ggplot(patients_match.ses_status) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~ses_status.patient) +
-  labs(title = "Matching of clinical record to school record by SES status",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-ggplot(ks_perm.patients.pvals, aes(x = ses_status, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.patients.ses_status$p.value, color = "red")
-
-
-```
+There are no patients that lived in different communes therefore were in the patient dataset twice that are matched to multiple school records.
 
 TODO - comment on whether any of the matched patients had only intellectual disability and not autism.
 
@@ -3519,6 +3267,292 @@ ggplot(data = adhd_prev_rural_adj.long) +
   labs(title = "ADHD prevalence by rurality",
        #y = "Aggregate prevalence",
        fill = "Prevalence")
+```
+
+
+### Differences between un/matched
+
+
+```{r kolmogorovSchool, warning = FALSE}
+
+school_yes <- school_matched_small %>% filter(matched == 1) #%>% select(sex.school)
+school_no <- school_matched_small %>% filter(matched == 0)
+
+# Kolmogorov tests for our matched results
+ks.school.sex <- ks.test(na.omit(school_yes$sex.school),
+                         na.omit(school_no$sex.school),
+                         alternative = "two.sided", simulate.p.value = TRUE)
+#ks.school.sex
+
+ks.school.ses_status <- ks.test(as.numeric(na.omit(school_yes$ses_status.school)),
+                                as.numeric(na.omit(school_no$ses_status.school)),
+                                alternative = "two.sided", simulate.p.value = TRUE)
+#ks.school.ses_status
+
+ks.school.commune_code<- ks.test(as.numeric(na.omit(school_yes$commune_code)),
+                                 as.numeric(na.omit(school_no$commune_code)),
+                                 alternative = "two.sided", simulate.p.value = TRUE)
+#ks.school.commune_code
+
+# Kolmogorov tests with permutation distributions
+set.seed(123)
+nPerm <- 200 # change to 2000
+ks_perm.school.pvals <- data.frame(sex = numeric(nPerm),
+                                   commune_code = numeric(nPerm),
+                                   ses_status = numeric(nPerm))
+
+school_matched_small_perm <- school_matched_small
+
+for (i in 1:nPerm) {
+  #print(i)
+  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
+  school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
+  school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
+  
+  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school),
+                                na.omit(school_perm_no$sex.school), 
+                                alternative = "two.sided")
+  ks_perm.school.commune_code <- ks.test(as.numeric(na.omit(school_perm_yes$commune_code)),
+                                        as.numeric(na.omit(school_perm_no$commune_code)),
+                                        alternative = "two.sided")
+  ks_perm.school.ses_status <- ks.test(as.numeric(na.omit(school_perm_yes$ses_status.school)),
+                                       as.numeric(na.omit(school_perm_no$ses_status.school)),
+                                       alternative = "two.sided")
+  
+  ks_perm.school.pvals$sex[i] <- ks_perm.school.sex$p.value
+  ks_perm.school.pvals$commune_code[i] <- ks_perm.school.commune_code$p.value
+  ks_perm.school.pvals$ses_status[i] <- ks_perm.school.ses_status$p.value
+}
+
+
+```
+
+```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=10}
+# Results for sex
+school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
+  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
+  arrange(sex_desc, matched)
+
+kolmog_school_sex.bar <- ggplot(school_match.sex) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Matching of school record to clinical record by sex",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+kolmog_school_sex.density <- ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.sex$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by sex and observed p-value (red)",
+       x = "Sex",
+       y = "Density")
+
+grid.arrange(kolmog_school_sex.bar, kolmog_school_sex.density, nrow = 2)
+```
+
+```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=10}
+# Results for commune
+school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
+  #merge(commune_, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 1) 
+school_match_no.student_commune_name <- school_no %>% group_by(student_commune_name.school) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 0)
+
+school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, school_match_no.student_commune_name) %>%
+  arrange(student_commune_name.school, matched)
+
+kolmog_school_commune.bar <- ggplot(school_match.student_commune_name) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~student_commune_name.school, scales = "fixed") +
+  #facet_wrap(~student_commune_name.school, scales = "free") +
+  labs(title = "Matching of school record to clinical record by commune",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
+
+kolmog_school_commune.density <- ggplot(ks_perm.school.pvals, aes(x = commune_code, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.commune_code$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by commune and observed p-value (red)",
+       x = "Commune",
+       y = "Density")
+
+grid.arrange(kolmog_school_commune.bar, kolmog_school_commune.density, nrow = 2)
+
+```
+
+```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=10}
+# Results for ses status
+school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.ses_status) %>%
+  arrange(ses_status.school, matched)
+
+kolmog_school_ses.bar <- ggplot(school_match.ses_status) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~ses_status.school) +
+  labs(title = "Matching of school record to clinical record by SES status",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+kolmog_school_ses.density <- ggplot(ks_perm.school.pvals, aes(x = ses_status, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.ses_status$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by proxy SES and observed p-value (red)",
+       x = "Proxy SES",
+       y = "Density")
+
+grid.arrange(kolmog_school_ses.bar, kolmog_school_ses.density, nrow = 2)
+
+```
+
+```{r kolmogorovPatient, warning = FALSE}
+
+patients_yes <- patients_matched_small %>% filter(matched == 1) #%>% select(sex.school)
+patients_no <- patients_matched_small %>% filter(matched == 0)
+
+# Kolmogorov tests for our matched results
+ks.patients.sex <- ks.test(na.omit(patients_yes$sex.patient),
+                         na.omit(patients_no$sex.patient),
+                         alternative = "two.sided", simulate.p.value = TRUE)
+#ks.patients.sex
+
+ks.patients.ses_status <- ks.test(as.numeric(na.omit(patients_yes$ses_status.patient)),
+                                as.numeric(na.omit(patients_no$ses_status.patient)),
+                                alternative = "two.sided", simulate.p.value = TRUE)
+#ks.patients.ses_status
+
+ks.patients.commune_code<- ks.test(as.numeric(na.omit(patients_yes$commune_code)),
+                                 as.numeric(na.omit(patients_no$commune_code)),
+                                 alternative = "two.sided", simulate.p.value = TRUE)
+#ks.patients.commune_code
+
+
+# Kolmogorov tests with permutation distributions
+set.seed(123)
+nPerm <- 200 # change to 2000
+ks_perm.patients.pvals <- data.frame(sex = numeric(nPerm),
+                                   commune_code = numeric(nPerm),
+                                   ses_status = numeric(nPerm))
+
+patients_matched_small_perm <- patients_matched_small
+
+for (i in 1:nPerm) {
+  #print(i)
+  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] # permute matched status
+  patients_perm_yes <- patients_matched_small_perm %>% filter(matched == 1)
+  patients_perm_no <- patients_matched_small_perm %>% filter(matched == 0)
+  
+  ks_perm.patients.sex <- ks.test(na.omit(patients_perm_yes$sex.patient),
+                                na.omit(patients_perm_no$sex.patient), 
+                                alternative = "two.sided")
+  ks_perm.patients.commune_code <- ks.test(as.numeric(na.omit(patients_perm_yes$commune_code)),
+                                        as.numeric(na.omit(patients_perm_no$commune_code)),
+                                        alternative = "two.sided")
+  ks_perm.patients.ses_status <- ks.test(as.numeric(na.omit(patients_perm_yes$ses_status.patient)),
+                                       as.numeric(na.omit(patients_perm_no$ses_status.patient)),
+                                       alternative = "two.sided")
+  
+  ks_perm.patients.pvals$sex[i] <- ks_perm.patients.sex$p.value
+  ks_perm.patients.pvals$commune_code[i] <- ks_perm.patients.commune_code$p.value
+  ks_perm.patients.pvals$ses_status[i] <- ks_perm.patients.ses_status$p.value
+}
+```
+
+```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=10}
+# Results for sex
+patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+patients_match_no.sex <- patients_no %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
+  mutate(sex_desc = ifelse(sex.patient == 1, "Male", ifelse(sex.patient == 2, "Female", NA))) %>% 
+  arrange(sex_desc, matched)
+
+kolmog_patient_ses.bar <- ggplot(patients_match.sex) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~sex_desc) +
+  labs(title = "Matching of clinical record to school record by sex",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = sex, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.patients.sex$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in patient data by sex and observed p-value (red)",
+       x = "Sex",
+       y = "Density")
+
+grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
+```
+
+```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=10}
+# Results for commune
+patients_match_yes.student_commune_name <- patients_yes %>% group_by(student_commune_name.patient) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
+  #merge(commune_, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 1) 
+patients_match_no.student_commune_name <- patients_no %>% group_by(student_commune_name.patient) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 0)
+
+patients_match.student_commune_name <- rbind(patients_match_yes.student_commune_name, patients_match_no.student_commune_name) %>%
+  arrange(student_commune_name.patient, matched)
+
+kolmog_patient_commune.bar <- ggplot(patients_match.student_commune_name) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~student_commune_name.patient, scales = "fixed") +
+  #facet_wrap(~student_commune_name.school, scales = "free") +
+  labs(title = "Matching of clinical record to school record by commune",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
+
+
+kolmog_patient_commune.density <- ggplot(ks_perm.patients.pvals, aes(x = commune_code, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.patients.commune_code$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in patient data by commune and observed p-value (red)",
+       x = "Commune",
+       y = "Density")
+
+grid.arrange(kolmog_patient_commune.bar, kolmog_patient_commune.density, nrow = 2)
+```
+
+```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=10}
+# Results for ses status
+patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+patients_match_no.ses_status <- patients_no %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+patients_match.ses_status <- rbind(patients_match_yes.ses_status, patients_match_no.ses_status) %>%
+  arrange(ses_status.patient, matched)
+
+kolmog_patient_ses.bar <- ggplot(patients_match.ses_status) +
+  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  facet_wrap(~ses_status.patient) +
+  labs(title = "Matching of clinical record to school record by SES status",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = ses_status, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.patients.ses_status$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in patient data by proxy SES and observed p-value (red)",
+       x = "Proxy SES",
+       y = "Density")
+
+grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
 ```
 
 
