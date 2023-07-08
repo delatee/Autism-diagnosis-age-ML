@@ -734,8 +734,9 @@ get.yes.fostercare <- function(x) {
 
 ```{r colours}
 plasma_colours <- viridis(10, option = "C") #"#0D0887FF" "#47039FFF" "#7301A8FF" "#9C179EFF" "#BD3786FF" "#D8576BFF" "#ED7953FF" "#FA9E3BFF" "#FDC926FF" "#F0F921FF"
-viridis_colours <- viridis(10, option = "G") #"#0B0405FF" "#28192FFF" "#3B2F5EFF" "#40498EFF" "#366A9FFF" "#348AA6FF" "#38AAACFF" "#54C9ADFF" "#A0DFB9FF" "#DEF5E5FF"
-turbo_colours <- viridis(10, option = "H") #"#30123BFF" "#4662D7FF" "#36AAF9FF" "#1AE4B6FF" "#72FE5EFF" "#C7EF34FF" "#FABA39FF" "#F66B19FF" "#CB2A04FF" "#7A0403FF"
+viridis_colours <- viridis(20, option = "D") 
+rocket_colours <- viridis(20, option = "F")
+turbo_colours <- viridis(17, option = "H") #"#30123BFF" "#4662D7FF" "#36AAF9FF" "#1AE4B6FF" "#72FE5EFF" "#C7EF34FF" "#FABA39FF" "#F66B19FF" "#CB2A04FF" "#7A0403FF"
   
 ```
 
@@ -1857,7 +1858,7 @@ res_mca_patients_noimp <- FactoMineR::MCA(patients_mca_noimp, # Can only take ca
                                           graph = FALSE) 
 ```
 
-```{r mcaNoimpFeatures, fig.cap="Categorical features of the small clinical dataset by its first two dimensions after multiple correspondence analysis."}
+```{r mcaNoimpFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation."}
 # Plot features
 fviz_mca_var(res_mca_patients_noimp, 
              choice = "mca.cor", 
@@ -1869,7 +1870,7 @@ fviz_mca_var(res_mca_patients_noimp,
   labs(title = "Categorical features by first two dimensions, no imputation")
 ```
 
-```{r mcaNoimpCategories, fig.cap="The available categories of the categorical features of the small clinical dataset by its first two dimensions after multiple correspondence analysis. Colour shows the category's contribution to the first two dimensions.", fig.height=11}
+```{r mcaNoimpCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation.", fig.height=11}
 # Plot categories
 fviz_mca_var(res_mca_patients_noimp,
              col.var = "contrib",
@@ -1878,133 +1879,104 @@ fviz_mca_var(res_mca_patients_noimp,
              gradient.cols = c(turbo_colours[2], turbo_colours[4], turbo_colours[8]),
              repel = TRUE, # Avoid text overlapping (slow if many points)
              ggtheme = theme_minimal()) +
-  labs(title = "Categories of features, no imputation",
+  labs(title = "Categories by first two dimensions, no imputation",
        colour = "Contribution")
 ```
 
-```{r mcaNoimpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of MCA., fig.height = 4}
+```{r mcaNoimpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation. The red line shows the expected average if contributions were uniform.", fig.height = 4}
 
 # Total contribution to dimension 1 and 2
 fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15) +
-  labs(title = "Contribution of categories, no imputation",
+  labs(title = "Contribution of categories to first two dimensions, no imputation",
        x = "Category",
        y = "Contribution (%)")
 ```
 
-```{r mcaNoimpFeatures, fig.cap="Categorical features of the small clinical dataset by its first two dimensions after multiple correspondence analysis."}
-# Plot individual patients
-# fviz_mca_ind(res_mca_patients_noimp, 
-#              label = "none",
-#              #col.ind = "cos2", 
-#              #gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-#              addEllipses = TRUE,
-#              ellipse.level = 0.95,
-#              repel = FALSE, # Graphs is not meaningful if this is TRUE
-#              ggtheme = theme_minimal())
-# OR
+```{r mcaNoimpPlots}
 mca_noimp_sex_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none", # hide individual labels
              habillage = "Sex", # color by groups 
-             #palette = c("green", "blue"),
+             palette = c(turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by sex",
+             title = "Patients by sex, no imputation",
              ggtheme = theme_minimal()) 
 mca_noimp_age_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-             label = "none", # hide individual labels
-             habillage = "Age band", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Age band",
+             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by age",
-             ggtheme = theme_minimal()) #+
-  #theme(legend.position = "none")
-# mca_noimp_aut_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-#              label = "none", # hide individual labels
-#              habillage = "Autism", # color by groups 
-#              #palette = c("#00AFBB", "#E7B800"),
-#              addEllipses = TRUE, ellipse.type = "confidence",
-#              title = "Patients by autism status",
-#              ggtheme = theme_minimal()) 
+             title = "Patients by age band, no imputation",
+             ggtheme = theme_minimal()) 
 mca_noimp_commune_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-             label = "none", # hide individual labels
-             habillage = "Commune", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Commune",
+             palette = turbo_colours,
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by commune of residence",
-             ggtheme = theme_minimal()) #+ #Really not meaningful
-  #theme(legend.position = "none")
+             title = "Patients by commune of residence, no imputation",
+             ggtheme = theme_minimal())
 mca_noimp_ses_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-             label = "none", # hide individual labels
-             habillage = "Health insurance", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Health insurance",
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by SES status",
+             title = "Patients by SES status, no imputation",
              ggtheme = theme_minimal()) 
 mca_noimp_rural_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-             label = "none", # hide individual labels
-             habillage = "Rurality", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Rurality",
+             palette = c(turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by rurality",
+             title = "Patients by rurality, no imputation",
              ggtheme = theme_minimal())
 mca_noimp_ethnic_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-             label = "none", # hide individual labels
-             habillage = "Ethnicity", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Ethnicity",
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by ethnicity",
+             title = "Patients by ethnicity, no imputation",
              ggtheme = theme_minimal())
 mca_noimp_disab_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-             label = "none", # hide individual labels
-             habillage = "Disability", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Disability",
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by disability status",
+             title = "Patients by disability status, no imputation",
              ggtheme = theme_minimal())
 mca_noimp_foster_plot <- fviz_mca_ind(res_mca_patients_noimp, 
-             label = "none", # hide individual labels
-             habillage = "Foster care", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
+             label = "none",
+             habillage = "Foster care",
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by foster care status",
+             title = "Patients by foster care status, no imputation",
              ggtheme = theme_minimal())
-
-
-grid.arrange(mca_noimp_age_plot)
-
-grid.arrange(mca_noimp_commune_plot)
-
-grid.arrange(mca_noimp_ethnic_plot)
-
-grid.arrange(mca_noimp_ses_plot)
-
-#grid.arrange(mca_noimp_aut_plot)
-
-grid.arrange(mca_noimp_sex_plot, mca_noimp_rural_plot, nrow = 2)
-
-grid.arrange(mca_noimp_disab_plot, mca_noimp_foster_plot, nrow = 2)
-
-
-fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
-
-
-#fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
-#fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
-#fviz_ellipses(res_mca_patients, 1, geom = "point")
-
-#fviz_cos2(res_mca_patients_noimp, choice = "var", axes = 1:2, xtickslab.rt = 90)
-#round(res_mca_patients_noimp$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
-
-# Contributions of variable categories to dimension 1
-#fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1, top = 15) 
-# Contributions of variable categories to dimension 2
-#fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 2, top = 15)
-
-# "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
-
-
 ```
 
-```{r MCA imp}
+```{r mcaNoimpAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by age band."}
+grid.arrange(mca_noimp_age_plot)
+```
+
+```{r mcaNoimpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by commune of residence."}
+grid.arrange(mca_noimp_commune_plot)
+```
+
+```{r mcaNoimpEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by ethnicity."}
+grid.arrange(mca_noimp_ethnic_plot)
+```
+
+```{r mcaNoimpSES, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by health insurance level."}
+grid.arrange(mca_noimp_ses_plot)
+```
+
+```{r mcaNoimpSexRural, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by sex and by rurality of residence."}
+grid.arrange(mca_noimp_sex_plot, mca_noimp_rural_plot, nrow = 2)
+```
+
+```{r mcaNoimpDisabFoster, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by disability status and by foster care status."}
+grid.arrange(mca_noimp_disab_plot, mca_noimp_foster_plot, nrow = 2)
+```
+
+
+```{r MCAimp}
 patients_mca_imp <- patients_mca_small %>%
   filter(autism == "Yes autism") %>%
    select(#id,
@@ -2153,7 +2125,7 @@ fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15)
 
 ```
 
-```{r MCA aut}
+```{r MCAaut}
 patients_mca_aut <- patients_mca_small %>%
   filter(autism == "Yes autism") %>%
    select(#id,
@@ -2340,12 +2312,12 @@ school <- chile_merged %>%
   rowid_to_column("id")
 
 # Add a fake row so that pairing works later
-school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-26", "Female", "Misc", 0, 3, 2)
+school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-01", NA, NA, NA, NA, NA)
 ```
 
 ### Number matched
 
-```{r manual linkage}
+```{r manualLinkage}
 patients_grouped_ses <- patients %>%
   group_by(sex_desc, 
            dob, 
@@ -2391,7 +2363,7 @@ merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_nam
 Using perfect match on sex, date of birth and commune of residence, `r nrow(merged)` matches can be found between the school and patient records.
 `r length(unique(merged$id.x)) - 1` unique school records can be perfectly matched to clinical records. `r length(unique(merged$id.y))` patients can be linked to school records.
 
-```{r probabilistic weights}
+```{r probabilisticWeights}
 # formerly a2
 pairs_blocked <- compare.linkage(school,
                      select(patients, -row_id),
@@ -2442,7 +2414,7 @@ matches <- select_n_to_m(pairs_blocked.pairs, threshold = 0.5, score = "weight",
 ```
 
 
-```{r match school}
+```{r matchSchool}
 
 # Now add the matched clinical records to the school records
 school_matched <- school %>%
@@ -2489,7 +2461,7 @@ school_matched_small <- school_matched %>%
 
 ```
 
-```{r match patient}
+```{r matchPatient}
 
 # Now add the matched clinical records to the school records
 patients_matched <- patients %>%
@@ -2536,7 +2508,7 @@ patients_matched_small <- patients_matched %>%
 ```
 
 
-```{r patients unique}
+```{r patientsUnique}
 patients_matched_unique <- patients_matched_small %>%
   group_by(matched, patient_id) %>%
   summarise(count = n())
@@ -2551,7 +2523,7 @@ There are no patients that lived in different communes therefore were in the pat
 ### Differences between un/matched
 
 
-```{r kolmogorov tests school, warning = FALSE}
+```{r kolmogorovSchool, warning = FALSE}
 
 school_yes <- school_matched_small %>% filter(matched == 1) #%>% select(sex.school)
 school_no <- school_matched_small %>% filter(matched == 0)
@@ -2679,7 +2651,7 @@ Our matched/non-matched are not different by sex (p-value in Kolmog is same as m
 
 
 
-```{r kolmogorov tests patient, warning = FALSE}
+```{r kolmogorovPatient, warning = FALSE}
 
 patients_yes <- patients_matched_small %>% filter(matched == 1) #%>% select(sex.school)
 patients_no <- patients_matched_small %>% filter(matched == 0)
@@ -2804,7 +2776,7 @@ TODO - comment on whether any of the matched patients had only intellectual disa
 
 ### Prev delta
 
-```{r new prev}
+```{r newPrev}
 n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) # Use this version because accounts for non-unique patients with both match and non-match
 #n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
 #  dim(patients_matched_small %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
@@ -2817,7 +2789,7 @@ n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id
 ## Bayesian prevalence projection
 
 
-```{r new prev arauc}
+```{r newPrevArauc}
 araucS_lower_prev <- aut_prev_health_adj %>%
   filter(health_service_name == "Araucanía Sur") %>%
   select(adjusted_rate) %>% as.numeric
@@ -2849,7 +2821,7 @@ for(i in 1:nrow(aut_prev_health_adj)) {
 
 ```
 
-```{r bayes proj setup}
+```{r bayesSetup}
 nObs <- nrow(chile_bayes_aut)
 nIter <- 2000
 nBurn <- 2000
@@ -2858,7 +2830,7 @@ FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
 
 ```
 
-```{r new prev health, include = FALSE}
+```{r newPrevHealth, include = FALSE}
 
 # Need to do all by health service code not name because name sorts in different orders.
 
@@ -2951,7 +2923,7 @@ ggplot() +
 ```
 
 
-```{r new prev health uniform prior}
+```{r newPrevHealthUniform}
 
 ####### Need to do all by health service code not name because name sorts in different orders.
 
@@ -3043,7 +3015,7 @@ Red is the prior 95% CI (adjusted sample rate and it + prev_delta), blue is post
 
 # Supplementary materials
 
-```{r prev plot aut age}
+```{r prevAgeAutPlot}
 ggplot(data = aut_prev.age) +
   geom_col(aes(x = age_june30, y = sample_prevalence*100, group = age_june30, fill = age_june30), position = position_dodge()) +
   geom_errorbar(aes(x = age_june30, ymin = ci_lower*100, ymax = ci_upper*100, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
@@ -3056,7 +3028,7 @@ ggplot(data = aut_prev.age) +
        fill = "Age band")
 ```
 
-```{r prev plot adhd age}
+```{r prevAgeAdhdPlot}
 ggplot(data = adhd_prev.age) +
   geom_col(aes(x = age_june30, y = sample_prevalence*100, group = age_june30, fill = age_june30), position = position_dodge()) +
   geom_errorbar(aes(x = age_june30, ymin = ci_lower*100, ymax = ci_upper*100, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
@@ -3069,7 +3041,7 @@ ggplot(data = adhd_prev.age) +
        fill = "Age band")
 ```
 
-```{r adj prev plot aut sex, fig.cap = "Sample prevalence of autism by age and sex. Bars show 95% normal confidence intervals."}
+```{r prevAgeSexAutPlot, fig.cap = "Sample prevalence of autism by age and sex. Bars show 95% normal confidence intervals."}
 # Autism
 
 # By age and sex
@@ -3085,7 +3057,7 @@ ggplot(data = aut_prev.age_sex) +
 ```
 
 
-```{r adj prev plot adhd age, fig.cap = "Sample prevalence of ADHD by age and sex. Bars show 95% normal confidence intervals."}
+```{r prevAgeSexAdhdPlot, fig.cap = "Sample prevalence of ADHD by age and sex. Bars show 95% normal confidence intervals."}
 # ADHD
 adhd_prev.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("age_june30", "sex_desc", "adhd"),
@@ -3105,7 +3077,7 @@ ggplot(data = adhd_prev.age_sex) +
 ```
 
 
-```{r adj prev health plot aut age, fig.cap = "Sample prevalence of autism by health service, age and sex. Bars show 95% normal confidence intervals."}
+```{r prevAgeHealthAutPlot, fig.cap = "Sample prevalence of autism by health service, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 aut_prev_health.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                                  grouping_vars = c("health_service_name", "age_june30", "sex_desc", "autism"),
@@ -3125,7 +3097,7 @@ ggplot(data = aut_prev_health.age_sex) +
 ```
 
 
-```{r adj prev health plot adhd age, fig.cap = "Sample prevalence of ADHD by health service, age and sex. Bars show 95% normal confidence intervals."}
+```{r prevAgeHealthAdhdPlot, fig.cap = "Sample prevalence of ADHD by health service, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 adhd_prev_health.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                                  grouping_vars = c("health_service_name", "age_june30", "sex_desc", "adhd"),
@@ -3145,7 +3117,7 @@ ggplot(data = adhd_prev_health.age_sex) +
 ```
 
 
-```{r adj prev araucS plot aut age, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age and sex. Bars show 95% normal confidence intervals.", include=FALSE}
+```{r prevAraucSAgeAutPlot, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age and sex. Bars show 95% normal confidence intervals.", include=FALSE}
 # Single ages
 # aut_prev_araucS.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut_araucS, 
 #                                                  grouping_vars = c("commune_name", "age_june30", "sex_desc", "autism"),
@@ -3165,7 +3137,7 @@ ggplot(data = adhd_prev_health.age_sex) +
 ```
 
 
-```{r adj prev economicAll plot aut age, fig.cap = "Sample prevalence of autism by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals."}
+```{r prevEconAAgeAutPlot, fig.cap = "Sample prevalence of autism by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 aut_prev_econA.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                                  grouping_vars = c("school_fee", "age_june30", "sex_desc", "autism"),
@@ -3185,7 +3157,7 @@ ggplot(data = aut_prev_econA.age_sex) +
 ```
 
 
-```{r adj prev economicAll plot adhd age, fig.cap = "Sample prevalence of ADHD by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals."}
+```{r prevEconAAgeAdhdPlot, fig.cap = "Sample prevalence of ADHD by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 adhd_prev_econA.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                                  grouping_vars = c("school_fee", "age_june30", "sex_desc", "adhd"),
@@ -3205,7 +3177,7 @@ ggplot(data = adhd_prev_econA.age_sex) +
 ```
 
 
-```{r adj prev ethnicity plot aut age, fig.cap = "Sample prevalence of autism by ethnicity, age and sex. Bars show 95% normal confidence intervals."}
+```{r prevEthnicAgeAutPlot, fig.cap = "Sample prevalence of autism by ethnicity, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 aut_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                                  grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "autism"),
@@ -3225,7 +3197,7 @@ ggplot(data = aut_prev_ethnic.age_sex) +
 ```
 
 
-```{r adj prev ethnicity plot adhd age, fig.cap = "Sample prevalence of ADHD by ethnicity, age and sex. Bars show 95% normal confidence intervals."}
+```{r prevEthnicAgeAdhdPlot, fig.cap = "Sample prevalence of ADHD by ethnicity, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 adhd_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                                  grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "adhd"),
@@ -3245,7 +3217,7 @@ ggplot(data = adhd_prev_ethnic.age_sex) +
 ```
 
 
-```{r adj prev rurality plot aut age, fig.cap = "Sample prevalence of autism by school's rurality, age and sex. Bars show 95% normal confidence intervals."}
+```{r prevRuralAgeAutPlot, fig.cap = "Sample prevalence of autism by school's rurality, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 aut_prev_rural.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                                  grouping_vars = c("school_rurality", "age_june30", "sex_desc", "autism"),
@@ -3265,7 +3237,7 @@ ggplot(data = aut_prev_rural.age_sex) +
 ```
 
 
-```{r adj prev rurality plot adhd age, fig.cap = "Sample prevalence of ADHD by school's rurality, age and sex. Bars show 95% normal confidence intervals."}
+```{r prevRuralAgeAdhdPlot, fig.cap = "Sample prevalence of ADHD by school's rurality, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 adhd_prev_rural.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                                  grouping_vars = c("school_rurality", "age_june30", "sex_desc", "adhd"),
@@ -3284,7 +3256,7 @@ ggplot(data = adhd_prev_rural.age_sex) +
        fill = "Age")
 ```
 
-```{r adj prev plot rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
+```{r adjPrevPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
 
 # Autism
 aut_prev_adj.long <- aut_prev_adj %>%
@@ -3324,7 +3296,7 @@ grid.arrange(aut_prev_adj.long_plot, adhd_prev_adj.long_plot, ncol = 2)
 ```
 
 
-```{r adj prev plot rate sex, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD by sex. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
+```{r adjPrevSexPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD by sex. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
 # Females
 # aut_prev_adj_f.long <- aut_prev_adj_f %>%
 #   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3379,7 +3351,7 @@ grid.arrange(aut_prev_sex_adj.long_plot, adhd_prev_sex_adj.long_plot, ncol = 2)
 ```
 
 
-```{r adj prev health plot aut rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevHealthAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
 aut_prev_health_adj.long <- aut_prev_health_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3400,7 +3372,7 @@ ggplot(data = aut_prev_health_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adj prev health plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevHealthAdhdPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # ADHD
 adhd_prev_health_adj.long <- adhd_prev_health_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3423,7 +3395,7 @@ ggplot(data = adhd_prev_health_adj.long) +
 
 
 
-```{r adj prev economicAll plot aut rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevEconAAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
 aut_prev_econA_adj.long <- aut_prev_econA_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3444,7 +3416,7 @@ ggplot(data = aut_prev_econA_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adj prev economicAll plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevEconAAdhdPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # ADHD
 adhd_prev_econA_adj.long <- adhd_prev_econA_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3466,7 +3438,7 @@ ggplot(data = adhd_prev_econA_adj.long) +
 ```
 
 
-```{r adj prev ethnicity plot aut rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevEthnicAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 
 # Autism
 aut_prev_ethnic_adj.long <- aut_prev_ethnic_adj %>%
@@ -3487,7 +3459,7 @@ ggplot(data = aut_prev_ethnic_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adj prev ethnicity plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevEthnicAdhdPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # ADHD
 adhd_prev_ethnic_adj.long <- adhd_prev_ethnic_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3509,7 +3481,7 @@ ggplot(data = adhd_prev_ethnic_adj.long) +
 ```
 
 
-```{r adj prev rurality plot aut rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevRuralAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
 aut_prev_rural_adj.long <- aut_prev_rural_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3529,7 +3501,7 @@ ggplot(data = aut_prev_rural_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adj prev rurality plot adhd rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevRuralAdhdPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # ADHD
 adhd_prev_rural_adj.long <- adhd_prev_rural_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3552,7 +3524,7 @@ ggplot(data = adhd_prev_rural_adj.long) +
 
 ## Bayesian prevalence estimation
 
-```{r bayes global params}
+```{r bayesAdjParams}
 nObs <- nrow(chile_bayes)
 nIter <- 1000
 nBurn <- 1000
@@ -3601,7 +3573,7 @@ rand_model <- "model {
 
 ### Random effect on sex
 
-```{r bayes sex aut, fig.cap = "Posterior predictive distribution for autism with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesSexAut, fig.cap = "Posterior predictive distribution for autism with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_sex_adj <- rbind(aut_prev_adj_m, aut_prev_adj_f) 
 # have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
 
@@ -3621,7 +3593,7 @@ plot_post_density(aut_prev_sex_post, aut_prev_sex_adj,
 ```
 
 
-```{r bayes sex adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesSexAdhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
 adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f) 
 # have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
 
@@ -3642,7 +3614,7 @@ plot_post_density(adhd_prev_sex_post, adhd_prev_sex_adj,
 
 ### Random effect on health service
 
-```{r bayes health aut, fig.cap = "Posterior predictive distribution for autism with a random effect on student's health service, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesHealthAut, fig.cap = "Posterior predictive distribution for autism with a random effect on student's health service, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
                               feat = "health_service_name",
                               model = rand_model,
@@ -3658,7 +3630,7 @@ plot_post_density(aut_prev_health_post, aut_prev_health_adj,
                   disease = "Autism")
 ```
 
-```{r bayes health adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on health service, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesHealthAdhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on health service, and with age- and sex-adjusted global prevalence prior."}
 adhd_prev_health_post <- do_jags_rand_model(x = adhd_prev_health_adj,
                               feat = "health_service_name",
                               model = rand_model,
@@ -3676,7 +3648,7 @@ plot_post_density(adhd_prev_health_post, adhd_prev_health_adj,
 
 ### Random effect on commune in Araucanía Sur health service
 
-```{r bayes araucS aut, fig.cap = "Posterior predictive distribution for autism with a random effect on commune within Araucanía Sur health service, and with age- and sex-adjusted global prevalence prior.", include=FALSE}
+```{r bayesAraucSAut, fig.cap = "Posterior predictive distribution for autism with a random effect on commune within Araucanía Sur health service, and with age- and sex-adjusted global prevalence prior.", include=FALSE}
 # aut_prev_araucS_post <- do_jags_rand_model(x = aut_prev_araucS_adj,
 #                               feat = "commune_name",
 #                               model = rand_model,
@@ -3694,7 +3666,7 @@ plot_post_density(adhd_prev_health_post, adhd_prev_health_adj,
 
 ### Random effect on socio-economic status
 
-```{r bayes economicAll aut, fig.cap = "Posterior predictive distribution for autism with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesEconAAut, fig.cap = "Posterior predictive distribution for autism with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_econA_post <- do_jags_rand_model(x = aut_prev_econA_adj,
                               feat = "school_fee",
                               model = rand_model,
@@ -3710,7 +3682,7 @@ plot_post_density(aut_prev_econA_post, aut_prev_econA_adj,
                   disease = "Autism")
 ```
 
-```{r bayes economicAll adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesEconAAdhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
 adhd_prev_econA_post <- do_jags_rand_model(x = adhd_prev_econA_adj,
                               feat = "school_fee",
                               model = rand_model,
@@ -3728,7 +3700,7 @@ plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj,
 
 ### Random effect on ethnicity
 
-```{r bayes ethnicity aut, fig.cap = "Posterior predictive distribution for autism with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesEthnicAut, fig.cap = "Posterior predictive distribution for autism with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_ethnic_post <- do_jags_rand_model(x = aut_prev_ethnic_adj,
                               feat = "ethnic_2_group",
                               model = rand_model,
@@ -3744,7 +3716,7 @@ plot_post_density(aut_prev_ethnic_post, aut_prev_ethnic_adj,
                   disease = "Autism")
 ```
 
-```{r bayes ethnic adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesEthnicAdhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
 adhd_prev_ethnic_post <- do_jags_rand_model(x = adhd_prev_ethnic_adj,
                               feat = "ethnic_2_group",
                               model = rand_model,
@@ -3762,7 +3734,7 @@ plot_post_density(adhd_prev_ethnic_post, adhd_prev_ethnic_adj,
 
 ### Random effect on school's rurality
 
-```{r bayes rurality aut, fig.cap = "Posterior predictive distribution for autism with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesRuralAut, fig.cap = "Posterior predictive distribution for autism with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_rural_post <- do_jags_rand_model(x = aut_prev_rural_adj,
                               feat = "school_rurality",
                               model = rand_model,
@@ -3778,7 +3750,7 @@ plot_post_density(aut_prev_rural_post, aut_prev_rural_adj,
                   disease = "Autism")
 ```
 
-```{r bayes rurality adhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
+```{r bayesRuralAdhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
 adhd_prev_rural_post <- do_jags_rand_model(x = adhd_prev_rural_adj,
                               feat = "school_rurality",
                               model = rand_model,
@@ -3797,7 +3769,7 @@ plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj,
 
 ## AraucS prevalence
 
-```{r adj prev araucS, include = FALSE}
+```{r adjPrevAraucS, include = FALSE}
 # Only do autism here because we only have clinical data for autism
 chile_bayes_aut_araucS <- chile_bayes_aut %>%
   filter(health_service_code == 5)
@@ -3817,7 +3789,7 @@ aut_prev_araucS_adj %>%
   mutate(across(is.numeric, round, digits = 5)) 
 ```
 
-```{r adj prev araucS plot aut agecat, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age band and sex. Bars show 95% normal confidence intervals.", include = FALSE}
+```{r prevAraucSAgecatAutPlot, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age band and sex. Bars show 95% normal confidence intervals.", include = FALSE}
 # By age and sex
 # Age categories
 aut_prev_araucS.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut_araucS,
@@ -3837,7 +3809,7 @@ ggplot(data = aut_prev_araucS.agecat_sex) +
 ```
 
 
-```{r adj prev araucS plot aut rate, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by commune in Araucanía Sur health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", include = FALSE}
+```{r adjPrevAraucSAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by commune in Araucanía Sur health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", include = FALSE}
 # All
 aut_prev_araucS_adj.long <- aut_prev_araucS_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
