@@ -1578,7 +1578,6 @@ kbl(aut_prev_health_adj.table,
     booktabs = TRUE,
     format = "pandoc",
     linesep = c(""), # No extra white space
-    format = "pandoc",
     caption = "Crude and age- and sex-adjusted autism prevalence by health service in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
@@ -1591,7 +1590,6 @@ kbl(adhd_prev_health_adj.table,
     booktabs = TRUE,
     format = "pandoc",
     linesep = c(""), # No extra white space
-    format = "pandoc",
     caption = "Crude and age- and sex-adjusted ADHD prevalence by health service in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 
 ```
@@ -1762,8 +1760,6 @@ patients_mca_small <- clinical_small_raw %>%
 
 
 The small clinical dataset has data on `r nrow(clinical_small)` appointments for `r length(unique(clinical_small$id))` unique patients aged 1-18 in 2021. `r patients_mca_small %>% filter(sex_desc == "Female") %>% nrow` (`r round(patients_mca_small %>% filter(sex_desc == "Female") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) are female, `r patients_mca_small %>% filter(ethnicity == "Mapuche") %>% nrow` (`r round(patients_mca_small %>% filter(ethnicity == "Mapuche") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) are Mapuche, `r patients_mca_small %>% filter(rurality == "URBAN") %>% nrow` (`r round(patients_mca_small %>% filter(rurality == "URBAN") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) live in an urban area, `r patients_mca_small %>% filter(disability == "Yes disability") %>% nrow` (`r round(patients_mca_small %>% filter(disability == "Yes disability") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have a disability and `r patients_mca_small %>% filter(foster_care == "Yes foster care") %>% nrow` (`r round(patients_mca_small %>% filter(foster_care == "Yes foster care") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have experienced foster care. `r patients_mca_small %>% filter(autism == 1) %>% nrow` (`r round(patients_mca_small %>% filter(autism == 1) %>% nrow / nrow(patients_mca_small) * 100, 2)`%) patients have autism, `r patients_mca_small %>% filter(intdisab == 1) %>% nrow` (`r round(patients_mca_small %>% filter(intdisab == 1) %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have an intellectual disability and `r patients_mca_small %>% filter(autism == 1 & intdisab == 1) %>% nrow` (`r round(patients_mca_small %>% filter(autism == 1 & intdisab == 1) %>% nrow / nrow(patients_mca_small) * 100, 2)`%).
-
-TODO - table summarising data content. Number of unique patients
 
 ```{r macPatientsSmallTable}
 patients_mca_small.table <- patients_mca_small %>%
@@ -2804,7 +2800,6 @@ ggplot(data = aut_prev.age_sex) +
 
 ```
 
-
 ```{r prevAgeSexAdhdPlot, fig.cap = "Sample prevalence of ADHD by age and sex. Bars show 95% normal confidence intervals."}
 # ADHD
 adhd_prev.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
@@ -2823,7 +2818,6 @@ ggplot(data = adhd_prev.age_sex) +
        fill = "Age")
 
 ```
-
 
 ```{r prevAgeHealthAutPlot, fig.cap = "Sample prevalence of autism by health service, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
@@ -2844,7 +2838,6 @@ ggplot(data = aut_prev_health.age_sex) +
        fill = "Age")
 ```
 
-
 ```{r prevAgeHealthAdhdPlot, fig.cap = "Sample prevalence of ADHD by health service, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 adhd_prev_health.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
@@ -2863,7 +2856,6 @@ ggplot(data = adhd_prev_health.age_sex) +
        y = "Sample prevalence",
        fill = "Age")
 ```
-
 
 ```{r prevAraucSAgeAutPlot, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age and sex. Bars show 95% normal confidence intervals.", include=FALSE}
 # Single ages
@@ -2884,7 +2876,6 @@ ggplot(data = adhd_prev_health.age_sex) +
 #        fill = "Age")
 ```
 
-
 ```{r prevEconAAgeAutPlot, fig.cap = "Sample prevalence of autism by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 aut_prev_econA.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
@@ -2903,7 +2894,6 @@ ggplot(data = aut_prev_econA.age_sex) +
        y = "Sample prevalence",
        fill = "Age")
 ```
-
 
 ```{r prevEconAAgeAdhdPlot, fig.cap = "Sample prevalence of ADHD by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
@@ -2924,7 +2914,6 @@ ggplot(data = adhd_prev_econA.age_sex) +
        fill = "Age")
 ```
 
-
 ```{r prevEthnicAgeAutPlot, fig.cap = "Sample prevalence of autism by ethnicity, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 aut_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
@@ -2943,7 +2932,6 @@ ggplot(data = aut_prev_ethnic.age_sex) +
        y = "Sample prevalence",
        fill = "Age")
 ```
-
 
 ```{r prevEthnicAgeAdhdPlot, fig.cap = "Sample prevalence of ADHD by ethnicity, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
@@ -2964,7 +2952,6 @@ ggplot(data = adhd_prev_ethnic.age_sex) +
        fill = "Age")
 ```
 
-
 ```{r prevRuralAgeAutPlot, fig.cap = "Sample prevalence of autism by school's rurality, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 aut_prev_rural.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
@@ -2984,7 +2971,6 @@ ggplot(data = aut_prev_rural.age_sex) +
        fill = "Age")
 ```
 
-
 ```{r prevRuralAgeAdhdPlot, fig.cap = "Sample prevalence of ADHD by school's rurality, age and sex. Bars show 95% normal confidence intervals."}
 # Single ages
 adhd_prev_rural.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
@@ -3003,6 +2989,69 @@ ggplot(data = adhd_prev_rural.age_sex) +
        y = "Sample prevalence",
        fill = "Age")
 ```
+
+## AraucS prevalence
+
+```{r adjPrevAraucS, include = FALSE}
+# Only do autism here because we only have clinical data for autism
+chile_bayes_aut_araucS <- chile_bayes_aut %>%
+  filter(health_service_code == 5)
+
+aut_prev_araucS <- get_grouped_prev(x = chile_bayes_aut_araucS, stdpop = chile_stdpop, 
+                                    grouping_vars = c("commune_name", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    disease = "autism")
+
+aut_prev_araucS_adj <- get_adjusted_prev(aut_prev_araucS, grouping_vars = "commune_name") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_prev_araucS_adj %>% 
+  select(commune_name, 
+         crude_ci_lower, crude_rate, crude_ci_upper, 
+         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
+  mutate(across(is.numeric, round, digits = 5)) 
+```
+
+```{r prevAraucSAgecatAutPlot, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age band and sex. Bars show 95% normal confidence intervals.", include = FALSE}
+# By age and sex
+# Age categories
+aut_prev_araucS.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut_araucS,
+                                                    grouping_vars = c("commune_name", "age_cat_name", "sex_desc", "autism"),
+                                                    disease = "autism") %>%
+  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
+
+ggplot(data = aut_prev_araucS.agecat_sex) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_viridis_d(option = "plasma") +
+  facet_wrap(~commune_name) +
+  labs(title = "Autism prevalence by commune in Araucanía Sur",
+       x = "Sex",
+       y = "Sample prevalence",
+       fill = "Age category")
+```
+
+```{r adjPrevAraucSAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by commune in Araucanía Sur health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", include = FALSE}
+# All
+aut_prev_araucS_adj.long <- aut_prev_araucS_adj %>%
+  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
+  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
+               names_to = c("type", ".value"),
+               names_pattern = "(crude|adjusted)_(.*)") %>%
+  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
+
+ggplot(data = aut_prev_araucS_adj.long) +
+  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
+  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
+  theme(axis.title.x = element_blank(),
+        axis.title.y = element_blank()) +
+  facet_wrap(~commune_name) +
+  labs(title = "Autism prevalence by commune in Araucanía Sur",
+       #y = "Aggregate prevalence",
+       fill = "Prevalence")
+```
+
+## Adjusted prevalence
 
 ```{r adjPrevPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
 
@@ -3042,7 +3091,6 @@ adhd_prev_adj.long_plot <- ggplot(data = adhd_prev_adj.long) +
 
 grid.arrange(aut_prev_adj.long_plot, adhd_prev_adj.long_plot, ncol = 2)
 ```
-
 
 ```{r adjPrevSexPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD by sex. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
 # Females
@@ -3098,7 +3146,6 @@ adhd_prev_sex_adj.long_plot <- ggplot(data = adhd_prev_sex_adj.long) +
 grid.arrange(aut_prev_sex_adj.long_plot, adhd_prev_sex_adj.long_plot, ncol = 2)
 ```
 
-
 ```{r adjPrevHealthAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
 aut_prev_health_adj.long <- aut_prev_health_adj %>%
@@ -3140,8 +3187,6 @@ ggplot(data = adhd_prev_health_adj.long) +
        y = "Aggregate prevalence",
        fill = "Prevalence")
 ```
-
-
 
 ```{r adjPrevEconAAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
@@ -3185,7 +3230,6 @@ ggplot(data = adhd_prev_econA_adj.long) +
        fill = "Prevalence")
 ```
 
-
 ```{r adjPrevEthnicAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 
 # Autism
@@ -3228,7 +3272,6 @@ ggplot(data = adhd_prev_ethnic_adj.long) +
        fill = "Prevalence")
 ```
 
-
 ```{r adjPrevRuralAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
 aut_prev_rural_adj.long <- aut_prev_rural_adj %>%
@@ -3270,7 +3313,7 @@ ggplot(data = adhd_prev_rural_adj.long) +
 ```
 
 
-### Differences between un/matched
+## Differences between un/matched
 
 
 ```{r kolmogorovSchool, warning = FALSE}
@@ -3327,7 +3370,7 @@ for (i in 1:nPerm) {
 
 ```
 
-```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=10}
+```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=9}
 # Results for sex
 school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
 school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
@@ -3353,7 +3396,7 @@ kolmog_school_sex.density <- ggplot(ks_perm.school.pvals, aes(x = sex, y = after
 grid.arrange(kolmog_school_sex.bar, kolmog_school_sex.density, nrow = 2)
 ```
 
-```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=10}
+```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=9}
 # Results for commune
 school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
   summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
@@ -3389,7 +3432,7 @@ grid.arrange(kolmog_school_commune.bar, kolmog_school_commune.density, nrow = 2)
 
 ```
 
-```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=10}
+```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=9}
 # Results for ses status
 school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
 school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
@@ -3468,7 +3511,7 @@ for (i in 1:nPerm) {
 }
 ```
 
-```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=10}
+```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=9}
 # Results for sex
 patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
 patients_match_no.sex <- patients_no %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
@@ -3494,7 +3537,7 @@ kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = sex, y = af
 grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
 ```
 
-```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=10}
+```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=9}
 # Results for commune
 patients_match_yes.student_commune_name <- patients_yes %>% group_by(student_commune_name.patient) %>%
   summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
@@ -3530,7 +3573,7 @@ kolmog_patient_commune.density <- ggplot(ks_perm.patients.pvals, aes(x = commune
 grid.arrange(kolmog_patient_commune.bar, kolmog_patient_commune.density, nrow = 2)
 ```
 
-```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=10}
+```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=9}
 # Results for ses status
 patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
 patients_match_no.ses_status <- patients_no %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
@@ -3605,8 +3648,6 @@ rand_model <- "model {
 }"
 ```
 
-### Random effect on sex
-
 ```{r bayesSexAut, fig.cap = "Posterior predictive distribution for autism with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_sex_adj <- rbind(aut_prev_adj_m, aut_prev_adj_f) 
 # have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
@@ -3626,7 +3667,6 @@ plot_post_density(aut_prev_sex_post, aut_prev_sex_adj,
                   disease = "Autism")
 ```
 
-
 ```{r bayesSexAdhd, fig.cap = "Posterior predictive distribution for ADHD with a random effect on sex, and with age- and sex-adjusted global prevalence prior."}
 adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f) 
 # have to put m first because 1 comes before 2 and otherwise will mess up naming in do_jags_rand_model
@@ -3645,8 +3685,6 @@ plot_post_density(adhd_prev_sex_post, adhd_prev_sex_adj,
                   theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
                   disease = "ADHD")
 ```
-
-### Random effect on health service
 
 ```{r bayesHealthAut, fig.cap = "Posterior predictive distribution for autism with a random effect on student's health service, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_health_post <- do_jags_rand_model(x = aut_prev_health_adj,
@@ -3680,8 +3718,6 @@ plot_post_density(adhd_prev_health_post, adhd_prev_health_adj,
                   disease = "ADHD")
 ```
 
-### Random effect on commune in Araucanía Sur health service
-
 ```{r bayesAraucSAut, fig.cap = "Posterior predictive distribution for autism with a random effect on commune within Araucanía Sur health service, and with age- and sex-adjusted global prevalence prior.", include=FALSE}
 # aut_prev_araucS_post <- do_jags_rand_model(x = aut_prev_araucS_adj,
 #                               feat = "commune_name",
@@ -3697,8 +3733,6 @@ plot_post_density(adhd_prev_health_post, adhd_prev_health_adj,
 #                   theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
 #                   disease = "Autism")
 ```
-
-### Random effect on socio-economic status
 
 ```{r bayesEconAAut, fig.cap = "Posterior predictive distribution for autism with a random effect on socio-economic status of student's family, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_econA_post <- do_jags_rand_model(x = aut_prev_econA_adj,
@@ -3732,8 +3766,6 @@ plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj,
                   disease = "ADHD")
 ```
 
-### Random effect on ethnicity
-
 ```{r bayesEthnicAut, fig.cap = "Posterior predictive distribution for autism with a random effect on ethnicity, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_ethnic_post <- do_jags_rand_model(x = aut_prev_ethnic_adj,
                               feat = "ethnic_2_group",
@@ -3766,8 +3798,6 @@ plot_post_density(adhd_prev_ethnic_post, adhd_prev_ethnic_adj,
                   disease = "ADHD")
 ```
 
-### Random effect on school's rurality
-
 ```{r bayesRuralAut, fig.cap = "Posterior predictive distribution for autism with a random effect on school's rurality, and with age- and sex-adjusted global prevalence prior."}
 aut_prev_rural_post <- do_jags_rand_model(x = aut_prev_rural_adj,
                               feat = "school_rurality",
@@ -3799,68 +3829,4 @@ plot_post_density(adhd_prev_econA_post, adhd_prev_econA_adj,
                   theta_mu = adhd_theta_mu_prior, theta_sigma = adhd_theta_sigma_prior,
                   disease = "ADHD")
 ```
-
-
-## AraucS prevalence
-
-```{r adjPrevAraucS, include = FALSE}
-# Only do autism here because we only have clinical data for autism
-chile_bayes_aut_araucS <- chile_bayes_aut %>%
-  filter(health_service_code == 5)
-
-aut_prev_araucS <- get_grouped_prev(x = chile_bayes_aut_araucS, stdpop = chile_stdpop, 
-                                    grouping_vars = c("commune_name", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
-                                    disease = "autism")
-
-aut_prev_araucS_adj <- get_adjusted_prev(aut_prev_araucS, grouping_vars = "commune_name") %>%
-  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
-         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
-
-aut_prev_araucS_adj %>% 
-  select(commune_name, 
-         crude_ci_lower, crude_rate, crude_ci_upper, 
-         adjusted_ci_lower, adjusted_rate, adjusted_ci_upper) %>%
-  mutate(across(is.numeric, round, digits = 5)) 
-```
-
-```{r prevAraucSAgecatAutPlot, fig.cap = "Sample prevalence of autism by commune in Araucanía Sur health service, age band and sex. Bars show 95% normal confidence intervals.", include = FALSE}
-# By age and sex
-# Age categories
-aut_prev_araucS.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut_araucS,
-                                                    grouping_vars = c("commune_name", "age_cat_name", "sex_desc", "autism"),
-                                                    disease = "autism") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = aut_prev_araucS.agecat_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_cat_name, fill = age_cat_name), position = "dodge") +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_d(option = "plasma") +
-  facet_wrap(~commune_name) +
-  labs(title = "Autism prevalence by commune in Araucanía Sur",
-       x = "Sex",
-       y = "Sample prevalence",
-       fill = "Age category")
-```
-
-
-```{r adjPrevAraucSAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by commune in Araucanía Sur health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", include = FALSE}
-# All
-aut_prev_araucS_adj.long <- aut_prev_araucS_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = aut_prev_araucS_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~commune_name) +
-  labs(title = "Autism prevalence by commune in Araucanía Sur",
-       #y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
 
