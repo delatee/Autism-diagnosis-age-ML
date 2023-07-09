@@ -899,7 +899,7 @@ Commune of residence was missing for 4078 students (0.13%) and their school's co
 
 Students’ age as of 30th June 2021 was mapped to age-bands of 6-8, 9-11, 12-14 and 15-18, preserving the divide between primary and secondary school as secondary school starts at age 12 in Chile, and with a larger final band as fewer students are expected to be diagnosed older and the 18 years old group may be small due to students leaving schooling. Students’ ethnicity was mapped to being a member of the Mapuche Indigenous group, being a member of another Chilean Indigenous group, or not being a member of an Indigenous group based on their recorded ethnicity which can take at most one value. The 6859 students (0.22%) with ethnicity recorded as ‘no registry’ were mapped to not being a member of an Indigenous group.
 
-Students’ school fee status was mapped to a proxy socio-economic status feature. Students with free schooling were given SES of 1 indicating low status as families with low SES are entitled to schooling rebates. Students paying $1,000-$100,000 monthly were given SES of 2, indicating medium status, and students paying more than $100,000 monthly  were given 3 to indicate high status. For school fee status, 49973 students (1.64%) were coded as ‘No information’ and 29 students (0.000949%) were missing school fee values and these were re-categorised as ‘No information’ to reflect their unknown school fee status. No other features of interest for this analysis had missingness.
+Students’ school fee status was mapped to a proxy socio-economic status feature. Students with free schooling were given SES of 1 indicating low status as families with low SES are entitled to schooling rebates. Students paying \$1,000-\$100,000 monthly were given SES of 2, indicating medium status, and students paying more than $100,000 monthly  were given 3 to indicate high status. For school fee status, 49973 students (1.64%) were coded as ‘No information’ and 29 students (0.000949%) were missing school fee values and these were re-categorised as ‘No information’ to reflect their unknown school fee status. No other features of interest for this analysis had missingness.
 
 ###	Crude prevalence
 
@@ -2355,7 +2355,7 @@ grid.arrange(mca_aut_commune_plot)
 ```
 
 
-## Probabilistic data linkage
+## Linkage of school and patient records
 
 ```{r patients}
 patients <- clinical %>%
@@ -2393,9 +2393,11 @@ patients_out <- clinical %>%
   rowid_to_column("row_id")
 # write_csv(patients_out, file = "04_Data/Outputs/patients.csv")
 
+patients_distinct <- patients %>% group_by(id) %>% summarise(commune_count = n(), communes = list(student_commune_name))
+
 ```
 
-NB: there are 1688 unique ID's in patients and it's 1702 rows long because some people are represented in 2 communes.
+Aggregating the combined clinical data to patient-level data for linkage resulted in the patient dataset with `r format(nrow(patients), big.mark = ",", trim = TRUE)` records for `r format(length(unique(patients$id)), big.mark = ",", trim = TRUE)` unique patients as `r patients_distinct %>% filter(commune_count == 2) %>% nrow()` patients lived in 2 communes and `r patients_distinct %>% filter(commune_count == 3) %>% nrow()` lived in 3 during the period covered by the data.
 
 ```{r school}
 school <- chile_merged %>%
@@ -2420,21 +2422,15 @@ school <- chile_merged %>%
   select(dob,
          sex_desc,
          student_commune_name,
-         #commune_name, 
-         #health_service_name,
          autism,
-         ses_status#,
-         #intdisab,
-         #aut_rank#,
-         #student_region_name
-  ) %>%
+         ses_status) %>%
   rowid_to_column("id")
 
 # Add a fake row so that pairing works later
 school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-01", NA, NA, NA, NA, NA)
 ```
 
-### Number matched
+### Manual record linkage
 
 ```{r manualLinkage}
 patients_grouped_ses <- patients %>%
@@ -2475,12 +2471,11 @@ school_grouped <- school %>%
 
 merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name"), all = FALSE)
 # 197 matches
-
-
 ```
 
-Using perfect match on sex, date of birth and commune of residence, `r nrow(merged)` matches can be found between the school and patient records.
-`r length(unique(merged$id.x)) - 1` unique school records can be perfectly matched to clinical records. `r length(unique(merged$id.y))` patients can be linked to school records.
+Using perfect match on sex, date of birth, commune of residence and the proxies for SES, `r nrow(merged_ses)` matches can be found between the school and patient records. Of these, `r length(unique(merged_ses$id.x))` unique school records can be perfectly matched to clinical records, and all perfect matches were for unique patients. When mismatch on SES proxy is allowed, `r nrow(merged)` matches can be manually found between the school and patient records. Of these, `r length(unique(merged$id.x))` unique school records can be perfectly matched to clinical records and `r length(unique(merged$id.y))` patients can be perfectly matched to school records.
+
+### Probabilistic record linkage
 
 ```{r probabilisticWeights}
 # formerly a2
@@ -2497,14 +2492,8 @@ pairs_weighted <- epiWeights(pairs_blocked, e = c(0.01, # Default for DOB
                            0.01, # Default for sex
                            0.01, # Default for commune because we want a good match
                            0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
-                           0.6#, # Have more error for ses_status because it is loosely defined 
-                           #0.01 # Allow some mismatch on whether autism is the primary diagnosis 
-                                  # so we take record with higher placed autism diagnosis when there 
-                                  # are multiple clinical record options for a single school record
-))
-#summary(pairs_weighted)
-#allPairs2 <- getPairs(pairs_weighted)
-#head(allPairs2, n = 20)
+                           0.6   # Have more error for ses_status because it is loosely defined 
+                           ))
 
 pairs_classified <- emClassify(pairs_weighted, threshold.upper = 1, threshold.lower = 0.8)
 
@@ -2514,13 +2503,9 @@ pairs_blocked.df <- pairs_blocked$pairs %>%
   rename(".x" = id1, ".y" = id2) %>%
   select(-is_match)
 
-#finalPairs2 <- getPairs(b2, max.weight = 1, min.weight = 0, single.rows = TRUE) # Take them all when blocked on sex_desc and dob together
-
 # Turn into a 'pairs' type object so it can be fed to select_n_to_m()
 pairs_blocked.pairs <- pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
-         mutate(student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y])#,
-         #ses = get_num_diff(school$ses_status[.x], patients$ses_status[.y])$val
-         ) %>%
+         mutate(student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y])) %>%
   left_join(pairs_blocked.df, by = c(".x", ".y")) %>%
   select(c(-student_commune_name.x)) %>%
   rename("student_commune_name" = "student_commune_name.y")
@@ -2531,7 +2516,6 @@ matches <- select_n_to_m(pairs_blocked.pairs, threshold = 0.5, score = "weight",
          "row_id" = ".y") %>%
   mutate(id = as.character(id))
 ```
-
 
 ```{r matchSchool}
 
@@ -2592,6 +2576,7 @@ patients_matched <- patients %>%
          student_commune_name.patient = student_commune_name.x,
          id = id.y,
          ses_status.patient = ses_status.x,
+         autism.patient = autism.x,
          dob.matched = dob.y,
          sex_desc.matched = sex_desc.y,
          student_commune_name.matched = student_commune_name.y,
@@ -2608,7 +2593,8 @@ patients_matched <- patients %>%
          sex_desc.school, sex_desc.patient, sex_desc.matched,
          student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
          ses_status.school, ses_status.patient, ses_status.matched,
-         weight) %>%
+         weight,
+         autism.patient) %>%
   arrange(desc(weight))
 
 patients_matched_small <- patients_matched %>%
@@ -2622,31 +2608,41 @@ patients_matched_small <- patients_matched %>%
          sex_desc.patient, sex.patient,
          student_commune_name.patient, commune_code,
          ses_status.patient,
-         matched)
-
+         matched,
+         autism.patient)
 ```
 
-
 ```{r patientsUnique}
+# Check if any of the patients that lived in multiple communes matched to multiple school records
 patients_matched_unique <- patients_matched_small %>%
   group_by(matched, patient_id) %>%
   summarise(count = n())
 
 patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% select(patient_id)
 # No patient is inadvertently matched to two school records
-
 ```
+
+```{r patientsAut}
+# Check if any matches are to patients that only have intellectual disability
+patients_intdisab <- patients_matched_small %>% filter(matched == 1, autism.patient == 0)
+
+# There are some so check if any other patient records were available for those DOB and sex values.
+for(j in 1:nrow(patients_intdisab)) {
+  patients %>% 
+    filter(sex_desc == patients_intdisab$sex_desc.patient[j],
+           dob == patients_intdisab$dob.patient[j]) #%>% print()
+}
+```
+
+Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blocked pairs. Probabilistic matching on sex, date of birth, commune of residence and the proxies for SES with selection of possible matches to create a bijective set of matches resulted in `r nrow(matches)` matches of unique school and patient records. This corresponds to `r round(nrow(matches) / nrow(school) * 100, 2)`% of the school records having a match in the patient records, `r round(nrow(matches) / nrow(patients) * 100, 2)`% of the patient records having a match in the school records and `r round(nrow(matches) / length(unique(patients$id)) * 100, 2)`% of the unique patients having a match in the school records. For each patient that had lived more than one commune and therefore appeared more than once in the patient data, only one match to a school record was made, meaning the linked data was bijective for school records and unique patients. `r patients_intdisab %>% nrow()` matches were made between a school record and a patient that did not have autism, rather had intellectual disability. For each of these, only one patient had sex and date of birth that perfectly matched the sex and date of birth in the school records, therefore no match to a patient with autism was available and thus these matches to patients with diagnosis of intellectual disability only were retained.
+
+Analysis of differences between matched and unmatched records in the school data and in the patient data by sex, commune and proxy for SES are provided as Supplementary Figures \@ref(fig:kolmogorovSchoolSex)-\@ref(fig:kolmogorovSchoolSes) (school data) and \@ref(fig:kolmogorovPatientSex)-\@ref(fig:kolmogorovPatientSes) (patient data).
 
 Bit easier to match SES status of 1 (probably more common)
 
 Our matched/non-matched are not different by sex (p-value in Kolmog is same as most of distribution of permuted pvals) but are different by commune and ses status. Cohen's D test isn't suitable to compare the matched and un-matched because the data don't have standard deviations.
 
-??Add commune maps here with size of sample for school and clinical?? Also size of other features.
 
-
-There are no patients that lived in different communes therefore were in the patient dataset twice that are matched to multiple school records.
-
-TODO - comment on whether any of the matched patients had only intellectual disability and not autism.
 
 ### Prev delta
 
