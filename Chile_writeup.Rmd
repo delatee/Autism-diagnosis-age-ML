@@ -2636,12 +2636,7 @@ for(j in 1:nrow(patients_intdisab)) {
 
 Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blocked pairs. Probabilistic matching on sex, date of birth, commune of residence and the proxies for SES with selection of possible matches to create a bijective set of matches resulted in `r nrow(matches)` matches of unique school and patient records. This corresponds to `r round(nrow(matches) / nrow(school) * 100, 2)`% of the school records having a match in the patient records, `r round(nrow(matches) / nrow(patients) * 100, 2)`% of the patient records having a match in the school records and `r round(nrow(matches) / length(unique(patients$id)) * 100, 2)`% of the unique patients having a match in the school records. For each patient that had lived more than one commune and therefore appeared more than once in the patient data, only one match to a school record was made, meaning the linked data was bijective for school records and unique patients. `r patients_intdisab %>% nrow()` matches were made between a school record and a patient that did not have autism, rather had intellectual disability. For each of these, only one patient had sex and date of birth that perfectly matched the sex and date of birth in the school records, therefore no match to a patient with autism was available and thus these matches to patients with diagnosis of intellectual disability only were retained.
 
-Analysis of differences between matched and unmatched records in the school data and in the patient data by sex, commune and proxy for SES are provided as Supplementary Figures \@ref(fig:kolmogorovSchoolSex)-\@ref(fig:kolmogorovSchoolSes) (school data) and \@ref(fig:kolmogorovPatientSex)-\@ref(fig:kolmogorovPatientSes) (patient data).
-
-Bit easier to match SES status of 1 (probably more common)
-
-Our matched/non-matched are not different by sex (p-value in Kolmog is same as most of distribution of permuted pvals) but are different by commune and ses status. Cohen's D test isn't suitable to compare the matched and un-matched because the data don't have standard deviations.
-
+Analysis of differences between matched and unmatched records in the school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no difference in frequency of sexes between matched and unmatched school records, see Figure \@ref(fig:kolmogorovSchoolSex). They did find a difference in the frequency of sexes between matched and unmatched patient records, see Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the sex ratios differing across the datasets: the school data is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r round(school_matched_small %>% filter(matched == 1, sex_desc.school == "Female") %>% nrow() / school_matched_small %>% filter(matched == 1) %>% nrow() * 100, 2)`% females. Kolmogovo-Smirnov permutation testing found matched and unmatched records differed by commune for both the school data, see Figure \@ref(fig:kolmogorovSchoolCommune), and patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. Differences were also found by proxy SES for both school and patient data, see Figure \@ref(fig:kolmogorovSchoolSes) and Figure \@ref(fig:kolmogorovPatientSes) respectively, likely reflecting different frequencies in these values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
 
 
 ### Prev delta
@@ -3496,94 +3491,6 @@ for (i in 1:nPerm) {
 
 ```
 
-```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=8}
-# Results for sex
-school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
-  arrange(sex_desc, matched)
-
-kolmog_school_sex.bar <- ggplot(school_match.sex) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~sex_desc) +
-  labs(title = "Matching of school record to clinical record by sex",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-kolmog_school_sex.density <- ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.sex$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by sex and observed p-value (red)",
-       x = "Sex",
-       y = "Density")
-
-grid.arrange(kolmog_school_sex.bar, kolmog_school_sex.density, nrow = 2)
-```
-
-```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=8}
-# Results for commune
-school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-school_match_no.student_commune_name <- school_no %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
-
-school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, school_match_no.student_commune_name) %>%
-  arrange(student_commune_name.school, matched)
-
-kolmog_school_commune.bar <- ggplot(school_match.student_commune_name) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~student_commune_name.school, scales = "fixed") +
-  #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of school record to clinical record by commune",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
-
-kolmog_school_commune.density <- ggplot(ks_perm.school.pvals, aes(x = commune_code, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.commune_code$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by commune and observed p-value (red)",
-       x = "Commune",
-       y = "Density")
-
-grid.arrange(kolmog_school_commune.bar, kolmog_school_commune.density, nrow = 2)
-
-```
-
-```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=8}
-# Results for ses status
-school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.ses_status) %>%
-  arrange(ses_status.school, matched)
-
-kolmog_school_ses.bar <- ggplot(school_match.ses_status) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~ses_status.school) +
-  labs(title = "Matching of school record to clinical record by SES status",
-       x = "Matched status",
-       y = "Feature frequency",
-       fill = "Matched status")
-
-kolmog_school_ses.density <- ggplot(ks_perm.school.pvals, aes(x = ses_status, y = after_stat(density))) +
-  geom_density() +
-  geom_vline(xintercept = ks.school.ses_status$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by proxy SES and observed p-value (red)",
-       x = "Proxy SES",
-       y = "Density")
-
-grid.arrange(kolmog_school_ses.bar, kolmog_school_ses.density, nrow = 2)
-
-```
-
 ```{r kolmogorovPatient, warning = FALSE}
 
 patients_yes <- patients_matched_small %>% filter(matched == 1) #%>% select(sex.school)
@@ -3637,6 +3544,35 @@ for (i in 1:nPerm) {
 }
 ```
 
+```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=8}
+# Results for sex
+school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
+  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
+  arrange(sex_desc, matched)
+
+kolmog_school_sex.bar <- ggplot(school_match.sex) +
+  geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
+               y = freq, 
+               fill = factor(matched, labels = c("Unmatched", "Matched")))) +
+  theme(legend.position = "none") +
+  facet_wrap(~sex_desc) +
+  labs(title = "Matching of school record to clinical record by sex",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+kolmog_school_sex.density <- ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.sex$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by sex and observed p-value (red)",
+       x = "Sex",
+       y = "Density")
+
+grid.arrange(kolmog_school_sex.bar, kolmog_school_sex.density, nrow = 2)
+```
+
 ```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=8}
 # Results for sex
 patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
@@ -3646,7 +3582,10 @@ patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
   arrange(sex_desc, matched)
 
 kolmog_patient_ses.bar <- ggplot(patients_match.sex) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
+               y = freq, 
+               fill = factor(matched, labels = c("Unmatched", "Matched")))) +
+  theme(legend.position = "none") +
   facet_wrap(~sex_desc) +
   labs(title = "Matching of clinical record to school record by sex",
        x = "Matched status",
@@ -3661,6 +3600,45 @@ kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = sex, y = af
        y = "Density")
 
 grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
+```
+
+```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=8}
+# Results for commune
+school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
+  #merge(commune_, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 1) 
+school_match_no.student_commune_name <- school_no %>% group_by(student_commune_name.school) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
+  mutate(matched = 0)
+
+school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, school_match_no.student_commune_name) %>%
+  arrange(student_commune_name.school, matched)
+
+kolmog_school_commune.bar <- ggplot(school_match.student_commune_name) +
+  geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
+               y = freq, 
+               fill = factor(matched, labels = c("Unmatched", "Matched")))) +
+  theme(legend.position = "none") +
+  facet_wrap(~student_commune_name.school, scales = "fixed") +
+  #facet_wrap(~student_commune_name.school, scales = "free") +
+  labs(title = "Matching of school record to clinical record by commune",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
+
+kolmog_school_commune.density <- ggplot(ks_perm.school.pvals, aes(x = commune_code, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.commune_code$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by commune and observed p-value (red)",
+       x = "Commune",
+       y = "Density")
+
+grid.arrange(kolmog_school_commune.bar, kolmog_school_commune.density, nrow = 2)
+
 ```
 
 ```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=8}
@@ -3679,7 +3657,10 @@ patients_match.student_commune_name <- rbind(patients_match_yes.student_commune_
   arrange(student_commune_name.patient, matched)
 
 kolmog_patient_commune.bar <- ggplot(patients_match.student_commune_name) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
+               y = freq, 
+               fill = factor(matched, labels = c("Unmatched", "Matched")))) +
+  theme(legend.position = "none") +
   facet_wrap(~student_commune_name.patient, scales = "fixed") +
   #facet_wrap(~student_commune_name.school, scales = "free") +
   labs(title = "Matching of clinical record to school record by commune",
@@ -3699,6 +3680,35 @@ kolmog_patient_commune.density <- ggplot(ks_perm.patients.pvals, aes(x = commune
 grid.arrange(kolmog_patient_commune.bar, kolmog_patient_commune.density, nrow = 2)
 ```
 
+```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=8}
+# Results for ses status
+school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.ses_status) %>%
+  arrange(ses_status.school, matched)
+
+kolmog_school_ses.bar <- ggplot(school_match.ses_status) +
+  geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
+               y = freq, 
+               fill = factor(matched, labels = c("Unmatched", "Matched")))) +
+  theme(legend.position = "none") +
+  facet_wrap(~ses_status.school) +
+  labs(title = "Matching of school record to clinical record by SES status",
+       x = "Matched status",
+       y = "Feature frequency",
+       fill = "Matched status")
+
+kolmog_school_ses.density <- ggplot(ks_perm.school.pvals, aes(x = ses_status, y = after_stat(density))) +
+  geom_density() +
+  geom_vline(xintercept = ks.school.ses_status$p.value, color = "red") +
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by proxy SES and observed p-value (red)",
+       x = "Proxy SES",
+       y = "Density")
+
+grid.arrange(kolmog_school_ses.bar, kolmog_school_ses.density, nrow = 2)
+
+```
+
 ```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=8}
 # Results for ses status
 patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
@@ -3707,7 +3717,10 @@ patients_match.ses_status <- rbind(patients_match_yes.ses_status, patients_match
   arrange(ses_status.patient, matched)
 
 kolmog_patient_ses.bar <- ggplot(patients_match.ses_status) +
-  geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
+  geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
+               y = freq, 
+               fill = factor(matched, labels = c("Unmatched", "Matched")))) +
+  theme(legend.position = "none") +
   facet_wrap(~ses_status.patient) +
   labs(title = "Matching of clinical record to school record by SES status",
        x = "Matched status",
