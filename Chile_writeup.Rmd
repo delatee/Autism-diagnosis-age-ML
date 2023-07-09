@@ -263,8 +263,40 @@ chile_merged <- chile_merged_raw %>%
          economic_specialty_code = cod_espe,
          economic_branch_code = cod_rama,
          economic_profspec_code = cod_men,
-         teaching_code_new = ens) %>%
-  mutate(commune_code_temp = ifelse(student_commune_code == "0", school_commune_code, student_commune_code),
+         teaching_code_new = ens)
+```
+
+```{r restructureData}
+chile_bayes <- chile_merged %>%
+  #select(-student_commune_name) %>%
+  filter(age_june30 >= 6 & age_june30 <= 18,
+         #special_needs_status == 1,
+         sex != 0) %>%
+  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
+         adhd = ifelse(special_needs_code == 203, 1, 0),
+         age_cat_name = factor(ifelse(age_june30 <= 8, "6-8", 
+                               ifelse(age_june30 <= 11, "9-11", 
+                               ifelse(age_june30 <= 14, "12-14", "15-18"))),
+                               levels = c("6-8", "9-11", "12-14", "15-18")),
+         # ethnic_2_group = ifelse(ethnic_3_group == "Other ethnic group", "Other Indigenous group",
+         #                  ifelse(ethnic_3_group == "Aymara", "Other Indigenous group",
+         #                  ifelse(ethnic_3_group == "No Native Group", "No Indigenous group", ethnic_3_group))),
+         ethnic_2_group = factor(ifelse(ethnicity == "Mapuche", "Mapuche", 
+                          ifelse(ethnicity == "No Native Group" | ethnicity == "No registry", "No Indigenous group",
+                                 "Other Indigenous group")), 
+                          levels = c("Mapuche", "Other Indigenous group", "No Indigenous group")),
+         school_rurality = ifelse(school_rurality_code == 0, "Urban", "Rural"),
+         school_fee = factor(ifelse(school_fee == "", "No information",
+                             ifelse(school_fee == "GRATUITO", "Free", 
+                             ifelse(school_fee == "$1.000 A $10.000", "$1,000-$10,000",
+                             ifelse(school_fee == "$10.001 A $25.000", "$10,001-$25,000", 
+                             ifelse(school_fee == "$25.001 A $50.000", "$25,001-$50,000",
+                             ifelse(school_fee == "$50.001 A $100.000", "$50,001-$100,000",
+                             ifelse(school_fee == "MAS DE $100.000", "$100,001+", 
+                             ifelse(school_fee == "SIN INFORMACION", "No information", NA)))))))),
+                             levels = c("Free", "$1,000-$10,000", "$10,001-$25,000",
+                                        "$25,001-$50,000", "$50,001-$100,000", "$100,001+")),
+         commune_code_temp = ifelse(student_commune_code == "0", school_commune_code, student_commune_code),
                              # If there is no commune code for the student, use their school's code instead
          commune_code_old = ifelse(nchar(as.character(commune_code_temp)) == 4,
                                    paste0("0", as.character(commune_code_temp)),
@@ -290,53 +322,16 @@ chile_merged <- chile_merged_raw %>%
                         ifelse(commune_code_old == "08418", "16108",
                         ifelse(commune_code_old == "08419", "16305",
                         ifelse(commune_code_old == "08420", "16207",
-                        ifelse(commune_code_old == "08421", "16109", commune_code_old))))))))))))))))))))))
-```
-
-```{r restructureData}
-chile_bayes <- chile_merged %>%
-  #select(-student_commune_name) %>%
+                        ifelse(commune_code_old == "08421", "16109", commune_code_old)))))))))))))))))))))) %>% 
+         #                                            "No information")),
+         # school_fee_group = ifelse(school_fee == "Free", "Free", 
+         #                    ifelse(school_fee %in% c("$1,000-$10,000", "$10,001-$25,000",
+         #                                             "$25,001-$50,000", "$50,001-$100,000"), "Low",
+         #                    ifelse(school_fee == "$100,001+", "Medium", 
+         #                    ifelse(school_fee == "No information", "No information", NA)))),
+         # school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium",
+         #                                                        "No information"))) %>% 
   left_join(region_service_commune_lookup %>% as.tibble() %>% select(-geometry), by = "commune_code") %>%
-  filter(age_june30 >= 6 & age_june30 <= 18,
-         #special_needs_status == 1,
-         sex != 0) %>%
-  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         adhd = ifelse(special_needs_code == 203, 1, 0),
-         age_cat_code = ifelse(age_june30 <= 8, 1, 
-                   ifelse(age_june30 <= 11, 2, 
-                   ifelse(age_june30 <= 14, 3, 4))),
-         age_cat_name = factor(ifelse(age_cat_code == 1, "6-8", 
-                               ifelse(age_cat_code == 2, "9-11", 
-                               ifelse(age_cat_code == 3, "12-14", "15-18"))),
-                               levels = c("6-8", "9-11", "12-14", "15-18")),
-         # ethnic_2_group = ifelse(ethnic_3_group == "Other ethnic group", "Other Indigenous group",
-         #                  ifelse(ethnic_3_group == "Aymara", "Other Indigenous group",
-         #                  ifelse(ethnic_3_group == "No Native Group", "No Indigenous group", ethnic_3_group))),
-         ethnic_2_group = factor(ifelse(ethnicity == "Mapuche", "Mapuche", 
-                          ifelse(ethnicity == "No Native Group" | ethnicity == "No registry", "No Indigenous group",
-                                 "Other Indigenous group")), 
-                          levels = c("Mapuche", "Other Indigenous group", "No Indigenous group")),
-         school_rurality = ifelse(school_rurality_code == 0, "Urban", "Rural"),
-         school_fee_temp = school_fee,
-         school_fee = ifelse(school_fee == "", "No information", 
-                      ifelse(school_fee == "GRATUITO", "Free", 
-                      ifelse(school_fee == "$1.000 A $10.000", "$1,000-$10,000",
-                      ifelse(school_fee == "$10.001 A $25.000", "$10,001-$25,000", 
-                      ifelse(school_fee == "$25.001 A $50.000", "$25,001-$50,000",
-                      ifelse(school_fee == "$50.001 A $100.000", "$50,001-$100,000", 
-                      ifelse(school_fee == "MAS DE $100.000", "$100,001+", 
-                      ifelse(school_fee == "SIN INFORMACION", "No information", NA)))))))),
-         school_fee = factor(school_fee, levels = c("Free", "$1,000-$10,000", 
-                                                    "$10,001-$25,000", "$25,001-$50,000",
-                                                    "$50,001-$100,000", "$100,001+", 
-                                                    "No information")),
-         school_fee_group = ifelse(school_fee == "Free", "Free", 
-                            ifelse(school_fee %in% c("$1,000-$10,000", "$10,001-$25,000",
-                                                     "$25,001-$50,000", "$50,001-$100,000"), "Low",
-                            ifelse(school_fee == "$100,001+", "Medium", 
-                            ifelse(school_fee == "No information", "No information", NA)))),
-         school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium",
-                                                                "No information"))) %>% 
   select(#school_region_name_abr,
     region_code,
     region_name,
@@ -348,16 +343,16 @@ chile_bayes <- chile_merged %>%
     health_service_name,
     sex,
     sex_desc,
+    dob,
     age_june30,
-    age_cat_code,
     age_cat_name,
     school_rurality_code,
     school_rurality,
     pago_matricula,
     pago_mensual,
     school_fee,
-    school_fee_group,
-    school_fee_temp,
+    #school_fee_group,
+    #school_fee_temp,
     ethnicity,
     mapuche,
     nationality,
@@ -2359,34 +2354,35 @@ grid.arrange(mca_aut_commune_plot)
 
 
 ```{r school}
-school_all <- chile_merged %>%
+school_all <- chile_bayes %>%
   select(-student_commune_name) %>%
-  left_join(region_service_commune_lookup %>% as.tibble %>% select(-geometry), by = "commune_code") %>%
+  #left_join(region_service_commune_lookup %>% as.tibble %>% select(-geometry), by = "commune_code") %>%
   filter(commune_code %in% araucsur_communes$commune_code) %>%
-  filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% 
-  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         aut_rank = 1,
+  #filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% 
+  mutate(#autism = ifelse(special_needs_code == 105, 1, 0),
+  #       aut_rank = 1,
          dob = ymd(dob),
-         ses_status = ifelse(school_fee == "", NA, 
-                      ifelse(school_fee == "GRATUITO", 1, 
-                      ifelse(school_fee == "$1.000 A $10.000", 2,
-                      ifelse(school_fee == "$10.001 A $25.000", 2, 
-                      ifelse(school_fee == "$25.001 A $50.000", 2,
-                      ifelse(school_fee == "$50.001 A $100.000", 2, 
-                      ifelse(school_fee == "MAS DE $100.000", 3, 
-                      ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
-      rename(student_commune_name = commune_name) %>%
+         ses_status = ifelse(school_fee == "Free", 1,
+                      ifelse(school_fee == "$1,000-$10,000" |
+                               school_fee == "$10,001-$50,000" |
+                               school_fee == "$50,001-$100,000", 2,
+                      ifelse(school_fee == "$100,001+", 3, NA)))
+         ) %>%
+  rename(student_commune_name = commune_name) %>%
   select(dob,
          sex_desc,
          student_commune_name,
          autism,
-         ses_status) %>%
-  rowid_to_column("id")
+         ses_status,
+         age_june30,
+         age_cat_name)
 
 school <- school_all %>% 
-  filter(autism == 1)
+  filter(autism == 1) %>%
   # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
-
+  select(-age_june30, -age_cat_name) %>%
+  rowid_to_column("id")
+  
 
 # Add a fake row so that pairing works later
 school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-01", NA, NA, NA, NA, NA)
@@ -2674,22 +2670,46 @@ school_patients <- patients_matched_small_dedup %>%
          autism = autism.patient,
          ses_status = ses_status.patient
          ) %>%
+  mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
+         age_cat_name = factor(ifelse(age_june30 <= 8, "6-8", 
+                               ifelse(age_june30 <= 11, "9-11", 
+                               ifelse(age_june30 <= 14, "12-14", "15-18"))), 
+                               levels = c("6-8", "9-11", "12-14", "15-18")))
   filter(matched == 0) %>% # remove matches so they're not double counted
-  select(id, dob, sex_desc, student_commune_name, autism, ses_status) %>%
+  select(id, dob, sex_desc, student_commune_name, autism, ses_status, age_june30, age_cat_name) %>%
   mutate(dataset = "patients") %>%
-  rbind(school_all %>% mutate(dataset = "school", id = as.character(id)))
-
-
-
-# Get deduped patients ie without the 2nd commune ones
-# Add that to the original school data with and without autism
-# Do age and sex adjustment
-
+  rbind(school_all %>% mutate(dataset = "school", id = as.character(id))) %>%
+  mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
+         age_cat_name = factor(ifelse(age_june30 <= 8, "6-8", 
+                               ifelse(age_june30 <= 11, "9-11", 
+                               ifelse(age_june30 <= 14, "12-14", "15-18"))), 
+                               levels = c("6-8", "9-11", "12-14", "15-18")))
 ```
 
 Adjust the new prev.
 
+```{r adjNewprevAraucS}
+aut_newprev_araucS <- get_grouped_prev(x = school_patients, stdpop = chile_stdpop, 
+                                    grouping_vars = c("age_june30", "age_cat_name", "sex_desc", "autism"),
+                                    disease = "autism")
 
+aut_newprev_araucS_adj <- aut_newprev_araucS %>% # Don't use get_adjusted_prev here because we have no variables to group on
+  summarise(sum_sample_pop_size = sum(sample_pop_size),
+            crude_rate = sum(n_disease) / sum(sample_pop_size),
+            crude_count = sum(n_disease),
+            adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
+            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
+            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
+            w_M = max(w),
+            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
+            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
+            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+```
 
 ## Bayesian prevalence projection
 
