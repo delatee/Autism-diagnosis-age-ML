@@ -295,7 +295,7 @@ chile_bayes <- chile_merged %>%
                              ifelse(school_fee == "MAS DE $100.000", "$100,001+", 
                              ifelse(school_fee == "SIN INFORMACION", "No information", NA)))))))),
                              levels = c("Free", "$1,000-$10,000", "$10,001-$25,000",
-                                        "$25,001-$50,000", "$50,001-$100,000", "$100,001+")),
+                                        "$25,001-$50,000", "$50,001-$100,000", "$100,001+", "No information")),
          commune_code_temp = ifelse(student_commune_code == "0", school_commune_code, student_commune_code),
                              # If there is no commune code for the student, use their school's code instead
          commune_code_old = ifelse(nchar(as.character(commune_code_temp)) == 4,
@@ -367,7 +367,7 @@ chile_bayes <- chile_merged %>%
 chile_bayes_aut <- chile_bayes %>% select(-adhd)
 chile_bayes_adhd <- chile_bayes %>% select(-autism)
 
-mapuche_regions <- c("09", "11", "09", "10", "14", "12", "13")
+mapuche_regions <- c("09", "11", "08", "10", "14", "12", "13")
 chile_bayes_aut_ethnic <- chile_bayes_aut %>%
   filter(region_code %in% mapuche_regions)
 chile_bayes_adhd_ethnic <- chile_bayes_adhd %>%
