@@ -937,7 +937,7 @@ For data linkage, the school data was further restricted to students with autism
 
 ###	Clinical data preparation
 
-For data linkage, the small and large clinical datasets were joined to form the clinical dataset. This was restricted to appointments for individuals resident in communes in the SSAS catchment as the data is believed to be complete for this catchment area only. Age and appointment year were not restricted in order to retain more data and thus maximise linkage opportunities, and only patients of female and male sex were present. Patients with familial socio-economic level of FONASA-A were interpreted to be of low SES status and given proxy status of 1 (equivalent to students with free school fees); patients with FONASA-B, FONASA-C and FONASA-D were interpreted to have moderate SES status and given 2 (equivalent to students paying $1,000-$100,000 monthly for state schooling); and patients with private health insurance were interpreted to have high SES and given 3 (equivalent to students paying more than $100,000 monthly). Students  that did not have a clinical autism diagnosis but did have a clinical intellectual disability diagnosis were included to maximise opportunities for matching with the school data, with prioritisation of autism diagnosis over intellectual disability.
+For data linkage, the small and large clinical datasets were joined to form the clinical dataset. This was restricted to appointments for individuals resident in communes in the SSAS catchment as the data is believed to be complete for this catchment area only. It was also restricted to patients aged 6-18 as of 30th June 2021 to maximise compatibility to the school data. Appointment year was not restricted in order to retain more data and thus maximise linkage opportunities, and only patients of female and male sex were present. Patients with familial socio-economic level of FONASA-A were interpreted to be of low SES status and given proxy status of 1 (equivalent to students with free school fees); patients with FONASA-B, FONASA-C and FONASA-D were interpreted to have moderate SES status and given 2 (equivalent to students paying \$1,000-\$100,000 monthly for state schooling); and patients with private health insurance were interpreted to have high SES and given 3 (equivalent to students paying more than \$100,000 monthly). Students  that did not have a clinical autism diagnosis but did have a clinical intellectual disability diagnosis were included to maximise opportunities for matching with the school data, with prioritisation of autism diagnosis over intellectual disability.
 
 The clinical dataset had no missingness in the features of interest for data linkage. 
 
@@ -2392,7 +2392,8 @@ In the school records, `r school_all %>% nrow()` students live in SSAS health se
 
 ```{r patients}
 patients <- clinical %>%
-  filter(commune_code %in% araucsur_communes$commune_code) %>%
+  filter(commune_code %in% araucsur_communes$commune_code,
+         age_june30 >= 6 & age_june30 <= 18) %>%
   group_by(id, gender, dob, commune_name, region_name) %>%
   summarise(ses_status = get.mode.na(ses_status),
             autism = get.max.na(autism),
@@ -2671,26 +2672,24 @@ school_patients <- patients_matched_small_dedup %>%
          ses_status = ses_status.patient
          ) %>%
   mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         age_cat_name = factor(ifelse(age_june30 <= 8, "6-8", 
+         age_cat_name = factor(ifelse(age_june30 <= 2, "0-2",
+                               ifelse(age_june30 <= 5, "3-5",
+                               ifelse(age_june30 <= 8, "6-8", 
                                ifelse(age_june30 <= 11, "9-11", 
-                               ifelse(age_june30 <= 14, "12-14", "15-18"))), 
-                               levels = c("6-8", "9-11", "12-14", "15-18")))
+                               ifelse(age_june30 <= 14, "12-14", "15-18"))))), 
+                               levels = c("0-2", "3-5", "6-8", "9-11", "12-14", "15-18"))) %>%
   filter(matched == 0) %>% # remove matches so they're not double counted
   select(id, dob, sex_desc, student_commune_name, autism, ses_status, age_june30, age_cat_name) %>%
   mutate(dataset = "patients") %>%
-  rbind(school_all %>% mutate(dataset = "school", id = as.character(id))) %>%
-  mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         age_cat_name = factor(ifelse(age_june30 <= 8, "6-8", 
-                               ifelse(age_june30 <= 11, "9-11", 
-                               ifelse(age_june30 <= 14, "12-14", "15-18"))), 
-                               levels = c("6-8", "9-11", "12-14", "15-18")))
+  rbind(school_all %>% rowid_to_column("id") %>% mutate(dataset = "school", id = as.character(id))) %>%
+  mutate(sex = ifelse(sex_desc == "Female", 2, 1))
 ```
 
 Adjust the new prev.
 
 ```{r adjNewprevAraucS}
 aut_newprev_araucS <- get_grouped_prev(x = school_patients, stdpop = chile_stdpop, 
-                                    grouping_vars = c("age_june30", "age_cat_name", "sex_desc", "autism"),
+                                    grouping_vars = c("age_june30", "age_cat_name", "sex", "autism"),
                                     disease = "autism")
 
 aut_newprev_araucS_adj <- aut_newprev_araucS %>% # Don't use get_adjusted_prev here because we have no variables to group on
@@ -2717,16 +2716,19 @@ aut_newprev_araucS_adj <- aut_newprev_araucS %>% # Don't use get_adjusted_prev h
 ```{r newPrevArauc}
 araucS_lower_prev <- aut_prev_health_adj %>%
   filter(health_service_name == "Araucanía Sur") %>%
-  select(adjusted_rate) %>% as.numeric
-araucS_upper_prev <- n_aut_araucS / aut_prev_health_adj %>%
-  filter(health_service_name == "Araucanía Sur") %>%
-  select(sum_sample_pop_size) %>% as.numeric
+  select(adjusted_rate) %>% as.numeric()
+araucS_upper_prev <- aut_newprev_araucS_adj %>%
+  select(adjusted_rate) %>% as.numeric()
+#araucS_upper_prev <- n_aut_araucS / aut_prev_health_adj %>%
+#  filter(health_service_name == "Araucanía Sur") %>%
+#  select(sum_sample_pop_size) %>% as.numeric
 prev_delta <- araucS_upper_prev - araucS_lower_prev
 
 araucS_lower <- aut_prev_health_adj %>%
   filter(health_service_name == "Araucanía Sur") %>%
-  select(adjusted_count) %>% as.numeric
-araucS_upper <- n_aut_araucS
+  select(adjusted_count) %>% as.numeric()
+araucS_upper <- aut_newprev_araucS_adj %>%
+  select(adjusted_count) %>% as.numeric()
 araucS_mean <- (araucS_upper + araucS_lower) / 2
 araucS_sd <- (araucS_upper - araucS_lower) / (2*1.96)
 
