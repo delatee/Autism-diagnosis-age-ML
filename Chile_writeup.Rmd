@@ -2357,6 +2357,43 @@ grid.arrange(mca_aut_commune_plot)
 
 ## Linkage of school and patient records
 
+
+```{r school}
+school_all <- chile_merged %>%
+  select(-student_commune_name) %>%
+  left_join(region_service_commune_lookup %>% as.tibble %>% select(-geometry), by = "commune_code") %>%
+  filter(commune_code %in% araucsur_communes$commune_code) %>%
+  filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% 
+  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
+         aut_rank = 1,
+         dob = ymd(dob),
+         ses_status = ifelse(school_fee == "", NA, 
+                      ifelse(school_fee == "GRATUITO", 1, 
+                      ifelse(school_fee == "$1.000 A $10.000", 2,
+                      ifelse(school_fee == "$10.001 A $25.000", 2, 
+                      ifelse(school_fee == "$25.001 A $50.000", 2,
+                      ifelse(school_fee == "$50.001 A $100.000", 2, 
+                      ifelse(school_fee == "MAS DE $100.000", 3, 
+                      ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
+      rename(student_commune_name = commune_name) %>%
+  select(dob,
+         sex_desc,
+         student_commune_name,
+         autism,
+         ses_status) %>%
+  rowid_to_column("id")
+
+school <- school_all %>% 
+  filter(autism == 1)
+  # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
+
+
+# Add a fake row so that pairing works later
+school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-01", NA, NA, NA, NA, NA)
+```
+
+In the school records, `r school_all %>% nrow()` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_all) * 100, 2)`%) have autism. 
+
 ```{r patients}
 patients <- clinical %>%
   filter(commune_code %in% araucsur_communes$commune_code) %>%
@@ -2398,37 +2435,6 @@ patients_distinct <- patients %>% group_by(id) %>% summarise(commune_count = n()
 ```
 
 Aggregating the combined clinical data to patient-level data for linkage resulted in the patient dataset with `r format(nrow(patients), big.mark = ",", trim = TRUE)` records for `r format(length(unique(patients$id)), big.mark = ",", trim = TRUE)` unique patients as `r patients_distinct %>% filter(commune_count == 2) %>% nrow()` patients lived in 2 communes and `r patients_distinct %>% filter(commune_count == 3) %>% nrow()` lived in 3 during the period covered by the data.
-
-```{r school}
-school <- chile_merged %>%
-  select(-student_commune_name) %>%
-  left_join(region_service_commune_lookup %>% as.tibble %>% select(-geometry), by = "commune_code") %>%
-  filter(commune_code %in% araucsur_communes$commune_code) %>%
-  filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% 
-  mutate(autism = ifelse(special_needs_code == 105, 1, 0),
-         aut_rank = 1,
-         dob = ymd(dob),
-         ses_status = ifelse(school_fee == "", NA, 
-                      ifelse(school_fee == "GRATUITO", 1, 
-                      ifelse(school_fee == "$1.000 A $10.000", 2,
-                      ifelse(school_fee == "$10.001 A $25.000", 2, 
-                      ifelse(school_fee == "$25.001 A $50.000", 2,
-                      ifelse(school_fee == "$50.001 A $100.000", 2, 
-                      ifelse(school_fee == "MAS DE $100.000", 3, 
-                      ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
-  filter(autism == 1) %>%
-    # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
-  rename(student_commune_name = commune_name) %>%
-  select(dob,
-         sex_desc,
-         student_commune_name,
-         autism,
-         ses_status) %>%
-  rowid_to_column("id")
-
-# Add a fake row so that pairing works later
-school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-01", NA, NA, NA, NA, NA)
-```
 
 ### Manual record linkage
 
@@ -2522,7 +2528,7 @@ matches <- select_n_to_m(pairs_blocked.pairs, threshold = 0.5, score = "weight",
 # Now add the matched clinical records to the school records
 school_matched <- school %>%
   mutate(id = as.character(id)) %>%
-  #filter(student_commune_name != "Misc") %>%
+  filter(!is.na(sex_desc)) %>%
   left_join(matches, by = "id") %>%
   rename(id.school = id,
          dob.school = dob.x,
@@ -2642,12 +2648,46 @@ Analysis of differences between matched and unmatched records in the school data
 ### Prev delta
 
 ```{r newPrev}
-n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) # Use this version because accounts for non-unique patients with both match and non-match
-#n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
-#  dim(patients_matched_small %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
+# Aggregate patients to single row per patient by choosing the commune that has a match where available.
+patients_matched_small_dedup <- patients_matched_small %>%
+  group_by(patient_id, dob.patient, sex_desc.patient) %>%
+  summarise(commune_list = list(student_commune_name.patient),
+            student_commune_name.patient = student_commune_name.patient[which.max(matched)],
+            ses_list = list(ses_status.patient),
+            ses_status.patient = ses_status.patient[which.max(matched)],
+            autism.patient = max(autism.patient),
+            matched = max(matched))
+
+n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) 
+# OR 
+n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
+  dim(patients_matched_small_dedup %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
+
+# Combine the school data for students in SSAS that do and don't have autism with the
+# deduplicated patient data for patients in SSAS that do and don't have autism, but leave
+# out the patients that are matches so the matched people are not double counted
+school_patients <- patients_matched_small_dedup %>% 
+  rename(id = patient_id,
+         dob = dob.patient,
+         sex_desc = sex_desc.patient,
+         student_commune_name = student_commune_name.patient,
+         autism = autism.patient,
+         ses_status = ses_status.patient
+         ) %>%
+  filter(matched == 0) %>% # remove matches so they're not double counted
+  select(id, dob, sex_desc, student_commune_name, autism, ses_status) %>%
+  mutate(dataset = "patients") %>%
+  rbind(school_all %>% mutate(dataset = "school", id = as.character(id)))
+
+
+
+# Get deduped patients ie without the 2nd commune ones
+# Add that to the original school data with and without autism
+# Do age and sex adjustment
+
 ```
 
-
+Adjust the new prev.
 
 
 
