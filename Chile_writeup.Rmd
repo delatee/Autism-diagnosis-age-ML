@@ -1972,7 +1972,7 @@ kbl(patients_mca_small.table,
 
 ## Multiple Correspondence Analysis
 
-Multiple correspondence analysis was first conducted with all features thought to be associated with autism diagnosis with no imputation. Figure  \@ref(fig:mcaNoimpFeatures) shows approximately 14.6% of the variance in this data can be captured by the first two dimensions of MCA. Disability and foster care status are well separated by the first dimension but figure \@ref(fig:mcaNoimpDisabFoster) shows that this separation is primarily driven by whether information is available for these features. Ethnicity, age band and commune of residence are well separately by the second dimension of MCA, as shown in Figure \@ref(fig:mcaNoimpFeatures), and are somewhat separated by the first dimension. Figures \@ref(fig:mcaNoimpCategories) and \@ref(fig:mcaNoimpGraph) further shows the importance of categories within the foster care, disabilities, ethnicity, age band and commune features for explaining the variance in this data. In particular, categories that explain more of the variance include not having disability or foster care status, or not having information on these, age 0-2 and 3-5, being foreign or Chilean, living in Toltén and having private health insurance. Examining the clustering of individual patients by the first two dimensions of MCA, \@ref(fig:mcaNoimpPlots) shows clear separation of Toltén and Nueva Imperial communes. However it is important to know here that these and several other communes are represented by only one patient, see Table \@ref(tab:macPatientsSmallTable). There is decent clustering of patients in Temuco and Pitrufquén communes. Figure \@ref(fig:mcaNoimpAge) further demonstrates that patients in age bands 0-2 and 3-5 cluster well and those in older age bands do not. There is some clustering by ethnicity in Figure \@ref(fig:mcaNoimpEthnic) but it is obscured by the separation of points into the two larger clustered defined by having or not having information on disability and foster care status. Figure \@ref(fig:mcaNoimpHealth) shows possible separation for patients with private health insurance and Figure \@ref(fig:mcaNoimpSexRural) shows little clustering by sex or rurality of residence.
+Multiple correspondence analysis was first conducted with all features thought to be associated with autism diagnosis with no imputation. Figure \@ref(fig:mcaNoimpFeatures) shows approximately 14.6% of the variance in this data can be captured by the first two dimensions of MCA. Disability and foster care status are well separated by the first dimension but figure \@ref(fig:mcaNoimpDisabFoster) shows that this separation is primarily driven by whether information is available for these features. Ethnicity, age band and commune of residence are well separately by the second dimension of MCA, as shown in Figure \@ref(fig:mcaNoimpFeatures), and are somewhat separated by the first dimension. Figures \@ref(fig:mcaNoimpGraph) and \@ref(fig:mcaNoimpCategories) further shows the importance of categories within the foster care, disabilities, ethnicity, age band and commune features for explaining the variance in this data. In particular, categories that explain more of the variance include not having disability or foster care status, or not having information on these, age 0-2 and 3-5, being foreign or Chilean, living in Toltén and having private health insurance. Examining the clustering of individual patients by the first two dimensions of MCA, Figure \@ref(fig:mcaNoimpAge) demonstrates that patients in age bands 0-2 and 3-5 cluster well and those in older age bands do not. There is some clustering by ethnicity in Figure \@ref(fig:mcaNoimpEthnic) but it is obscured by the separation of points into the two larger clustered defined by having or not having information on disability and foster care status. Figure \@ref(fig:mcaNoimpPlots) shows clear separation of Toltén and Nueva Imperial communes, however it is important to know here that these and several other communes are represented by only one patient, see Table \@ref(tab:macPatientsSmallTable). There is decent clustering of patients in Temuco and Pitrufquén communes. Figure \@ref(fig:mcaNoimpSES) shows possible separation for patients with private health insurance and Figure \@ref(fig:mcaNoimpSexRural) shows little clustering by sex or rurality of residence.
 
 ```{r mcaNoimp}
 patients_mca_noimp <- patients_mca_small %>%
@@ -2099,12 +2099,12 @@ mca_noimp_foster_plot <- fviz_mca_ind(res_mca_patients_noimp,
 grid.arrange(mca_noimp_age_plot)
 ```
 
-```{r mcaNoimpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by commune of residence."}
-grid.arrange(mca_noimp_commune_plot)
-```
-
 ```{r mcaNoimpEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by ethnicity."}
 grid.arrange(mca_noimp_ethnic_plot)
+```
+
+```{r mcaNoimpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by commune of residence."}
+grid.arrange(mca_noimp_commune_plot)
 ```
 
 ```{r mcaNoimpSES, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by health insurance level."}
@@ -2119,6 +2119,7 @@ grid.arrange(mca_noimp_sex_plot, mca_noimp_rural_plot, nrow = 2)
 grid.arrange(mca_noimp_disab_plot, mca_noimp_foster_plot, nrow = 2)
 ```
 
+Exchanging disability and foster care status for their imputed versions leads to the MCA capturing approximately 14.1% of the variance in that data with its first two dimensions, as shown in Figure \@ref(fig:mcaImpFeatures). Disability and foster care status are no longer well separated by the first dimension and Figure \@ref(fig:mcaImpDisabFoster) shows that the patients who have experienced foster care do cluster well but the patients with a disability do not. In Figure \@ref(fig:mcaImpFeatures), age band and ethnicity are now well separated by both dimensions and commune mostly by the second. With the reduced importance of disability and foster care, age bands 0-2 and 3-5, foreign, no information and Chilean ethnicity and Toltén and Nueva Imperial communes contribute most to the first two dimensions, see Figures \@ref(fig:mcaImpGraph) and \@ref(fig:mcaImpCategories). Again patients with age bands 0-2 and 3-5 cluster well and older age bands do not, as shown in Figure \@ref(fig:mcaImpAge). Figure \@ref(fig:mcaImpEthnic) shows much clearer clustering of ethnicity than before. For communes with more than one patient resident, clustering is less clear than before with only Pitrufquén well separated by these dimensions, see Figure \@ref(fig:mcaImpCommune). In Figures \@ref(fig:mcaImpSES) and \@ref(fig:mcaImpSexRural), clustering by feature is weak.
 
 ```{r mcaImp}
 patients_mca_imp <- patients_mca_small %>%
@@ -2244,12 +2245,12 @@ mca_imp_foster_plot <- fviz_mca_ind(res_mca_patients_imp,
 grid.arrange(mca_imp_age_plot)
 ```
 
-```{r mcaImpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by commune of residence."}
-grid.arrange(mca_imp_commune_plot)
-```
-
 ```{r mcaImpEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by ethnicity."}
 grid.arrange(mca_imp_ethnic_plot)
+```
+
+```{r mcaImpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by commune of residence."}
+grid.arrange(mca_imp_commune_plot)
 ```
 
 ```{r mcaImpSES, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by health insurance level."}
@@ -2264,8 +2265,7 @@ grid.arrange(mca_imp_sex_plot, mca_imp_rural_plot, nrow = 2)
 grid.arrange(mca_imp_disab_plot, mca_imp_foster_plot, nrow = 2)
 ```
 
-3 features only. Disability and foster care are unbalanced and imputation adds bias.
-
+MCA on the small clinical data using only age band, ethnicity and commune results in the first two dimensions capturing 17.8% of the variance in that data, see Figure \@ref(fig:mcaAutFeatures), and these features are fairly well represented by the first two dimensions. Again age bands 0-2 and 3-5, foreign, no information and Chilean ethnicity and Toltén and Nueva Imperial communes contribute most to the first two dimensions, see Figures \@ref(fig:mcaAutGraph) and \@ref(fig:mcaAutCategories). By patient, age bands 0-2 and 3-5 still cluster well (Figure \@ref(fig:mcaAutAge)), ethnicity clusters are very distinct (Figure \@ref(fig:mcaAutEthnic)), and communes show more structure than previously (Figure \@ref(fig:mcaAutCommune)).
 
 ```{r mcaAut}
 patients_mca_aut <- patients_mca_small %>%
@@ -2346,16 +2346,13 @@ mca_aut_ethnic_plot <- fviz_mca_ind(res_mca_patients_aut,
 grid.arrange(mca_aut_age_plot)
 ```
 
-```{r mcaAutCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using age band, commune and ethnicity, coloured by commune of residence."}
-grid.arrange(mca_aut_commune_plot)
-```
-
 ```{r mcaAutEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using age band, commune and ethnicity, coloured by ethnicity."}
 grid.arrange(mca_aut_ethnic_plot)
 ```
 
-
-
+```{r mcaAutCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using age band, commune and ethnicity, coloured by commune of residence."}
+grid.arrange(mca_aut_commune_plot)
+```
 
 
 ## Probabilistic data linkage
@@ -3503,7 +3500,7 @@ for (i in 1:nPerm) {
 
 ```
 
-```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=9}
+```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=8}
 # Results for sex
 school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
 school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
@@ -3529,7 +3526,7 @@ kolmog_school_sex.density <- ggplot(ks_perm.school.pvals, aes(x = sex, y = after
 grid.arrange(kolmog_school_sex.bar, kolmog_school_sex.density, nrow = 2)
 ```
 
-```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=9}
+```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=8}
 # Results for commune
 school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
   summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
@@ -3565,7 +3562,7 @@ grid.arrange(kolmog_school_commune.bar, kolmog_school_commune.density, nrow = 2)
 
 ```
 
-```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=9}
+```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=8}
 # Results for ses status
 school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
 school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
@@ -3644,7 +3641,7 @@ for (i in 1:nPerm) {
 }
 ```
 
-```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=9}
+```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=8}
 # Results for sex
 patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
 patients_match_no.sex <- patients_no %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
@@ -3670,7 +3667,7 @@ kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = sex, y = af
 grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
 ```
 
-```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=9}
+```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=8}
 # Results for commune
 patients_match_yes.student_commune_name <- patients_yes %>% group_by(student_commune_name.patient) %>%
   summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
@@ -3706,7 +3703,7 @@ kolmog_patient_commune.density <- ggplot(ks_perm.patients.pvals, aes(x = commune
 grid.arrange(kolmog_patient_commune.bar, kolmog_patient_commune.density, nrow = 2)
 ```
 
-```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=9}
+```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=8}
 # Results for ses status
 patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
 patients_match_no.ses_status <- patients_no %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
