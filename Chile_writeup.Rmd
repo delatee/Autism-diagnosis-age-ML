@@ -2765,8 +2765,8 @@ for(i in 1:nrow(aut_prev_health_adj)) {
   else {
     adjusted_ci_width <- aut_prev_health_adj$adjusted_ci_upper[i] - aut_prev_health_adj$adjusted_ci_lower[i]
     aut_prev_health_adj$new_rate[i] <- aut_prev_health_adj$adjusted_rate[i] + prev_delta
-    aut_prev_health_adj$new_ci_lower[i] <- aut_prev_health_adj$new_rate - 0.5*adjusted_ci_width
-    aut_prev_health_adj$new_ci_upper[i] <- aut_prev_health_adj$new_rate + 0.5*adjusted_ci_width
+    aut_prev_health_adj$new_ci_lower[i] <- aut_prev_health_adj$new_rate[i] - 0.5*adjusted_ci_width
+    aut_prev_health_adj$new_ci_upper[i] <- aut_prev_health_adj$new_rate[i] + 0.5*adjusted_ci_width
     aut_prev_health_adj$new_count[i] <- round(aut_prev_health_adj$new_rate[i] * aut_prev_health_adj$sum_sample_pop_size[i], 0)
   }
 }
@@ -2780,26 +2780,22 @@ aut_newprev_health_adj.table <- aut_prev_health_adj %>%
                             sprintf("%.2f", round(new_ci_upper * 100, 2)),
                             ")")) %>%
   select(health_service_name, adjusted_prev_ci, new_prev_ci)
-kbl(aut_prev_health_adj.table,
+kbl(aut_newprev_health_adj.table,
     col.names = c("Health service", "School data adjusted prevalence (95% CI)", "Projected linked data adjusted prevalence (Equivalent CI)"),
     align = "lrr",
     booktabs = TRUE,
     format = "pandoc",
     linesep = c(""), # No extra white space
-    caption = "Projected age- and sex-adjusted autism prevalence by health service in Chile school data and linked school and patient data. Projections for the linked adjusted prevalence for health services other than Araucanía Sur were calculated by adding delta to each health service's adjusted prevalence from the school data. Adjusted prevalence from the school data has 95% gamma confidence intervals and projected adjusted prevalence from the linked data has confidence intervals equal in width to the school data's intervals.")
+    caption = "Projected age- and sex-adjusted autism prevalence by health service in Chile school data and linked school and patient data. Projections for the linked adjusted prevalence for health services other than Araucanía Sur were calculated by adding delta to each health service's adjusted prevalence from the school data. Adjusted prevalence from the school data has 95% gamma confidence intervals and projected adjusted prevalence from the linked data has confidence intervals equal in width to the school data adjusted prevalence intervals for each health service other than Araucanía Sur which has the 95% gamma confidence intervals found earlier.")
 
 
 ```
 
 
-This gives an adjusted prevalence delta for SSAS of `r round(aut_newprev_araucS_adj$adjusted_rate * 100 - aut_prev_health_adj %>% filter(health_service_name == "Araucanía Sur") %>% select(adjusted_rate) %>% as.numeric() * 100, 3)`%. `r round(prev_delta * 100, 3)`. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted prevalence from the linked data onto the other health services. 
+This gives an adjusted prevalence delta for SSAS of `r round(prev_delta * 100, 3)`%. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted prevalence from the linked data for SSAS onto the other health services. The patterns of prevalence across health services are retained and Ñuble has the highest projected adjusted prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%).
 
 
 ## Bayesian prevalence projection
-
-
-
-
 
 ```{r bayesSetup}
 nObs <- nrow(chile_bayes_aut)
@@ -2807,15 +2803,49 @@ nIter <- 2000
 nBurn <- 2000
 nFeat <- length(unique(aut_prev_health_adj$health_service_code))
 FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
-
 ```
 
-```{r newPrevHealth, include = FALSE}
+```{r bayesLowPrior, fig.cap = "Posterior predictive distributions for autism prevalence using school data with a random effect on student's health service. Beta conjugate prior of age- and sex-adjusted global autism prevalence from school data. Red dashed lines show the prior 95% confidence interval, blue dotted lines show the posterior 95% credible interval.", fig.height=10, fig.width=8}
+# Same prior for all health services - specifically the global prevalence in school data
+# Could change these to health service specific priors - specifically the adjusted prevalences by health service
+aut_theta_mu_prior <- aut_prev_adj$adjusted_rate
+aut_theta_sigma_prior <- (aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96)
+# # Females
+# aut_theta_mu_prior_f <- aut_prev_adj_f$adjusted_rate
+# aut_theta_sigma_prior_f <- sqrt(aut_prev_adj_f$var)
+# # Males
+# theta_mu_prior_m <- aut_prev_adj_m$adjusted_rate
+# theta_sigma_prior_m <- sqrt(aut_prev_adj_m$var)
 
-# Need to do all by health service code not name because name sorts in different orders.
+rand_model_low <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dbeta(theta_a, theta_b)
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
 
+pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
+
+health_low_post <- do_jags_rand_model(x = aut_prev_health_adj,
+                              feat = "health_service_name",
+                              model = rand_model_low,
+                              theta_mu = aut_theta_mu_prior,
+                              theta_sigma = aut_theta_sigma_prior,
+                              pars = pars, 
+                              convergence_checks = FALSE) %>%
+  rename("health_service_name" = "Feat_names")
+
+plot_post_density(health_low_post, aut_prev_health_adj, 
+                  feat = "health_service_name", 
+                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
+                  disease = "Autism")
+```
+
+
+```{r bayesHighPrior, fig.cap = "Posterior predictive distributions for autism prevalence using school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted projected autism prevalence from linked data. Red dashed lines show the prior 95% confidence interval, blue dotted lines show the posterior 95% credible interval.", fig.height=10, fig.width=8}
 # Now have health service specific priors so need to provide them as vectors and index each as needed
-rand_model_new <- "model {
+rand_model_high <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
     theta[i] ~ dbeta(theta_a[i], theta_b[i])
     disease_sample[i] ~ dbin(theta[i], nObs[i])
@@ -2823,14 +2853,13 @@ rand_model_new <- "model {
   }
 }"
 
-nFeat <- length(unique(aut_prev_health_adj$health_service_code))
-FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
-
 pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
 
 # Define beta prior
-theta_mu <- (aut_prev_health_adj$new_rate + aut_prev_health_adj$adjusted_rate) / 2
-theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
+theta_mu <- aut_prev_health_adj$new_rate
+#theta_mu <- (aut_prev_health_adj$new_rate + aut_prev_health_adj$adjusted_rate) / 2
+theta_sigma <- (aut_prev_health_adj$new_ci_upper - aut_prev_health_adj$new_ci_lower) / (2*1.96)
+#theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
@@ -2848,7 +2877,7 @@ rand_data <- list(theta_a = theta_a,
                   nObs = aut_prev_health_adj$sum_sample_pop_size,
                   aut_sample = aut_prev_health_adj$adjusted_count,
                   nFeat = nFeat)
-rand_jag <- jags.model(textConnection(rand_model_new),
+rand_jag <- jags.model(textConnection(rand_model_high),
                        data = rand_data,
                        inits = rand_ini,
                        n.chains = 2,
@@ -2903,13 +2932,13 @@ ggplot() +
 ```
 
 
-```{r newPrevHealthUniform}
+```{r bayesUniformPrior, fig.cap = "Posterior predictive distributions for autism prevalence using school data with a random effect on student's health service. Uniform prior bounded by health service specific age- and sex-adjusted autism prevalence from school data, and health service specific age- and sex-adjusted projected autism prevalence from linked data. Red dashed lines show the prior 95% confidence interval, blue dotted lines show the posterior 95% credible interval.", fig.height=10, fig.width=8}
 
 ####### Need to do all by health service code not name because name sorts in different orders.
 
 # Now have health service specific priors so need to provide them as vectors and index each as needed
 # OR Uniform prior https://stats.stackexchange.com/questions/555260/how-to-set-prior-for-bayesian-analysis 
-rand_model_new <- "model {
+rand_model_uniform <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
     theta[i] ~ dunif(theta_lower[i], theta_upper[i])     #dbeta(theta_a[i], theta_b[i])
     disease_sample[i] ~ dbin(theta[i], nObs[i])
@@ -2936,7 +2965,7 @@ rand_data <- list(theta_lower = theta_lower,
                   nObs = aut_prev_health_adj$sum_sample_pop_size,
                   aut_sample = aut_prev_health_adj$adjusted_count,
                   nFeat = nFeat)
-rand_jag <- jags.model(textConnection(rand_model_new),
+rand_jag <- jags.model(textConnection(rand_model_uniform),
                        data = rand_data,
                        inits = rand_ini,
                        n.chains = 2,
@@ -3289,7 +3318,7 @@ ggplot(data = aut_prev_araucS_adj.long) +
 
 ## Adjusted prevalence
 
-```{r adjPrevPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
+```{r adjPrevPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
 
 # Autism
 aut_prev_adj.long <- aut_prev_adj %>%
@@ -3328,7 +3357,7 @@ adhd_prev_adj.long_plot <- ggplot(data = adhd_prev_adj.long) +
 grid.arrange(aut_prev_adj.long_plot, adhd_prev_adj.long_plot, ncol = 2)
 ```
 
-```{r adjPrevSexPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD by sex. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
+```{r adjPrevSexPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD by sex. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
 # Females
 # aut_prev_adj_f.long <- aut_prev_adj_f %>%
 #   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3382,7 +3411,7 @@ adhd_prev_sex_adj.long_plot <- ggplot(data = adhd_prev_sex_adj.long) +
 grid.arrange(aut_prev_sex_adj.long_plot, adhd_prev_sex_adj.long_plot, ncol = 2)
 ```
 
-```{r adjPrevHealthAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevHealthAutPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
 aut_prev_health_adj.long <- aut_prev_health_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3403,7 +3432,7 @@ ggplot(data = aut_prev_health_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adjPrevHealthAdhdPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevHealthAdhdPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # ADHD
 adhd_prev_health_adj.long <- adhd_prev_health_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3424,7 +3453,7 @@ ggplot(data = adhd_prev_health_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adjPrevEconAAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevEconAAutPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
 aut_prev_econA_adj.long <- aut_prev_econA_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3445,7 +3474,7 @@ ggplot(data = aut_prev_econA_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adjPrevEconAAdhdPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevEconAAdhdPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # ADHD
 adhd_prev_econA_adj.long <- adhd_prev_econA_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3466,7 +3495,7 @@ ggplot(data = adhd_prev_econA_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adjPrevEthnicAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevEthnicAutPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 
 # Autism
 aut_prev_ethnic_adj.long <- aut_prev_ethnic_adj %>%
@@ -3487,7 +3516,7 @@ ggplot(data = aut_prev_ethnic_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adjPrevEthnicAdhdPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevEthnicAdhdPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # ADHD
 adhd_prev_ethnic_adj.long <- adhd_prev_ethnic_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3508,7 +3537,7 @@ ggplot(data = adhd_prev_ethnic_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adjPrevRuralAutPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevRuralAutPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # Autism
 aut_prev_rural_adj.long <- aut_prev_rural_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
@@ -3528,7 +3557,7 @@ ggplot(data = aut_prev_rural_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r adjPrevRuralAdhdPlot, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
+```{r adjPrevRuralAdhdPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of ADHD by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
 # ADHD
 adhd_prev_rural_adj.long <- adhd_prev_rural_adj %>%
   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
