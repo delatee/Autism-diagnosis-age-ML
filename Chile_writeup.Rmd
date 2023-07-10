@@ -850,14 +850,14 @@ ggplot(arauc) +
 
 # Methods
 
-##	Data management
+## Data management
 
 The statistical software package R has been used to clean, link, analyse and visualise data. R analysis scripts and version control are managed in GitHub and are available at https://github.com/delatee/Autism-diagnosis-age-ML. Raw data and analysis outputs have not been uploaded to GitHub.   All data is stored on local devices and will be deleted at conclusion of the project.
 
 
-##	Data collection
+## Data collection
 
-###	School data
+### School data
 
 This research uses data from the Chilean Government’s Ministerio de Educación (Ministry of Education) that was provided under a freedom of information request. This dataset contains anonymised records of 3.6 million students in all Chilean schools in 2021. It was collected and curated by the Chilean Unidad de Estadísticas (Statistics Unit), Centro de Estudios (Study Centre) and Ministerio de Educación and is housed in the Sistema de Información General de Estudiantes (General Student Information System, SIGE). This dataset will be referred to as the school data. 
 
@@ -865,7 +865,7 @@ The school data shows whether students have accessed the Subvención de Educaci�
 
 A collection of economic data was supplied under the same FIO request to supplement the school data. It comprises wage deducted health insurance contributions from Chile’s Fondo Nacional de Salud (National Health Fund, FONASA). This data provides the value of health insurance contributions that are based on parents’ wages, from which a colleague previously inferred school fee contributions and hence socio-economic status of students’ families.
 
-###	Clinical data
+### Clinical data
 
 This research also uses data from Chile’s Servicio de Salud Araucanía Sur (South Araucanía health service, SSAS), obtained under a freedom of information request. This data is collated from secondary care clinical records, particularly from mental health community care services. It comprises two datasets which will be referred to as the small clinical data and large clinical data.
 
@@ -873,9 +873,9 @@ The small clinical data was provided by Villarrica Hospital in the Villarrica co
 
 The large clinical data comprises clinical records for public sector specialist health visits of every patient aged 6-18 with a primary diagnosis of autism between May 2015 and December 2021 for all communes in the SSAS catchment and the communes of Curacautín, Lonquimay and Victoria in the Servicio de Salud Araucanía Norte (North Araucanía health service, SSAN) catchment, both in Chile’s Araucanía region. 
 
-The small and large clinical datats will be collectively referred to as the clinical data and they do not include any records for privately provided healthcare.
+The small and large clinical datasets will be collectively referred to as the clinical data and they do not include any records for privately provided healthcare.
 
-###	Supplementary data
+### Supplementary data
 
 Chile’s 2017 census data, held by the Instituto Nacional de Estadisticas (National Statistics Institute, INE) (29), was used to create a standard population of Chile’s age and sex distribution from projections of population size by age and sex in 2021. It was also used to obtain projections of population of youth aged 0-14 in 2021 by region.
 
@@ -884,9 +884,9 @@ Data from the INE’s Encuesta Suplementaria de Ingresos (Supplementary Income S
 For mapping, shapefiles of administrative areas were obtained from The Humanitarian Data Exchange of the United Nations Office for the Coordination of Humanitarian Affairs (31). Additional region and commune naming information was taken from the R package ‘chilemapas’. 
 
 
-##	Aim 1: Use school data and frequentist method to find a lower bound on autism and ADHD prevalence
+## Aim 1: Use school data and frequentist method to find a lower bound on autism and ADHD prevalence
 
-###	School data preparation
+### School data preparation
 
 The school dataset was restricted to students aged 6-18 as of 30th June 2021 to capture children of school age in Chile. No restriction on sex was necessary as it contained only females and males. Students’ commune of residence was mapped to their respective health service catchment areas. Two issues due to boundary changes were corrected. Firstly, the commune now called Tocopilla which falls across the Antofagasta and Tarapacá regions was formerly two communes, Tocopilla in Antofagasta and Pozo Almonte in Tarapacá. The old names have been retained to ensure appropriate region mapping and they are mapped to Antofagasta and Iquique health services respectively. Secondly, the communes recorded as belonging to the former Ñuble sub-region of the Bío-Bío region were mapped to their corresponding communes in the recently formed Ñuble region.
 
@@ -894,21 +894,22 @@ Commune of residence was missing for 4078 students (0.13%) and their school's co
 
 Students’ age as of 30th June 2021 was mapped to age-bands of 6-8, 9-11, 12-14 and 15-18, preserving the divide between primary and secondary school as secondary school starts at age 12 in Chile, and with a larger final band as fewer students are expected to be diagnosed older and the 18 years old group may be small due to students leaving schooling. Students’ ethnicity was mapped to being a member of the Mapuche Indigenous group, being a member of another Chilean Indigenous group, or not being a member of an Indigenous group based on their recorded ethnicity which can take at most one value. The 6859 students (0.22%) with ethnicity recorded as ‘no registry’ were mapped to not being a member of an Indigenous group.
 
-Students’ school fee status was mapped to a proxy socio-economic status feature. Students with free schooling were given SES of 1 indicating low status as families with low SES are entitled to schooling rebates. Students paying \$1,000-\$100,000 monthly were given SES of 2, indicating medium status, and students paying more than $100,000 monthly  were given 3 to indicate high status. For school fee status, 49973 students (1.64%) were coded as ‘No information’ and 29 students (0.000949%) were missing school fee values and these were re-categorised as ‘No information’ to reflect their unknown school fee status. No other features of interest for this analysis had missingness.
+Students’ school fee status was mapped to a proxy socio-economic status feature. Students with free schooling were given SES of 1 indicating low status as families with low SES are entitled to schooling rebates. Students paying \$1,000-\$100,000 monthly were given SES of 2, indicating medium status, and students paying more than \$100,000 monthly  were given 3 to indicate high status. For school fee status, 49973 students (1.64%) were coded as ‘No information’ and 29 students (0.00095%) were missing school fee values and these were re-categorised as ‘No information’ to reflect their unknown school fee status. No other features of interest for this analysis had missingness.
 
-###	Crude prevalence
+### Crude prevalence
 
 The crude prevalences of autism and of ADHD were calculated as the count of cases divided by the relevant population size. Grouping features of sex, health service of residential commune, monthly school fee as a proxy for SES, ethnicity and school’s rurality were used, and calculations were made for aggregate, by sex, and by sex and age group. 
 
-###	Frequentist age and sex adjustment
+### Frequentist age and sex adjustment
 
 For each grouping feature, prevalence was standardised by age and sex using direct standardisation. Following the method presented by Fay and Feuer (35), the age- and sex-adjusted prevalence rates for each group were calculated using the 2017 Chile census projections of the distribution of people by age and sex in 2021 as the standard population. Gamma confidence limits were calculated at the 95% level using chi-squared distributions. The adjusted prevalence rates were multiplied by their respective population sizes to give adjusted prevalence counts which were rounded to integers, therefore loosing a small amount of precision.
 
 Ethnicity analysis compared individuals from the Mapuche Indigenous group to those from other Indigenous groups or with no Indigenous group and used data from the Araucanía, Aysén, Biobío, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions only as these regions are collectively the five regions with the largest Mapuche populations and the five regions with the highest proportion of Mapuche in their population. 
 
-##	Aim 2: Use clinical data and multiple component analysis to identify autism diagnosis characteristics 
 
-###	Clinical data preparation
+## Aim 2: Use clinical data and multiple component analysis to identify autism diagnosis characteristics 
+
+### Clinical data preparation
 
 The small and large clinical datasets were cleaned to ensure internal consistency in feature values and translated into English where appropriate. Patients were categorised as having autism if any of their diagnosis codes were in ICD F84-F89 for any appointment. Patients were categorised as having an intellectual disability if any of their diagnoses codes was in ICD F70-F79 for any appointment. No restriction on sex was necessary as these data contained only females and males. The clinical data includes economic data in the form of patients’ family’s health insurance contribution level. Values taken are ‘FONASA-A’ to ‘FONASA-D’ which are respectively larger contributions to this public health fund and are assumed to map to increasing socio-economic status, and ‘Private health insurance’ which indicates contributions to a private health insurance provider rather than the public fund and therefore is assumed to map to the highest socio-economic level.
 
@@ -918,24 +919,25 @@ The small clinical data was aggregated to patient level by selecting each patien
 
 Only patients with autism and living most recently in a commune in the SSAS catchment area were included.
 
-###	Multiple correspondence analysis
+### Multiple correspondence analysis
 
 Multiple correspondence analysis (MCA) was conducted using R’s FactoMineR package with the number of output dimensions equal to the number of input features. MCA was an appropriate technique to use here because the small clinical dataset contains primarily categorical features which MCA is designed to handle. 
 
 Data-led analytics was used to identify features in the small clinical dataset that explained the variance in this patient-level data. Initially, all available features with suspected association with autism were included in MCA, specifically: sex, age group, commune of residence, health insurance contribution level as a proxy for SES, ethnicity, residential rurality, disability status and foster care status. The data grouped well into having information about disability and about foster care and not having information about each, therefore the MCA was rerun with the disability and foster care features exchanged for their respective imputed versions. This identified age, commune and ethnicity as important for explaining the variance, so the MCA was rerun with only these three features.
 
-###	Alternative machine learning approaches
+### Alternative machine learning approaches
 
 Component factor analysis (CFA) and principle component analysis (PCA) were also considered to analyse the features associated with autism diagnosis in the small clinical data. Both are powerful methods for uncovering the latent structure of data, however CFA typically requires ordered categorical variables and PCA requires continuous variables. As the commune feature, an unordered categorical variable, was thought to be important to the features associated with autism diagnosis and therefore needed to be included in analysis, using CFA or PCA would require one-hot-encoding of commune which would reduce the appropriateness of these tests.
 
-##	Aim 3a: Link school and clinical records
 
-###	School data preparation
+## Aim 3a: Link school and clinical records
+
+### School data preparation
 
 For data linkage, the school data was further restricted to students with autism that were living in communes in the SSAS catchment in 2021 to maximise comparability with the clinical data. A false empty record was added to the school dataset before linkage that allowed the algorithm to correctly match on SES. This false record was only used during linkage, did not match to any patient records and was removed before comparing matched and unmatched records.
 
 
-###	Clinical data preparation
+### Clinical data preparation
 
 For data linkage, the small and large clinical datasets were joined to form the clinical dataset. This was restricted to appointments for individuals resident in communes in the SSAS catchment as the data is believed to be complete for this catchment area only. It was also restricted to patients aged 6-18 as of 30th June 2021 to maximise compatibility to the school data. Appointment year was not restricted in order to retain more data and thus maximise linkage opportunities, and only patients of female and male sex were present. Patients with familial socio-economic level of FONASA-A were interpreted to be of low SES status and given proxy status of 1 (equivalent to students with free school fees); patients with FONASA-B, FONASA-C and FONASA-D were interpreted to have moderate SES status and given 2 (equivalent to students paying \$1,000-\$100,000 monthly for state schooling); and patients with private health insurance were interpreted to have high SES and given 3 (equivalent to students paying more than \$100,000 monthly). Students  that did not have a clinical autism diagnosis but did have a clinical intellectual disability diagnosis were included to maximise opportunities for matching with the school data, with prioritisation of autism diagnosis over intellectual disability.
 
@@ -943,35 +945,74 @@ The clinical dataset had no missingness in the features of interest for data lin
 
 The clinical data was aggregated to one row per patient per commune in the SSAS catchment, to maximise the opportunity for matching patients that had moved within this health service. The majority of patients lived in only one commune in the SSAS catchment during the study period. Aggregation to patient level took the most common SES value. The resulting dataset will be referred to as the patient data.
 
-###	Selection of features for matching
+### Selection of features for matching
 
 The features available in both school and patient datasets for matching were sex, date of birth, commune of residence, diagnoses with autism, and the proxies for socio-economic status – monthly school fees in the school data and mode health insurance contributions in the patient data. Although only students with autism diagnoses are included from the school dataset, the clinical dataset comprises primarily patients with a diagnosis of autism, some patients with a diagnosis of intellectual disability and some with both. The diagnosis with autism feature is therefore included in the features to match on to encourage matching of school records to clinical records for patients with an autism diagnosis, but to allow for matching to clinical records for patients with only a diagnosis of intellectual disability when no suitable patient with autism is present.
 
-###	Manual record linkage
+### Manual record linkage
 
 The school and patient data were blocked on sex and date of birth to improve match quality and reduce runtime. As both datasets are from trusted, large-scale data collections, it is reasonable to assume sex and dates of birth are highly accurate in both datasets, and it would not be reasonable to accept any proposed matches that do not agree on either sex or date of birth. 
 
 Two versions of manual record linkage were tried. First, the school and patient data were merged with perfect matches required on sex, date of birth, commune of residence and proxies for SES. Second, the school and patient data were merged with perfect matches required only on sex, date of birth and commune of residence, as the proxies for SES are known to be approximate and therefore requiring perfect matches on SES is not reasonable.
 
-###	Probabilistic record linkage
+### Probabilistic record linkage
 
-All possible pairs of blocked matches were generated and agreement weights were calculated for each feature using expectation maximisation, then aggregated into a weight for the pair . Records with missing values were retained as this linkage method is robust to missingness. The similarity comparison method was exact matching for commune of residence, diagnosis with autism and socio-economic status; there was no value in using a string comparison method for commune of residence as all commune names were already standardised and two communes having similarly spelled names does not increase the likelihood of a match between those communes. Linkage was implemented using R’s RecordLinkage package. This included consideration of the average frequencies of categories in each feature and estimated errors rates were supplied: the default estimated error rate of 0.01 was supplied for the commune of residence and diagnosis with autism features as they are expected to be fairly accurate features, and an estimated error rate of 0.6 was supplied for the socio-economic status feature as it is a loosely defined proxy. This value was chosen through trial and error to ensure the algorithm prioritised matching on diagnosis of autism above matching on socio-economic status. Pairs were then selected based on weight to create a 1-1, bipartite, matching between school records and patients.
+All possible pairs of blocked matches were generated and agreement weights were calculated for each feature using expectation maximisation, then aggregated into a weight for the pair . Records with missing values were retained as this linkage method is robust to missingness. The similarity comparison method was exact matching for commune of residence, diagnosis with autism and socio-economic status; there was no value in using a string comparison method for commune of residence as all commune names were already standardised and two communes having similarly spelled names does not increase the likelihood of a match between those communes. Linkage was implemented using R’s RecordLinkage package. This included consideration of the average frequencies of categories in each feature and estimated errors rates were supplied: the default estimated error rate of 0.01 was supplied for the commune of residence and diagnosis with autism features as they are expected to be fairly accurate features, and an estimated error rate of 0.6 was supplied for the socio-economic status feature as it is a loosely defined proxy. This value was chosen through trial and error to ensure the algorithm prioritised matching on diagnosis of autism above matching on socio-economic status. 
 
-###	Alternative record linkage methods
+Pairs were then selected based on weight to create a 1-1, bipartite, matching between school records and patients. These matches were examined to ensure a patient that lived in multiple communes had matched to only one school record and to assess the plausibility of matches made to patients without autism but with intellectual disability.
+
+### Creation of the linked dataset
+
+The patient data was de-duplicated to a single row per patient with the commune of their matched record chosen if they had a multiple. The school data for students aged 6-18 in the SSAS catchment area and the deduplicated patient-level data for patients aged 6-18 in SSAS were combined to form the linked dataset, leaving out the deduplicated patient records that were a match to student records to ensure those individuals were not present twice in the linked data. 
+
+### Alternative record linkage methods
 
 Record linkage using Bayesian methods in which matched status is modelled, as developed by Sadinle (32) and refined by Stringham (33), was considered for record linkage here. This technique is typically more complex and has longer runtimes than probabilistic matching but can more easily enforce one-to-one matching and is particularly well suited to matching names. As the datasets in this investigation did not include names, there was limited benefit from using Bayesian linkage methods.
 
 Record linkage using machine learning to classify matched and unmatched pairs, as explored by Pita et al, was also considered as it is generally thought to be more accurate than probabilistic matching alone (34). However this was not pursued because the datasets under investigation have very few common features to match on, meaning machine learning algorithms would have few options to trial, and there are no known true matches with which to assess the accuracy of machine learning models. 
 
-###	Comparison of matched and unmatched records.
+### Comparison of matched and unmatched records.
 
 For the school and patient datasets, each record was classified as either matched or unmatched based on whether it appeared in the bipartite matching. The discrete Kolmogorov-Smirnov test was used to compare matched and unmatched records within each dataset for each of the features used for matching, excluding date of birth which has too many categories to have meaningful results and excluding diagnosis of autism which is uniformly true in the school dataset and therefore not informative. Missing values in the socio-economic status feature were omitted before testing.
 
 Permutation  tests were then performed for each of the features tested in each dataset by permuting the matched status 2000 times and recomputing the discrete Kolmogorov-Smirnov test for each permutation. The p-values for the Kolmogorov-Smirnov tests on the observed data were then compared to the distributions of p-values for the permuted data to determine the significance of the observed results.
 
+
 ## Aim 3b: Accurately estimate autism prevalence and project across health services using Bayesian prevalence prediction
 
-TODO - copy text here
+### Autism prevalence estimation using linked data
+
+The crude and age- and sex-adjusted prevalence of autism in the linked data was calculated as in sections \@ref(4-3-2) and \@ref(4-3-3) for all the linked data and for females and males separately. The adjusted prevalence delta was calculated as the difference between the adjusted prevalence for SSAS calculated using the linked data and the adjusted prevalence for SSAS from the school data only. 
+
+### Prevalence projection
+
+Prevalence was projected for each of the health services other than SSAS by adding delta to their adjusted prevalence calculated from the school data only. Estimated confidence intervals were calculated for the projections by finding a band around the projection of equal width to the 95% gamma confidence interval for each health service’s school data adjusted prevalence.
+
+### Bayesian prevalence analysis 
+
+Bayesian prevalence analysis of autism was conducted for the school data by health service. A random-effects model was constructed with the random effect on health service as follows. 
+Set 
+$$y_{i} = \text{adjusted count of autism cases in health service } i$$
+$$n_{i} = \text{number of students in health service } i$$
+$$\theta_{i} = \text{prevalence of autism in health service } i$$
+
+For each health service $i$, the model formula is 
+$$y_{i}  | (n_{i}, \theta_{i})  ~ \text{Binomial}(n_{i}, \theta_{i})$$
+With 
+$$\theta_{i} ~ \text{Beta}(a,b)$$
+And posterior distribution
+$$\theta_{i} | (y_{i} ,n_{i})  ~ \text{Beta}(y_{i} + a, n_{i} - y_{i} + b)$$
+
+Fitting a binomial model required integer valued counts of autism cases. As adjusted case counts were used throughout, the adjusted counts had to be rounded to integer values which caused a small amount of precision to be lost. It is anticipated that this may cause the posterior credible intervals to be slightly wider but is not expected to have a large effect on findings.
+
+### Prior selection
+
+Four priors for θ_i were used when fitting the Bayesian prevalence model. First, a conjugate beta prior common to all health services was constructed with the global age- and sex-adjusted prevalence of autism in the school dataset and its standard deviation used respectively as the mean and standard deviation of the prior. This prior was suitable because the global adjusted prevalence in the school data provides a lower bound on the plausible prevalence of autism in Chile. Second, a conjugate beta prior specific to each health service using the health service specific age- and sex-adjusted autism prevalence in the school data as the prior means and their standard deviations as the prior standard deviations. This prior was suitable because it was extending the previous prior to each of the random effect categories. On its own this prior is expected to give uninformative posteriors because it is effectively duplicating the information in the sample data, but it will be used as a more specific lower bound on the plausible prevalence of autism in each health service. Third, a conjugate beta prior specific to each health service with the health service specific adjusted prevalence projected from the linked data as the prior means and prior standard deviations taken from the previous prior. This prior was suitable as captures the extra information provided by the linkage and has narrow standard deviations which will model a theoretical upper bound on the prevalence of autism in each health service. Fourth, a uniform prior specific to each health service with the adjusted autism prevalences from the school data for each health service as its lower bounds and the projected prevalences from the linked data for each health service as its upper bounds. This prior is suitable because it captures the information from both the school and linked datasets, without specifying where within these bounds the true prevalences are likely to be.
+
+### Markov chain Monte Carlo sampling
+
+Bayesian prevalence modelling used the JAGS (Just Another Gibbs Sampler) R package which uses Markov chain Monte Carlo (MCMC) sampling to produce posterior density distributions when given the above priors and adjusted prevalence observations. A burn-in period of 2000 samples was used to ensure models converge, then 2000 iterations were used to model the posterior densities . Visual inspection of trace plots showed no evidence of a lack of convergence and rhat values were less than 1.1.
+
 
 # Results
 
@@ -1586,7 +1627,7 @@ adhd_prev_rural_adj <- get_adjusted_prev(adhd_prev_rural, grouping_vars = "schoo
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
 
-Autism and ADHD are slightly more prevalent for students at rural schools and both follow the same age patterns observed earlier. See Tables \@ref(tab:prevAgeRuralAutTable) and \@ref(tab:prevAgeRuralAdhdTable), Figures \@ref(fig:prevAgecatRuralAutPlot) and \@ref(tab:prevAgecatRuralAdhdPlot) and Supplementary Figures \@ref(fig:prevAgeRuralAutPlot) and \@ref(tab:prevAgeRuralAdhdPlot).
+Autism and ADHD are slightly more prevalent for students at rural schools and both follow the same age patterns observed earlier. See Tables \@ref(tab:prevAgeRuralAutTable) and \@ref(tab:prevAgeRuralAdhdTable), Figures \@ref(fig:prevAgecatRuralAutPlot) and \@ref(fig:prevAgecatRuralAdhdPlot) and Supplementary Figures \@ref(fig:prevAgeRuralAutPlot) and \@ref(fig:prevAgeRuralAdhdPlot).
 
 ```{r prevAgeRuralAutTable}
 # Autism
@@ -2768,7 +2809,7 @@ kbl(aut_newprev_health_adj.table,
     col.names = c("Health service", "School data (95% CI)", "Projected linked data (Equivalent CI)"),
     align = "lrr",
     booktabs = TRUE,
-    format = "latex",
+    format = "pandoc",
     linesep = c(""), # No extra white space
     caption = "Projected age- and sex-adjusted autism prevalence by health service in Chile school data and linked school and patient data. Projections for the linked adjusted prevalence for health services other than Araucanía Sur were calculated by adding delta to each health service's adjusted prevalence from the school data. Adjusted prevalence from the school data has 95% gamma confidence intervals and projected adjusted prevalence from the linked data has confidence intervals equal in width to the school data adjusted prevalence intervals for each health service other than Araucanía Sur which has the 95% gamma confidence intervals found earlier.") %>%
   add_header_above(c(" " = 1, "Adjusted prevalence" = 2))
@@ -3236,8 +3277,6 @@ ggplot(data = adhd_prev_rural.age_sex) +
        fill = "Age")
 ```
 
-## AraucS prevalence
-
 ```{r adjPrevAraucS, include = FALSE}
 # Only do autism here because we only have clinical data for autism
 chile_bayes_aut_araucS <- chile_bayes_aut %>%
@@ -3296,8 +3335,6 @@ ggplot(data = aut_prev_araucS_adj.long) +
        #y = "Aggregate prevalence",
        fill = "Prevalence")
 ```
-
-## Adjusted prevalence
 
 ```{r adjPrevPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalences of autism and ADHD. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
 
@@ -3558,10 +3595,6 @@ ggplot(data = adhd_prev_rural_adj.long) +
        fill = "Prevalence")
 ```
 
-
-## Differences between un/matched
-
-
 ```{r kolmogorovSchool, warning = FALSE}
 
 school_yes <- school_matched_small %>% filter(matched == 1) #%>% select(sex.school)
@@ -3794,7 +3827,6 @@ kolmog_patient_commune.bar <- ggplot(patients_match.student_commune_name) +
        fill = "Matched status")
 # most of the difference in matched commune frequency is for Temuco which is the biggest commune.
 
-
 kolmog_patient_commune.density <- ggplot(ks_perm.patients.pvals, aes(x = commune_code, y = after_stat(density))) +
   geom_density() +
   geom_vline(xintercept = ks.patients.commune_code$p.value, color = "red") +
@@ -3831,7 +3863,6 @@ kolmog_school_ses.density <- ggplot(ks_perm.school.pvals, aes(x = ses_status, y 
        y = "Density")
 
 grid.arrange(kolmog_school_ses.bar, kolmog_school_ses.density, nrow = 2)
-
 ```
 
 ```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=8}
@@ -3861,9 +3892,6 @@ kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = ses_status,
 
 grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
 ```
-
-
-## Bayesian prevalence estimation
 
 ```{r bayesAdjParams}
 nObs <- nrow(chile_bayes)
