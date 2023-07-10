@@ -2687,7 +2687,7 @@ school_patients <- patients_matched_small_dedup %>%
 
 The linked dataset contains `r format(nrow(school_patients), big.mark = ",", trim = TRUE)` records, comprising `r format(school_patients %>% filter(dataset == "school") %>% nrow(), big.mark = ",", trim = TRUE)` school records and `r format(school_patients %>% filter(dataset == "patients") %>% nrow(), big.mark = ",", trim = TRUE)` patient records.
 
-## Updated autism prevalence estimates
+## Updated autism prevalence estimates and delta
 
 ```{r adjNewprevAraucS}
 aut_newprev_araucS <- get_grouped_prev(x = school_patients, stdpop = chile_stdpop, 
@@ -2731,47 +2731,75 @@ aut_newprev_araucS_sex_adj <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS
 
 ```
 
+Using the linked dataset, the crude prevalence of autism in SSAS is `r round(aut_newprev_araucS_adj$crude_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 3)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 3)`%) and the age- and sex-adjusted prevalence of autism is `r round(aut_newprev_araucS_adj$adjusted_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 3)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 3)`%). For females, crude prevalence is `r round(aut_newprev_araucS_adj_f$crude_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj_f$crude_ci_lower * 100, 3)`-`r sprintf("%.3f", round(aut_newprev_araucS_adj_f$crude_ci_upper * 100, 3))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 3)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 3)`%). For males, crude prevalence is `r round(aut_newprev_araucS_adj_m$crude_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj_m$crude_ci_lower * 100, 3)`-`r sprintf("%.3f", round(aut_newprev_araucS_adj_m$crude_ci_upper * 100, 3))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 3)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 3)`%).
 
-
-
-
-## Bayesian prevalence projection
-
-
-```{r newPrevArauc}
+```{r newPrevAraucS}
 araucS_lower_prev <- aut_prev_health_adj %>%
   filter(health_service_name == "Araucanía Sur") %>%
   select(adjusted_rate) %>% as.numeric()
 araucS_upper_prev <- aut_newprev_araucS_adj %>%
   select(adjusted_rate) %>% as.numeric()
-#araucS_upper_prev <- n_aut_araucS / aut_prev_health_adj %>%
-#  filter(health_service_name == "Araucanía Sur") %>%
-#  select(sum_sample_pop_size) %>% as.numeric
+
 prev_delta <- araucS_upper_prev - araucS_lower_prev
 
-araucS_lower <- aut_prev_health_adj %>%
-  filter(health_service_name == "Araucanía Sur") %>%
-  select(adjusted_count) %>% as.numeric()
-araucS_upper <- aut_newprev_araucS_adj %>%
-  select(adjusted_count) %>% as.numeric()
-araucS_mean <- (araucS_upper + araucS_lower) / 2
-araucS_sd <- (araucS_upper - araucS_lower) / (2*1.96)
+# araucS_lower <- aut_prev_health_adj %>%
+#   filter(health_service_name == "Araucanía Sur") %>%
+#   select(adjusted_count) %>% as.numeric()
+# araucS_upper <- aut_newprev_araucS_adj %>%
+#   select(adjusted_count) %>% as.numeric()
+# araucS_mean <- (araucS_upper + araucS_lower) / 2
+# araucS_sd <- (araucS_upper - araucS_lower) / (2*1.96)
 
 aut_prev_health_adj$new_rate <- numeric(nrow(aut_prev_health_adj))
+aut_prev_health_adj$new_ci_lower <- numeric(nrow(aut_prev_health_adj))
+aut_prev_health_adj$new_ci_upper <- numeric(nrow(aut_prev_health_adj))
 aut_prev_health_adj$new_count <- numeric(nrow(aut_prev_health_adj))
 
 for(i in 1:nrow(aut_prev_health_adj)) {
-  if(aut_prev_health_adj$health_service_name[i] == "Servicio de Salud Araucanía Sur") {
+  if(aut_prev_health_adj$health_service_name[i] == "Araucanía Sur") {
     aut_prev_health_adj$new_rate[i] <- araucS_upper_prev
+    aut_prev_health_adj$new_ci_lower[i] <- aut_newprev_araucS_adj$adjusted_ci_lower
+    aut_prev_health_adj$new_ci_upper[i] <- aut_newprev_araucS_adj$adjusted_ci_upper
     aut_prev_health_adj$new_count[i] <- araucS_upper
   }
   else {
+    adjusted_ci_width <- aut_prev_health_adj$adjusted_ci_upper[i] - aut_prev_health_adj$adjusted_ci_lower[i]
     aut_prev_health_adj$new_rate[i] <- aut_prev_health_adj$adjusted_rate[i] + prev_delta
+    aut_prev_health_adj$new_ci_lower[i] <- aut_prev_health_adj$new_rate - 0.5*adjusted_ci_width
+    aut_prev_health_adj$new_ci_upper[i] <- aut_prev_health_adj$new_rate + 0.5*adjusted_ci_width
     aut_prev_health_adj$new_count[i] <- round(aut_prev_health_adj$new_rate[i] * aut_prev_health_adj$sum_sample_pop_size[i], 0)
   }
 }
 
+
+aut_newprev_health_adj.table <- aut_prev_health_adj %>% 
+  mutate(new_prev_ci = paste0(sprintf("%.2f", round(new_rate * 100, 2)),
+                            " (",
+                            sprintf("%.2f", round(new_ci_lower * 100, 2)),
+                            ", ", 
+                            sprintf("%.2f", round(new_ci_upper * 100, 2)),
+                            ")")) %>%
+  select(health_service_name, adjusted_prev_ci, new_prev_ci)
+kbl(aut_prev_health_adj.table,
+    col.names = c("Health service", "School data adjusted prevalence (95% CI)", "Projected linked data adjusted prevalence (Equivalent CI)"),
+    align = "lrr",
+    booktabs = TRUE,
+    format = "pandoc",
+    linesep = c(""), # No extra white space
+    caption = "Projected age- and sex-adjusted autism prevalence by health service in Chile school data and linked school and patient data. Projections for the linked adjusted prevalence for health services other than Araucanía Sur were calculated by adding delta to each health service's adjusted prevalence from the school data. Adjusted prevalence from the school data has 95% gamma confidence intervals and projected adjusted prevalence from the linked data has confidence intervals equal in width to the school data's intervals.")
+
+
 ```
+
+
+This gives an adjusted prevalence delta for SSAS of `r round(aut_newprev_araucS_adj$adjusted_rate * 100 - aut_prev_health_adj %>% filter(health_service_name == "Araucanía Sur") %>% select(adjusted_rate) %>% as.numeric() * 100, 3)`%. `r round(prev_delta * 100, 3)`. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted prevalence from the linked data onto the other health services. 
+
+
+## Bayesian prevalence projection
+
+
+
+
 
 ```{r bayesSetup}
 nObs <- nrow(chile_bayes_aut)
