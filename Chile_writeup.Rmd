@@ -2642,7 +2642,7 @@ Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blo
 Analysis of differences between matched and unmatched records in the school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no difference in frequency of sexes between matched and unmatched school records, see Figure \@ref(fig:kolmogorovSchoolSex). They did find a difference in the frequency of sexes between matched and unmatched patient records, see Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the sex ratios differing across the datasets: the school data is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r round(school_matched_small %>% filter(matched == 1, sex_desc.school == "Female") %>% nrow() / school_matched_small %>% filter(matched == 1) %>% nrow() * 100, 2)`% females. Kolmogovo-Smirnov permutation testing found matched and unmatched records differed by commune for both the school data, see Figure \@ref(fig:kolmogorovSchoolCommune), and patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. Differences were also found by proxy SES for both school and patient data, see Figure \@ref(fig:kolmogorovSchoolSes) and Figure \@ref(fig:kolmogorovPatientSes) respectively, likely reflecting different frequencies in these values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
 
 
-### Prev delta
+### Linked dataset
 
 ```{r newPrev}
 # Aggregate patients to single row per patient by choosing the commune that has a match where available.
@@ -2685,7 +2685,9 @@ school_patients <- patients_matched_small_dedup %>%
   mutate(sex = ifelse(sex_desc == "Female", 2, 1))
 ```
 
-Adjust the new prev.
+The linked dataset contains `r format(nrow(school_patients), big.mark = ",", trim = TRUE)` records, comprising `r format(school_patients %>% filter(dataset == "school") %>% nrow(), big.mark = ",", trim = TRUE)` school records and `r format(school_patients %>% filter(dataset == "patients") %>% nrow(), big.mark = ",", trim = TRUE)` patient records.
+
+## Updated autism prevalence estimates
 
 ```{r adjNewprevAraucS}
 aut_newprev_araucS <- get_grouped_prev(x = school_patients, stdpop = chile_stdpop, 
@@ -2708,7 +2710,30 @@ aut_newprev_araucS_adj <- aut_newprev_araucS %>% # Don't use get_adjusted_prev h
             adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+
+# Adjusted prevalence by sex
+aut_newprev_araucS_f <- school_patients %>%
+  filter(sex == 2) %>%
+  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+aut_newprev_araucS_adj_f <- get_adjusted_prev(aut_newprev_araucS_f, grouping_vars = c()) %>% mutate(sex_desc = "Female") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_newprev_araucS_m <- school_patients %>%
+  filter(sex == 1) %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+aut_newprev_araucS_adj_m <- get_adjusted_prev(aut_newprev_araucS_m, grouping_vars = c()) %>% mutate(sex_desc = "Male") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_newprev_araucS_sex_adj <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS_adj_f) 
+
 ```
+
+
+
+
 
 ## Bayesian prevalence projection
 
