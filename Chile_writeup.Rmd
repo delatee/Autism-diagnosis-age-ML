@@ -963,7 +963,9 @@ Pairs were then selected based on weight to create a 1-1, bipartite, matching be
 
 ### Creation of the linked dataset
 
-The patient data was de-duplicated to a single row per patient with the commune of their matched record chosen if they had a multiple. The school data for students aged 6-18 in the SSAS catchment area and the deduplicated patient-level data for patients aged 6-18 in SSAS were combined to form the linked dataset, leaving out the deduplicated patient records that were a match to student records to ensure those individuals were not present twice in the linked data. 
+The patient data was de-duplicated to a single row per patient with the commune of their matched record chosen if they had a multiple. The school data for students aged 6-18 in the SSAS catchment area and the deduplicated patient-level data for patients aged 6-18 in SSAS were combined to form the linked dataset, leaving out the deduplicated patient records that were a match to student records to ensure those individuals were not present twice in the linked data.
+
+It is assumed that the patients that did not match to the school data do exist in the school data but do not have a diagnosis of autism in the school data.
 
 ### Alternative record linkage methods
 
@@ -982,7 +984,7 @@ Permutation  tests were then performed for each of the features tested in each d
 
 ### Autism prevalence estimation using linked data
 
-The crude and age- and sex-adjusted prevalence of autism in the linked data was calculated as in sections \@ref(4-3-2) and \@ref(4-3-3) for all the linked data and for females and males separately. The adjusted prevalence delta was calculated as the difference between the adjusted prevalence for SSAS calculated using the linked data and the adjusted prevalence for SSAS from the school data only. 
+The crude and age- and sex-adjusted prevalence of autism in the linked data was calculated as in sections [4.3.2][Crude prevalence] and [4.3.3][Frequentist age and sex adjustment] for all the linked data and for females and males separately. The adjusted prevalence delta was calculated as the difference between the adjusted prevalence for SSAS calculated using the linked data and the adjusted prevalence for SSAS from the school data only. 
 
 ### Prevalence projection
 
@@ -997,17 +999,17 @@ $$n_{i} = \text{number of students in health service } i$$
 $$\theta_{i} = \text{prevalence of autism in health service } i$$
 
 For each health service $i$, the model formula is 
-$$y_{i}  | (n_{i}, \theta_{i})  ~ \text{Binomial}(n_{i}, \theta_{i})$$
+$$y_{i}  | (n_{i}, \theta_{i})  \sim \text{Binomial}(n_{i}, \theta_{i})$$
 With 
-$$\theta_{i} ~ \text{Beta}(a,b)$$
+$$\theta_{i} \sim \text{Beta}(a,b)$$
 And posterior distribution
-$$\theta_{i} | (y_{i} ,n_{i})  ~ \text{Beta}(y_{i} + a, n_{i} - y_{i} + b)$$
+$$\theta_{i} | (y_{i} ,n_{i})  \sim \text{Beta}(y_{i} + a, n_{i} - y_{i} + b)$$
 
 Fitting a binomial model required integer valued counts of autism cases. As adjusted case counts were used throughout, the adjusted counts had to be rounded to integer values which caused a small amount of precision to be lost. It is anticipated that this may cause the posterior credible intervals to be slightly wider but is not expected to have a large effect on findings.
 
 ### Prior selection
 
-Four priors for θ_i were used when fitting the Bayesian prevalence model. First, a conjugate beta prior common to all health services was constructed with the global age- and sex-adjusted prevalence of autism in the school dataset and its standard deviation used respectively as the mean and standard deviation of the prior. This prior was suitable because the global adjusted prevalence in the school data provides a lower bound on the plausible prevalence of autism in Chile. Second, a conjugate beta prior specific to each health service using the health service specific age- and sex-adjusted autism prevalence in the school data as the prior means and their standard deviations as the prior standard deviations. This prior was suitable because it was extending the previous prior to each of the random effect categories. On its own this prior is expected to give uninformative posteriors because it is effectively duplicating the information in the sample data, but it will be used as a more specific lower bound on the plausible prevalence of autism in each health service. Third, a conjugate beta prior specific to each health service with the health service specific adjusted prevalence projected from the linked data as the prior means and prior standard deviations taken from the previous prior. This prior was suitable as captures the extra information provided by the linkage and has narrow standard deviations which will model a theoretical upper bound on the prevalence of autism in each health service. Fourth, a uniform prior specific to each health service with the adjusted autism prevalences from the school data for each health service as its lower bounds and the projected prevalences from the linked data for each health service as its upper bounds. This prior is suitable because it captures the information from both the school and linked datasets, without specifying where within these bounds the true prevalences are likely to be.
+Four priors for $\theta_{i}$ were used when fitting the Bayesian prevalence model. First, a conjugate beta prior common to all health services was constructed with the global age- and sex-adjusted prevalence of autism in the school dataset and its standard deviation used respectively as the mean and standard deviation of the prior. This prior was suitable because the global adjusted prevalence in the school data provides a lower bound on the plausible prevalence of autism in Chile. Second, a conjugate beta prior specific to each health service using the health service specific age- and sex-adjusted autism prevalence in the school data as the prior means and their standard deviations as the prior standard deviations. This prior was suitable because it was extending the previous prior to each of the random effect categories. On its own this prior is expected to give uninformative posteriors because it is effectively duplicating the information in the sample data, but it will be used as a more specific lower bound on the plausible prevalence of autism in each health service. Third, a conjugate beta prior specific to each health service with the health service specific adjusted prevalence projected from the linked data as the prior means and prior standard deviations taken from the previous prior. This prior was suitable as captures the extra information provided by the linkage and has narrow standard deviations which will model a theoretical upper bound on the prevalence of autism in each health service. Fourth, a uniform prior specific to each health service with the adjusted autism prevalences from the school data for each health service as its lower bounds and the projected prevalences from the linked data for each health service as its upper bounds. This prior is suitable because it captures the information from both the school and linked datasets, without specifying where within these bounds the true prevalences are likely to be.
 
 ### Markov chain Monte Carlo sampling
 
@@ -2827,10 +2829,12 @@ nFeat <- length(unique(aut_prev_health_adj$health_service_code))
 FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
 ```
 
-```{r bayesLowPrior, fig.cap = "Posterior predictive distributions for autism prevalence using school data with a random effect on student's health service. Beta conjugate prior of age- and sex-adjusted global autism prevalence from school data. Red dashed lines show the prior 95% confidence interval, blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+```{r bayesConstantPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of age- and sex-adjusted global autism prevalence from school data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 # Same prior for all health services - specifically the global prevalence in school data
 # Could change these to health service specific priors - specifically the adjusted prevalences by health service
 aut_theta_mu_prior <- aut_prev_adj$adjusted_rate
+#aut_theta_mu_prior_rep <- data.frame(mu = rep(aut_prev_adj$adjusted_rate, times = nFeat), 
+#                                     health_service_name = aut_prev_health_adj$health_service_name)
 aut_theta_sigma_prior <- (aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96)
 # # Females
 # aut_theta_mu_prior_f <- aut_prev_adj_f$adjusted_rate
@@ -2839,7 +2843,7 @@ aut_theta_sigma_prior <- (aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted
 # theta_mu_prior_m <- aut_prev_adj_m$adjusted_rate
 # theta_sigma_prior_m <- sqrt(aut_prev_adj_m$var)
 
-rand_model_low <- "model {
+rand_model_constant <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
     theta[i] ~ dbeta(theta_a, theta_b)
     disease_sample[i] ~ dbin(theta[i], nObs[i])
@@ -2851,21 +2855,125 @@ pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
 
 health_low_post <- do_jags_rand_model(x = aut_prev_health_adj,
                               feat = "health_service_name",
-                              model = rand_model_low,
+                              model = rand_model_constant,
                               theta_mu = aut_theta_mu_prior,
                               theta_sigma = aut_theta_sigma_prior,
                               pars = pars, 
                               convergence_checks = FALSE) %>%
   rename("health_service_name" = "Feat_names")
 
-plot_post_density(health_low_post, aut_prev_health_adj, 
-                  feat = "health_service_name", 
-                  theta_mu = aut_theta_mu_prior, theta_sigma = aut_theta_sigma_prior,
-                  disease = "Autism")
+
+
+health_const_post_ci <- health_low_post %>%
+  group_by("health_service_name") %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+ggplot() +
+  geom_density(data = health_low_post, aes(x = predicted_prev*100)) +
+  geom_vline(data = health_const_post_ci, aes(xintercept = post_lower*100), color = "blue", linetype = "dotted") +
+  geom_vline(data = health_const_post_ci, aes(xintercept = post_upper*100), color = "blue", linetype = "dotted") +
+  #geom_vline(data = aut_theta_mu_prior_rep, aes(xintercept = mu), color = "green", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100), color = "red", linetype = "dashed") +
+  facet_wrap(~health_service_name) +
+  labs(title = "Posterior predictive distributions for common lower bound",
+       x = "Prevalence %",
+       y = "Density")
+
+
 ```
 
+Bayesian prevalence projections by health service with common global autism prevalence prior is shown in Figure \@ref(fig:bayesConstantPrior). The differences in adjusted sample prevalence across health services are evident in the red bands and the posterior predictive distributions have been pulled towards the common prior. For regions like Ñuble which have adjusted sample prevalence in the school data higher than the global adjusted prevalence, these posterior densities are not plausible.
 
-```{r bayesHighPrior, fig.cap = "Posterior predictive distributions for autism prevalence using school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted projected autism prevalence from linked data. Red dashed lines show the prior 95% confidence interval, blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+```{r bayesLowPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted autism prevalence from school data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+# Now have health service specific priors so need to provide them as vectors and index each as needed
+rand_model_low <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dbeta(theta_a[i], theta_b[i])
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+  }
+}"
+
+pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
+
+# Define beta prior
+theta_mu <- aut_prev_health_adj$adjusted_rate
+#theta_mu.df <- data.frame(theta_mu = theta_mu, 
+#                          health_service_codee = FeatNames)
+#theta_mu <- (aut_prev_health_adj$new_rate + aut_prev_health_adj$adjusted_rate) / 2
+theta_sigma <- (aut_prev_health_adj$adjusted_ci_upper - aut_prev_health_adj$adjusted_ci_lower) / (2*1.96)
+#theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
+theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
+
+# Initial values for model chains
+rand_ini <- list(list(theta = rep(0.001, nFeat)),
+                 list(theta = rep(0.01, nFeat)))
+# Run JAGS model
+rand_data <- list(theta_a = theta_a,
+                  theta_b = theta_b,
+                  nObs = aut_prev_health_adj$sum_sample_pop_size,
+                  aut_sample = aut_prev_health_adj$adjusted_count,
+                  nFeat = nFeat)
+rand_jag <- jags.model(textConnection(rand_model_low),
+                       data = rand_data,
+                       inits = rand_ini,
+                       n.chains = 2,
+                       quiet = TRUE)
+update(rand_jag, n.iter = nBurn)
+rand_sam <- coda.samples(model = rand_jag,
+                         variable.names = pars,
+                         n.iter = nIter)
+
+convergence_check <- FALSE
+if(convergence_check) {
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+        arrange(desc(rhat))
+  print(rand_summ)
+}
+
+aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "health_service_code",
+                 values_to = "predicted_prev") %>%
+    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
+    select(Iteration, Feat_names, predicted_prev) %>%
+  rename(health_service_code = Feat_names) %>%
+  merge(health_service_lookup, by = "health_service_code") %>%
+  rename(health_service_name_long = health_service_name,
+         health_service_name = health_service_name_short)
+  
+# Plot manually because we need different CI's now
+aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
+  group_by(health_service_name) %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+ggplot() +
+  geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev*100)) +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower*100), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper*100), color = "blue", linetype = "dotted") +
+  #geom_vline(data = theta_mu.df, aes(xintercept = theta_mu), color = "green", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100), color = "red", linetype = "dashed") +
+  facet_wrap(~health_service_name) +
+  labs(title = "Posterior predictive distribution for health service specific lower bound priors",
+       x = "Prevalence %",
+       y = "Density")
+
+```
+
+Figure \@ref(fig:bayesLowPrior) shows Bayesian prevalence projections by health service with health service specific priors and as expected, the posteriors 95% credible intervals are coincident with the adjusted sample prevalence 95% confidence intervals. The posterior prevalence peaks can be considered lower bounds for the true autism prevalence in each health service.
+
+```{r bayesHighPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted projected autism prevalence from linked data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 # Now have health service specific priors so need to provide them as vectors and index each as needed
 rand_model_high <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
@@ -2884,11 +2992,6 @@ theta_sigma <- (aut_prev_health_adj$new_ci_upper - aut_prev_health_adj$new_ci_lo
 #theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
-
-#x <- seq(0,1, by =0.01)
-#for(i in 1:29) {
-#  plot(x, dbeta(x, theta_a[i], theta_b[i]), type = "l", xlim = c(0,0.1))
-#}
 
 # Initial values for model chains
 rand_ini <- list(list(theta = rep(0.001, nFeat)),
@@ -2933,7 +3036,6 @@ aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Ite
   rename(health_service_name_long = health_service_name,
          health_service_name = health_service_name_short)
   
-
 # Plot manually because we need different CI's now
 aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
   group_by(health_service_name) %>%
@@ -2941,20 +3043,21 @@ aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
             post_upper = quantile(predicted_prev, 0.975))
   
 ggplot() +
-  geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev)) +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "red", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "red", linetype = "dashed") +
+  geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev*100)) +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower*100), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper*100), color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100), color = "red", linetype = "dashed") +
   facet_wrap(~health_service_name) +
-  labs(title = "Region specific priors informed by clinical data from Araucanía Sur",
-       x = "Posterior predictive distribution",
+  labs(title = "Posterior predictive distribution for health service specific upper bound priors",
+       x = "Prevalence %",
        y = "Density")
 
 ```
 
+With projected prevalence priors, the Bayesian prevalence projections shown in Figure \@ref(fig:bayesHighPrior) are pulled upward toward their priors by approximately delta. For regions with high sample prevalence such as Ñuble, this addition of delta results in a posterior prevalence projects up to 1.5 percentage points higher than the global adjusted prevalence for the school data. The posterior prevalence peaks can be considered plausible upper bounds for the prevalence of recorded cases of autism in each health service.
 
-```{r bayesUniformPrior, fig.cap = "Posterior predictive distributions for autism prevalence using school data with a random effect on student's health service. Uniform prior bounded by health service specific age- and sex-adjusted autism prevalence from school data, and health service specific age- and sex-adjusted projected autism prevalence from linked data. Red dashed lines show the prior 95% confidence interval, blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+```{r bayesUniformPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Uniform prior bounded by health service specific age- and sex-adjusted autism prevalence from school data, and health service specific age- and sex-adjusted projected autism prevalence from linked data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 
 ####### Need to do all by health service code not name because name sorts in different orders.
 
@@ -3032,21 +3135,78 @@ ggplot() +
   geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev)) +
   geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
   geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "red", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "red", linetype = "dashed") +
+  #geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "green", linetype = "dashed") +
+  #geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "green", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper), color = "red", linetype = "dashed") +
   facet_wrap(~health_service_name) +
-  labs(title = "Region specific priors informed by clinical data from Araucanía Sur",
-       x = "Posterior predictive distribution",
+  labs(title = "Posterior predicitve distribution for health service specific uniform priors",
+       x = "Prevalence %",
        y = "Density")
 
 ```
 
-Red is the prior 95% CI (adjusted sample rate and it + prev_delta), blue is posterior 95% CrI
+In Figure \@ref(fig:bayesUniformPrior), the posterior distributions are reflective of their uniform priors with posterior credible intervals slightly within the prior bounds (Table \@ref(tab:newPrevAraucS)). These predictive densities show a considerable departure from the adjusted sample prevalence from the school data and provide a window within which the true prevalence of recorded autism in each health service would plausibly fall.
+
+#	Discussion
+
+## Findings
+
+###	Aim 1: school data frequentist prevalence
+
+* Crude prevalence peaks match known disease diagnosis patterns (young for autism and early teen for ADHD). Uptick for age 18 likely due to people with autism or ADHD taking slightly longer to complete schooling or being slightly older for their year group, therefore appear to have higher prevalence in 18yo group.
+Age patters are preserved across demographic features (check if true when all are done).
+Observed prevalences are different across the many features known to be associated with autism diagnosis which suggests Chile is comparable to other countries with more closely studied autism diagnosis patterns. 
+
+* Known differences in autism and ADHD prevalence across sexes is preserved after adjusting for age and sex structure.
+“Prevalence is higher among older students for higher fee bands.” What is a plausible explanation for this??
+
+###	Aim 2: clinical data MCA
+
+* Found features associated with autism – age, ethnicity, commune from MCA. Showed missingness in data matters. 	
+
+###	Aim 3a: linkage 
+
+* Better to do probabilistic matching than manual perfect match merging because you get more matches and get the likelihood of them being matches.
+
+* There are differences in the matched and unmatched school and patient records which suggests there may be other factors at play.
+
+* The lower percentage of females in the school dataset than the patient dataset suggests females may be under represented in school autism cases.
+
+###	Aim 3b: Bayesian
+
+* Found lower and upper-ish bounds on diagnosed autism prevalence in Chile’s health services.
+
+* Used same delta for all regions which might not be appropriate. There is a phenotypic upper bound to autism prevalence to might not be possible for Nuble upper bound to be as high as it is. 
+
+## Limitations
+
+* Single special needs code per student
+
+* Inconsistent data selection across the two clinical datasets re number of diagnosis codes and inclusion of intellectual disability. Needed better diagnosis codes for clinical data. More clinical data.
+
+* SES status coding is very imprecise though tried to account for that by declaring high error in weight allocation during matching.
+
+* Disability and foster care are unbalanced and imputation adds bias.
+
+* Double-dipping on prior selection
+
+* Consider other limitations in the opioid paper https://pubmed.ncbi.nlm.nih.gov/37292044/ 
+
+## Extensions
+
+* Test the assumption that the unmatched patients really are in the school data and get a better estimate of the new denominator.
+
+* Used age bands but could use single ages and do PCA with 1-hot encoded other features (except commune). PCA instead of MCA.
+
+* Further analysis could use deltas that are scaled to the sample prevalence observed for the region.
+
+* ADHD clinical data to estimate upper bound for ADHD.
 
 
 # Supplementary materials
 
-```{r prevAgeAutPlot, fig.cap = "Sample prevalence of autism by age band. Bars show 95% normal confidence intervals.", fig.height=3}
+```{r prevAgeAutPlot, fig.cap = "Sample prevalence of autism by age band. Bars show 95% normal confidence intervals.", fig.height=3, fig.pos='H'}
 ggplot(data = aut_prev.age) +
   geom_col(aes(x = age_june30, y = sample_prevalence*100, group = age_june30, fill = age_june30), position = position_dodge()) +
   geom_errorbar(aes(x = age_june30, ymin = ci_lower*100, ymax = ci_upper*100, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
