@@ -1,10 +1,11 @@
 ---
 title: Investigating the autism and ADHD prevalence in Chile through Bayesian prevalence
   analysis and clinical record data linkage
-author: "Student 5526"
+author: "Student 5526, Newnham College"
 date: "`r Sys.Date()`"
 output: 
   bookdown::pdf_document2:
+    toc: no
     number_sections: TRUE
 
 ---
@@ -17,9 +18,32 @@ output:
 <!-- Optionally include a page break. This will force the start
 of the document to the second page -->
 
+\begin{center}
 
-This dissertation is submitted for the degree of Master of Philosophy. The dissertation does not exceed the word limit for the respective Degree Committee.
-Word count: xxx TODO
+Declaration: 'This dissertation is submitted for the degree of Master of Philosophy.'
+
+\end{center}
+
+\newpage
+
+This dissertation is the result of my own work and includes nothing which is the outcome of work done in collaboration except where specifically indicated in the text. 
+
+The dissertation does not exceed the word limit for the respective Degree Committee. 
+
+Word count: xxx TODO [including footnotes, but excluding tables, appendices, and bibliography]
+
+\newline
+
+**Acknowledgements**
+
+TODO
+
+\newpage
+
+```{=latex}
+\setcounter{tocdepth}{4}
+\tableofcontents
+```
 
 \newpage
 
@@ -742,13 +766,6 @@ turbo_colours <- viridis(17, option = "H") #"#30123BFF" "#4662D7FF" "#36AAF9FF" 
 TODO
 
 
-# Declaration
-
-This dissertation is the result of my own work and includes nothing which is the outcome of work done in collaboration except where specifically indicated in the text.
-
-USN: xxxxx July, 2022
-
-TODO - is this section needed?
 
 
 # Introduction
@@ -1066,7 +1083,7 @@ adhd_prev_adj <- adhd_prev %>% # Don't use get_adjusted_prev here because we hav
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
 
-The school dataset contained records for `r format(nrow(chile_bayes), big.mark = ",", trim = TRUE)` Chilean students aged 6-18 in 2021. Of these, `r format(chile_bayes %>% filter(sex_desc == "Female") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(sex_desc == "Female") %>% nrow() / nrow(chile_bayes) * 100, 2)`%) were female and the rest were male.  A special needs code was recorded for `r format(chile_bayes %>% filter(special_needs_status == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(special_needs_status == 1) %>% nrow() / nrow(chile_bayes) * 100, 2)`%) students, indicating they received SEED during that school year. Of these students, `r format(chile_bayes %>% filter(autism == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(autism == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for autism and `r format(chile_bayes %>% filter(adhd == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(adhd == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for ADHD. Thus the global crude prevalence of autism in the school data was `r round(aut_prev_adj$crude_rate * 100, 3)`% (`r round(aut_prev_adj$crude_ci_lower * 100, 3)`-`r round(aut_prev_adj$crude_ci_upper * 100, 3)`%) and the global crude prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$crude_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$crude_ci_lower * 100, 2))`-`r round(adhd_prev_adj$crude_ci_upper * 100, 2)`%).
+The school dataset contained records for `r format(nrow(chile_bayes), big.mark = ",", trim = TRUE)` Chilean students aged 6-18 in 2021. Of these, `r format(chile_bayes %>% filter(sex_desc == "Female") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(sex_desc == "Female") %>% nrow() / nrow(chile_bayes) * 100, 2)`%) were female and the rest were male.  A special needs code was recorded for `r format(chile_bayes %>% filter(special_needs_status == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(special_needs_status == 1) %>% nrow() / nrow(chile_bayes) * 100, 2)`%) students, indicating they received SEED during that school year. Of these students, `r format(chile_bayes %>% filter(autism == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(autism == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for autism and `r format(chile_bayes %>% filter(adhd == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(adhd == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for ADHD. Thus the global crude prevalence of autism in the school data was `r round(aut_prev_adj$crude_rate * 100, 2)`% (`r round(aut_prev_adj$crude_ci_lower * 100, 2)`-`r round(aut_prev_adj$crude_ci_upper * 100, 2)`%) and the global crude prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$crude_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$crude_ci_lower * 100, 2))`-`r round(adhd_prev_adj$crude_ci_upper * 100, 2)`%).
 
 The crude prevalence of autism and ADHD vary with age, as shown in Tables \@ref(tab:prevAgecatAutTable) and \@ref(tab:prevAgecatAdhdTable), Figures \@ref(fig:prevAgecatAutPlot) and \@ref(fig:prevAgecatAdhdPlot), and Supplementary Figures \@ref(fig:prevAgeAutPlot) and \@ref(fig:prevAgeAdhdPlot). Autism prevalence is highest in 6-8 year olds and decreases with age while ADHD prevalence peaks around age 11 then decreases. Both conditions show a small increase in prevalence for age 18.
 
@@ -1085,7 +1102,7 @@ kbl(aut_prev.agecat.table,
     align = "rrr",
     booktabs = TRUE,
     format = "latex",
-    linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
+    #linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of autism cases by age band in Chile school data with normal confidence intervals.")
 ```
 
@@ -1104,7 +1121,7 @@ kbl(adhd_prev.agecat.table,
     align = "rrr",
     booktabs = TRUE,
     format = "latex",
-    linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
+    #linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of ADHD cases by age band in Chile school data with normal confidence intervals.")
 ```
 
@@ -1191,7 +1208,7 @@ adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f)
 
 ```
 
-Autism prevalence is `r round(aut_prev_sex_adj$crude_rate[2] * 100, 3)`% (`r round(aut_prev_sex_adj$crude_ci_lower[2] * 100, 3)`-`r round(aut_prev_sex_adj$crude_ci_upper[2] * 100, 3)`%) for females and `r sprintf("%.2f", round(aut_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(aut_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, see Table \@ref(tab:prevAgecatSexAutTable) and Figure \@ref(fig:prevAgecatSexAutPlot). ADHD prevalence is `r round(adhd_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$crude_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(adhd_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(adhd_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, see Table \@ref(tab:prevAgecatSexAdhdTable) and Figure \@ref(fig:prevAgecatSexAdhdPlot). Autism and ADHD prevalences are higher in males than females for all ages, see also Supplementary Figures \@ref(fig:prevAgeSexAutPlot) and \@ref(fig:prevAgeSexAdhdPlot).
+Autism prevalence is `r round(aut_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$crude_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(aut_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(aut_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, see Table \@ref(tab:prevAgecatSexAutTable) and Figure \@ref(fig:prevAgecatSexAutPlot). ADHD prevalence is `r round(adhd_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$crude_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(adhd_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(adhd_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, see Table \@ref(tab:prevAgecatSexAdhdTable) and Figure \@ref(fig:prevAgecatSexAdhdPlot). Autism and ADHD prevalences are higher in males than females for all ages, see also Supplementary Figures \@ref(fig:prevAgeSexAutPlot) and \@ref(fig:prevAgeSexAdhdPlot).
 
 ```{r prevAgecatSexAutTable}
 # Autism
@@ -1209,10 +1226,10 @@ kbl(aut_prev.agecat_sex.table,
     align = "rrrrr",
     booktabs = TRUE,
     format = "latex",
-    linesep = c("", "", "\\addlinespace",
-                "", "", "\\addlinespace",
-                "", "", "\\addlinespace",
-                "", "", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
+    # linesep = c("", "", "\\addlinespace",
+    #             "", "", "\\addlinespace",
+    #             "", "", "\\addlinespace",
+    #             "", "", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of autism cases by age band in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(header = c(" " = 1, "Female" = 2, "Male" = 2))
 ```
@@ -1233,10 +1250,10 @@ kbl(adhd_prev.agecat_sex.table,
     align = "rrrrr",
     booktabs = TRUE,
     format = "latex",
-    linesep = c("", "", "\\addlinespace",
-                "", "", "\\addlinespace",
-                "", "", "\\addlinespace",
-                "", "", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
+    # linesep = c("", "", "\\addlinespace",
+    #             "", "", "\\addlinespace",
+    #             "", "", "\\addlinespace",
+    #             "", "", "", "\\addlinespace"), # Extra white space after every 3rd line to match age bands
     caption = "Count and prevalence of ADHD cases by age band in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 1, "Female" = 2, "Male" = 2))
 ```
@@ -1329,7 +1346,8 @@ kbl(aut_prev_health.agecat_sex.table,
               "", "", "", "", "",
               "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of autism cases by health service and age band in Chile school data for females and males with normal confidence intervals.") %>%
-  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) #%>%
+  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
+  kable_styling(latex_options="scale_down") #%>%
   #kable_styling(latex_options = c("repeat_header"))
 ```
 
@@ -1357,7 +1375,8 @@ kbl(adhd_prev_health.agecat_sex.table,
               "", "", "", "", "",
               "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of ADHD cases by health service and age band in Chile school data for females and males with normal confidence intervals.") %>%
-  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) #%>%
+  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
+  kable_styling(latex_options="scale_down") #%>%
   #kable_styling(latex_options = c("repeat_header"))
 
 ```
@@ -1437,10 +1456,11 @@ kbl(aut_prev_econA.agecat_sex.table,
   align = "lrrrrr",
   booktabs = TRUE,
   format = "latex",
-  longtable = TRUE,
+  #longtable = TRUE,
   linesep = c("", "", "", "", "", "", "\\addlinespace"), # Extra white space after every 7th line
   caption = "Count and prevalence of Autism cases by school fee and age band in Chile school data for females and males with normal confidence intervals.") %>%
-  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) #%>%
+  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
+  kable_styling(latex_options="scale_down") #%>%
   #kable_styling(latex_options = c("repeat_header"))
 ```
 
@@ -1460,10 +1480,11 @@ kbl(adhd_prev_econA.agecat_sex.table,
   align = "lrrrrr",
   booktabs = TRUE,
   format = "latex",
-  longtable = TRUE,
+  #longtable = TRUE,
   linesep = c("", "", "", "", "", "", "\\addlinespace"), # Extra white space after every 7th line
   caption = "Count and prevalence of ADHD cases by school fee and age band in Chile school data for females and males with normal confidence intervals.") %>%
-add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) #%>%
+add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
+  kable_styling(latex_options="scale_down") #%>%
   #kable_styling(latex_options = c("repeat_header"))
 ```
 
@@ -1544,7 +1565,8 @@ kbl(aut_prev_ethnic.agecat_sex.table,
   #longtable = TRUE,
   linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of Autism cases by ethnicity and age band in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
-  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) #%>%
+  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
+  kable_styling(latex_options="scale_down") #%>%
   #kable_styling(latex_options = c("repeat_header"))
 ```
 
@@ -1567,7 +1589,8 @@ kbl(adhd_prev_ethnic.agecat_sex.table,
   #longtable = TRUE,
   linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of ADHD cases by ethnicity and age band in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
-add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) #%>%
+add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
+  kable_styling(latex_options="scale_down") #%>%
   #kable_styling(latex_options = c("repeat_header"))
 ```
 
@@ -1716,7 +1739,7 @@ ggplot(data = adhd_prev_rural.agecat_sex) +
 
 ## Frequentist prevalence estimation
 
-After using frequentist methods to adjust for the age and sex distribution of the child population of Chile in 2021, the adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 3)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 3)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 3)`%) and the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). Among females, the adjusted prevalence of autism was `r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 3)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[2] * 100, 3)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[2] * 100, 3)`%) and among males it was `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 3)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[1] * 100, 3)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[1] * 100, 3)`%). Among females, the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[1] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[1] * 100, 2)`%). As we know the prevalences of autism and ADHD in this data are likely to be underestimates, the age- and sex-adjusted prevalences can be considered a lower bound on the true prevalence of autism and of ADHD in Chile. 
+After using frequentist methods to adjust for the age and sex distribution of the child population of Chile in 2021, the adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 2)`%) and the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). Among females, the adjusted prevalence of autism was `r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[1] * 100, 2)`-`r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_ci_upper[1] * 100, 2))`%). Among females, the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[1] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[1] * 100, 2)`%). As we know the prevalences of autism and ADHD in this data are likely to be underestimates, the age- and sex-adjusted prevalences can be considered a lower bound on the true prevalence of autism and of ADHD in Chile. 
 
 Considering school data by health service, shown in Table \@ref(tab:adjPrevHealthAutTable), the adjusted prevalence of autism is much higher in Ñuble at `r round(aut_prev_health_adj$adjusted_rate[29] * 100, 2)`% (`r round(aut_prev_health_adj$adjusted_ci_lower[29] * 100, 2)` - `r round(aut_prev_health_adj$adjusted_ci_upper[29] * 100, 2)`%) than other health services and is low in rural areas such as Araucanía. It is also low in the Metropolitano health services which serve Santiago, Chile's largest city. Adjusted ADHD prevalence, shown in Table \@ref(tab:adjPrevHealthAdhdTable), is medial for Metropolitano health services and very low for Atacama, a fairly urbanised region, at `r round(adhd_prev_health_adj$adjusted_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$adjusted_ci_lower[8] * 100, 2)` - `r round(adhd_prev_health_adj$adjusted_ci_upper[8] * 100, 2)`%).
 
@@ -1974,9 +1997,7 @@ kbl(patients_mca_small.table,
                 "", "", "", "", "", "\\addlinespace", # Age band
                 "", "", "", "", "\\addlinespace", # SES
                 "", "", "", "", "", 
-                "", "", "", "", "",
-                "", "", "", "", "",
-                "", "", "", "", "\\addlinespace", # Commune
+                "", "", "", "", "", "\\addlinespace", # Commune
                 "", "\\addlinespace", # Rurality
                 "", "", "", "\\addlinespace", # Ethnicity
                 "", "", "\\addlinespace", # Disability
@@ -2740,7 +2761,9 @@ aut_newprev_araucS_adj <- aut_newprev_araucS %>% # Don't use get_adjusted_prev h
             adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+```
 
+```{r adjNewprevAraucSSex}
 # Adjusted prevalence by sex
 aut_newprev_araucS_f <- school_patients %>%
   filter(sex == 2) %>%
@@ -2759,7 +2782,65 @@ aut_newprev_araucS_adj_m <- get_adjusted_prev(aut_newprev_araucS_m, grouping_var
 aut_newprev_araucS_sex_adj <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS_adj_f) 
 ```
 
-Using the linked dataset, the crude prevalence of autism in SSAS is `r round(aut_newprev_araucS_adj$crude_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 3)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 3)`%) and the age- and sex-adjusted prevalence of autism is `r round(aut_newprev_araucS_adj$adjusted_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 3)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 3)`%). For females, crude prevalence is `r round(aut_newprev_araucS_adj_f$crude_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj_f$crude_ci_lower * 100, 3)`-`r sprintf("%.3f", round(aut_newprev_araucS_adj_f$crude_ci_upper * 100, 3))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 3)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 3)`%). For males, crude prevalence is `r round(aut_newprev_araucS_adj_m$crude_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj_m$crude_ci_lower * 100, 3)`-`r sprintf("%.3f", round(aut_newprev_araucS_adj_m$crude_ci_upper * 100, 3))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 3)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 3)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 3)`%).
+```{r adjNewprevAraucSAgecat}
+# Adjusted prevalence by age band
+chile_stdpop_6 <- chile_stdpop %>%
+  filter(age >= 6 & age <= 8) %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
+chile_stdpop_9 <- chile_stdpop %>%
+  filter(age >= 9 & age <= 11) %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
+chile_stdpop_12 <- chile_stdpop %>%
+  filter(age >= 12 & age <= 14) %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
+chile_stdpop_15 <- chile_stdpop %>%
+  filter(age >= 15 & age <= 18) %>%
+  mutate(pop_prop = std_pop / sum(std_pop))
+
+aut_newprev_araucS_6 <- school_patients %>%
+  filter(age_cat_name == "6-8") %>%
+  get_grouped_prev(stdpop = chile_stdpop_6, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+aut_newprev_araucS_adj_6 <- get_adjusted_prev(aut_newprev_araucS_6, grouping_vars = c()) %>% mutate(age_cat_name = "6-8") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+aut_newprev_araucS_9 <- school_patients %>%
+  filter(age_cat_name == "9-11") %>%
+  get_grouped_prev(stdpop = chile_stdpop_9, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+aut_newprev_araucS_adj_9 <- get_adjusted_prev(aut_newprev_araucS_9, grouping_vars = c()) %>% mutate(age_cat_name = "9-11") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+aut_newprev_araucS_12 <- school_patients %>%
+  filter(age_cat_name == "12-14") %>%
+  get_grouped_prev(stdpop = chile_stdpop_12, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+aut_newprev_araucS_adj_12 <- get_adjusted_prev(aut_newprev_araucS_12, grouping_vars = c()) %>% mutate(age_cat_name = "12-14") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+aut_newprev_araucS_15 <- school_patients %>%
+  filter(age_cat_name == "15-18") %>%
+  get_grouped_prev(stdpop = chile_stdpop_15, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+aut_newprev_araucS_adj_15 <- get_adjusted_prev(aut_newprev_araucS_15, grouping_vars = c()) %>% mutate(age_cat_name = "15-18") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_newprev_araucS_agecat_adj <- rbind(aut_newprev_araucS_adj_6,
+                                       aut_newprev_araucS_adj_9,
+                                       aut_newprev_araucS_adj_12,
+                                       aut_newprev_araucS_adj_15) 
+
+aut_newprev_araucS_agecat_adj.table <- aut_newprev_araucS_agecat_adj %>% 
+  select(age_cat_name, crude_prev_ci, adjusted_prev_ci)
+
+kbl(aut_newprev_araucS_agecat_adj.table, 
+  col.names = c("Age band", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
+  align = "lrr",
+  booktabs = TRUE,
+  format = "pandoc",
+  linesep = c(""), # No white space
+  caption = "Age- and sex-adjusted autism prevalence from linked data in SSAS by age band with 95% gamma confidence intervals.") #%>% 
+  #kable_styling(latex_options="scale_down")
+```
+
+Using the linked dataset, the crude prevalence of autism in SSAS is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 2)`%) and the age- and sex-adjusted prevalence of autism is `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 2)`%). For females, crude prevalence is `r round(aut_newprev_araucS_adj_f$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_f$crude_ci_upper * 100, 2))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 2)`%). For males, crude prevalence is `r round(aut_newprev_araucS_adj_m$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_m$crude_ci_upper * 100, 2))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 2)`%). Autism prevalence is highest among individuals aged 6-8 with crude prevalence of `r round(aut_newprev_araucS_adj_6$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$crude_ci_upper * 100, 2)`%) and age- and sex- adjusted prevalence of `r round(aut_newprev_araucS_adj_6$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$adjusted_ci_upper * 100, 2)`%) and decreases with age, see Table \@ref(tab:adjNewprevAraucSAgecat), 
 
 ```{r newPrevAraucS}
 araucS_lower_prev <- aut_prev_health_adj %>%
@@ -2817,7 +2898,7 @@ kbl(aut_newprev_health_adj.table,
   add_header_above(c(" " = 1, "Adjusted prevalence" = 2))
 ```
 
-This gives an adjusted prevalence delta for SSAS of `r round(prev_delta * 100, 3)`%. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted prevalence from the linked data for SSAS onto the other health services. The patterns of prevalence across health services are retained and Ñuble has the highest projected adjusted prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%).
+This gives an adjusted prevalence delta for SSAS of `r round(prev_delta * 100, 2)`%. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted prevalence from the linked data for SSAS onto the other health services. The patterns of prevalence across health services are retained and Ñuble has the highest projected adjusted prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%).
 
 ## Bayesian prevalence projection
 
@@ -3195,14 +3276,19 @@ Observed prevalences are different across the many features known to be associat
 
 ## Extensions
 
-* Test the assumption that the unmatched patients really are in the school data and get a better estimate of the new denominator.
+While this investigation has progressed the understanding of autism and ADHD prevalence in Chile, it has also uncovered new avenues for exploration. If clinical data on ADHD diagnoses were available for a region of Chile, the MCA analysis, data linkage and Bayesian projection conducted here for autism could be extended to ADHD. If clinical data on autism for other health service regions were available, the delta calculation could be validated and thus more accurate autism prevalence estimates could be found. 
 
-* Used age bands but could use single ages and do PCA with 1-hot encoded other features (except commune). PCA instead of MCA.
+This investigation used MCA to assess the contribution of feature categories among patients with autism in SSAS which required casting the age feature to categorical age bands. However age is a continuous variable and the information contained in it would be better captured using a continuous variable analysis technique such as principle component analysis. The commune feature would need to be excluded because it cannot be meaningfully encoded as a continuous or ordered categorical variable. The remaining features could be one-hot encoded to pseudo-continuous variables before performing PCA. This would allow the contribution of patient age to be better characterised but one-hot encoding would somewhat reduce the power of inferences about the other features used.
 
-* Further analysis could use deltas that are scaled to the sample prevalence observed for the region.
+During data linkage, this investigation assumed that unmatched patients in the clinical data existed in the school data but did not have an autism diagnosis in the school data. It would be valuable to test this assumption by attempting to link the patient data for SSAS to all school records for SSAS, including those students that do not have an autism diagnosis. This would allow the number of patients that do not exist in the school data to be estimated which would provide a more accurate sample size for use as the denominator in prevalence calculation. 
 
-* ADHD clinical data to estimate upper bound for ADHD.
 
+This investigation assumed the adjusted prevalence delta found for SSAS was directly applicable to other regions which may not be the case. Further analysis of the Bayesian prevalence projection could use health service specific deltas that are inversely proportional to the sample prevalence observed for each health service. This would decrease the delta for services with high observed prevalence and thus lessen the increase in the updated prevalence estimate, and would increase the updated prevalence estimate for health services with low observed prevalence. This would provide more biologically plausible prevalence estimates, however subsequent Bayesian analysis would be using information from the school data twice – as the sample data and to inform the health service specific prior through use of observed prevalence to scale delta.
+
+
+# Conclusions
+
+This investigation has furthered the understanding of autism and ADHD prevalence in Chile. It has found a lower bound on the prevalence of autism to be `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% in females and `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% in males) and a lower bound on the prevalence of ADHD to be `r round(adhd_prev_adj$adjusted_rate * 100, 2)`% (`r round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2)`% in females and `r round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2)`% in males). Prevalence of autism and ADHD differs across age, socio-economic status, ethnicity and rurality of students’ schools. In Servicio de Salud Araucanía Sur, age, ethnicity and commune of residence were found to be important components for explaining the variance in data on patients with autism. School data and patient data on individuals with autism in Servicio de Salud Araucanía Sur were successfully linked and used to calculate that a more accurate estimate of the prevalence of autism in this region is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_sex_adj$crude_rate[2] * 100, 2)`% for females and `r round(aut_newprev_araucS_sex_adj$crude_rate[1] * 100, 2)`% for males). Bayesian prevalence projection extended this findings across health services and demonstrated that prevalence of recorded autism cases in Chile could up to `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`%.
 
 # Supplementary materials
 
