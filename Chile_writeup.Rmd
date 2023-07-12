@@ -867,6 +867,11 @@ ggplot(arauc) +
 
 # Methods
 
+##	Deviation from research protocol
+
+This investigation differs very substantially from the research protocol provided at Appendix X. The protocol intended to investigate autism prevalence in the Cambridgeshire region using clinical data from the Cambridgeshire and Peterborough NHS Foundation Trust and school data from the UK Department for Education’s National Pupil Database. Unfortunately this clinical data was found to be of insufficient size and quality to conduct the proposed investigation and while this school data was of high quality, it had been well analysed by Roman-Urestarazu already (8)(10). Therefore school and clinical data from Chile was used instead as they were of high quality and no research on them could be found. The available data from Chile did not have fields on age at autism diagnosis and it was therefore not possible to progress the research protocol’s first aim of using machine learning to analyse autism diagnosis age. The protocol’s second aim of school autism diagnoses with clinical diagnoses was adapted to be supplementation of the Chilean school data diagnoses with clinical diagnoses, see below. Additional aims and analysis that were appropriate to the Chile data were developed and are detailed in Section [Aims] and the rest of this section.
+
+
 ## Data management
 
 The statistical software package R has been used to clean, link, analyse and visualise data. R analysis scripts and version control are managed in GitHub and are available at https://github.com/delatee/Autism-diagnosis-age-ML. Raw data and analysis outputs have not been uploaded to GitHub.   All data is stored on local devices and will be deleted at conclusion of the project.
