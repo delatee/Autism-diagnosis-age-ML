@@ -905,7 +905,7 @@ The large clinical data comprises clinical records for public sector specialist 
 
 The small and large clinical datasets will be collectively referred to as the clinical data and they do not include any records for privately provided healthcare. \@ref(fig:flowchart) shows the pre-processing of the clinical data.
 
-```{r flowchart, fig.cap="Clinical data pre-processing pathway.", echo=FALSE, out.width = '90%'}
+```{r flowchart, fig.cap="Clinical data pre-processing pathway. N = number of appointment records, N' = number of appointment records for patients resident in SSAS communes.", echo=FALSE, out.width = '90%'}
 knitr::include_graphics("Flowchart.jpg", error = FALSE)
 ```
 
