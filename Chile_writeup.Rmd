@@ -1,6 +1,5 @@
 ---
-title: Investigating the autism and ADHD prevalence in Chile through Bayesian prevalence
-  analysis and clinical record data linkage
+title: "Autism and ADHD prevalence in Chile through Bayesian prevalence analysis, machine learning and clinical record data linkage"
 author: "Student 5526, Newnham College"
 date: "`r Sys.Date()`"
 output: 
@@ -30,9 +29,8 @@ This dissertation is the result of my own work and includes nothing which is the
 
 The dissertation does not exceed the word limit for the respective Degree Committee. 
 
-Word count: xxx TODO [including footnotes, but excluding tables, appendices, and bibliography]
+Word count: xxx TODO (including footnotes, but excluding tables, appendices, and bibliography)
 
-\newline
 
 **Acknowledgements**
 
@@ -60,6 +58,7 @@ library(janitor)
 library(gridExtra)
 library(readxl)
 library(writexl)
+library(png)
 library(viridis)
 #library(wesanderson)
 library(rgbif)
@@ -881,21 +880,22 @@ The statistical software package R has been used to clean, link, analyse and vis
 
 ### School data
 
-This research uses data from the Chilean Government’s Ministerio de Educación (Ministry of Education) that was provided under a freedom of information request. This dataset contains anonymised records of 3.6 million students in all Chilean schools in 2021. It was collected and curated by the Chilean Unidad de Estadísticas (Statistics Unit), Centro de Estudios (Study Centre) and Ministerio de Educación and is housed in the Sistema de Información General de Estudiantes (General Student Information System, SIGE). This dataset will be referred to as the school data. 
+This research uses data from the Chilean Government’s Ministerio de Educación (Ministry of Education) that was provided under a freedom of information request and Chile’s Law 21545 (28). This dataset contains anonymised records of 3.6 million students in all Chilean schools in 2021. It was collected and curated by the Chilean Unidad de Estadísticas (Statistics Unit), Centro de Estudios (Study Centre) and Ministerio de Educación and is housed in the Sistema de Información General de Estudiantes (General Student Information System, SIGE). It includes data on school type and location, student characteristics, academic performance, special needs and school fee contributions. This dataset will be referred to as the school data, see Supplementary Table \@ref(tab:schooldata) for details on its available variables. 
 
 The school data shows whether students have accessed the Subvención de Educación Especial Diferencial (Differential Special Education Grant, SEED), which is provided to students with severe physical or mental disabilities, including autism and ADHD, that require education adjustments such as specialist schools or small class sizes (28). The school data includes four groups of students who have autism but are recorded in this dataset as not having autism: students with autism who attend private schools which are not eligible for SEED; students with autism who choose not to apply for SEED; students with autism who apply for SEED but are found to not be sufficiently severely affected to receive SEED; and students with autism who receive SEED but for a different disability as only one can be recorded, perhaps one that more severely affects them. The number of students in each of these groups is unknown and these groups are analogous for students with ADHD. Thus all estimates of autism and ADHD prevalence from this dataset alone are likely to be underestimates. 
 
-A collection of economic data was supplied under the same FIO request to supplement the school data. It comprises wage deducted health insurance contributions from Chile’s Fondo Nacional de Salud (National Health Fund, FONASA). This data provides the value of health insurance contributions that are based on parents’ wages, from which a colleague previously inferred school fee contributions and hence socio-economic status of students’ families.
-
 ### Clinical data
 
-This research also uses data from Chile’s Servicio de Salud Araucanía Sur (South Araucanía health service, SSAS), obtained under a freedom of information request. This data is collated from secondary care clinical records, particularly from mental health community care services. It comprises two datasets which will be referred to as the small clinical data and large clinical data.
+This research also uses data from Chile’s Servicio de Salud Araucanía Sur (South Araucanía health service, SSAS), obtained under a freedom of information request. These data are collated from secondary care clinical records, particularly from mental health community care services. They include wage deducted health insurance contributions from Chile’s Fondo Nacional de Salud (National Health Fund, FONASA). These data provide the value of health insurance contributions that are based on parents’ wages, from which a colleague previously inferred socio-economic status of patients’ families. This data collection comprises two datasets which will be referred to as the small clinical data and large clinical data. 
 
-The small clinical data was provided by Villarrica Hospital in the Villarrica commune of Chile’s Araucanía region. It comprises clinical records for public sector specialist health visits of every patient aged 6-18 with a primary, secondary or tertiary diagnosis of autism or intellectual disability between February 2014 and December 2021 that were registered for that hospital. This is understood to include every such patient resident in the communes of Curarrehue, Loncoche, Pucón and Villarica in the SSAS catchment of Chile’s Araucanía region, and include some such patients resident in the communes of Cunco, Freire, Gorbea, Nueva Imperial, Pitrufquén, Temuco, Teodoro Schmidt and Toltén in the SSAS catchment. It also includes some such patients resident in the communes of Algarrobo (Valparaíso San Antonio health service catchment, Valparaíso region), Cabo de Hornos (Magallanes health service catchment, Magallanes y Antártica Chilena region), Diego de Almagro (Atacama health service catchment, Atacama region), Hijuelas (Viña del Mar Quillota health service catchment, Valparaíso region), Machalí (Libertador B.O'Higgins health service catchment, Libertador B.O'Higgins region), Panguipulli (Valdivia health service catchment, Los Ríos region), Pencahue (Maule health service catchment, Maule region), Pica (Iquique health service catchment, Tarapacá region), Quinta Normal (Metropolitano Occidente health service catchment, Metropolitana de Santiago region) and Tocopilla (Antofagasta health service catchment, Antofagasta region).
+The small clinical data was provided by Villarrica Hospital in the Villarrica commune of Chile’s Araucanía region. It comprises clinical records for public sector specialist health visits of every patient aged 6-18 with a primary, secondary or tertiary diagnosis of autism or intellectual disability between February 2014 and December 2021 that were registered for that hospital. This is understood to include every such patient resident in the communes of Curarrehue, Loncoche, Pucón and Villarica in the SSAS catchment of Chile’s Araucanía region, and include some such patients resident in the communes of Cunco, Freire, Gorbea, Nueva Imperial, Pitrufquén, Temuco, Teodoro Schmidt and Toltén in the SSAS catchment. It also includes some such patients resident in communes in other health service catchments which will not be used. 
 
-The large clinical data comprises clinical records for public sector specialist health visits of every patient aged 6-18 with a primary diagnosis of autism between May 2015 and December 2021 for all communes in the SSAS catchment and the communes of Curacautín, Lonquimay and Victoria in the Servicio de Salud Araucanía Norte (North Araucanía health service, SSAN) catchment, both in Chile’s Araucanía region. 
+The large clinical data comprises clinical records for public sector specialist health visits of every patient aged 6-18 with a primary diagnosis of autism between May 2015 and December 2021 for all communes in the SSAS catchment. It also includes data for patients resident in the communes of Curacautín, Lonquimay and Victoria in the Servicio de Salud Araucanía Norte (North Araucanía health service, SSAN) catchment which will not be used. 
 
-The small and large clinical datasets will be collectively referred to as the clinical data and they do not include any records for privately provided healthcare.
+The small and large clinical datasets will be collectively referred to as the clinical data and they do not include any records for privately provided healthcare. \@ref(fig:flowchart) shows the pre-processing of the clinical data.
+
+
+
 
 ### Supplementary data
 
@@ -1015,6 +1015,7 @@ Prevalence was projected for each of the health services other than SSAS by addi
 ### Bayesian prevalence analysis 
 
 Bayesian prevalence analysis of autism was conducted for the school data by health service. A random-effects model was constructed with the random effect on health service as follows. 
+
 Set 
 $$y_{i} = \text{adjusted count of autism cases in health service } i$$
 $$n_{i} = \text{number of students in health service } i$$
@@ -3296,6 +3297,8 @@ This investigation assumed the adjusted prevalence delta found for SSAS was dire
 This investigation has furthered the understanding of autism and ADHD prevalence in Chile. It has found a lower bound on the prevalence of autism to be `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% in females and `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% in males) and a lower bound on the prevalence of ADHD to be `r round(adhd_prev_adj$adjusted_rate * 100, 2)`% (`r round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2)`% in females and `r round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2)`% in males). Prevalence of autism and ADHD differs across age, socio-economic status, ethnicity and rurality of students’ schools. In Servicio de Salud Araucanía Sur, age, ethnicity and commune of residence were found to be important components for explaining the variance in data on patients with autism. School data and patient data on individuals with autism in Servicio de Salud Araucanía Sur were successfully linked and used to calculate that a more accurate estimate of the prevalence of autism in this region is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_sex_adj$crude_rate[2] * 100, 2)`% for females and `r round(aut_newprev_araucS_sex_adj$crude_rate[1] * 100, 2)`% for males). Bayesian prevalence projection extended this findings across health services and demonstrated that prevalence of recorded autism cases in Chile could up to `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`%.
 
 # Supplementary materials
+
+
 
 ```{r prevAgeAutPlot, fig.cap = "Sample prevalence of autism by age band. Bars show 95% normal confidence intervals.", fig.height=3, fig.pos='H'}
 aut_prev.age <- get_grouped_prev_plot(x = chile_bayes_aut, 
