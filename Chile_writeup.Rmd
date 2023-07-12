@@ -493,7 +493,7 @@ clinical_small <- clinical_small_raw %>%
                       ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA))))))
          ) %>%
   left_join(region_service_commune_lookup, by = "commune_name_upper") %>%
-  #filter(autism == 1) %>%
+  filter(autism == 1) %>%
   select(id, gender, commune_code, commune_name, commune_name_upper, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, cod_dg_1, cod_dg_2, cod_dg_3, diagnosis, autism, aut_rank) 
 # Throws a warning because there are 2 records for Tocopila which is in two regions. Will keep both because we have no way of knowing which is correct.
 # Doesn't anymore because I changed the lookup to have only 1 Tocopilla row
@@ -2436,11 +2436,11 @@ school_all <- chile_bayes %>%
 school <- school_all %>% 
   filter(autism == 1) %>%
   # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
-  select(-age_june30, -age_cat_name) %>%
+  select(-age_june30, -age_cat_name, -autism) %>%
   rowid_to_column("id")
   
 # Add a fake row so that pairing works later
-school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-01", NA, NA, NA, NA, NA)
+school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-01", NA, NA, NA, NA)
 ```
 
 In the school records, `r format(school_all %>% nrow(), big.mark = ",", trim = TRUE)` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_all) * 100, 2)`%) have autism. 
@@ -2463,7 +2463,7 @@ patients <- clinical %>%
          dob, 
          sex_desc,
          student_commune_name,
-         autism,
+         #autism,
          ses_status#,
          #intdisab,
          #aut_rank
@@ -2509,7 +2509,7 @@ school_grouped_ses <- school %>%
   ungroup()
 
 merged_ses <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name", "ses_status"), all = FALSE)
-# 84 matches
+# 79 matches
 
 patients_grouped <- patients %>%
   group_by(sex_desc, 
@@ -2548,7 +2548,7 @@ pairs_blocked <- compare.linkage(school,
 pairs_weighted <- epiWeights(pairs_blocked, e = c(0.01, # Default for DOB
                            0.01, # Default for sex
                            0.01, # Default for commune because we want a good match
-                           0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
+                           #0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
                            0.6   # Have more error for ses_status because it is loosely defined 
                            ))
 
@@ -2630,7 +2630,7 @@ patients_matched <- patients %>%
          student_commune_name.patient = student_commune_name.x,
          id = id.y,
          ses_status.patient = ses_status.x,
-         autism.patient = autism.x,
+         #autism.patient = autism.x,
          dob.matched = dob.y,
          sex_desc.matched = sex_desc.y,
          student_commune_name.matched = student_commune_name.y,
@@ -2647,8 +2647,8 @@ patients_matched <- patients %>%
          sex_desc.school, sex_desc.patient, sex_desc.matched,
          student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
          ses_status.school, ses_status.patient, ses_status.matched,
-         weight,
-         autism.patient) %>%
+         weight) %>% #,
+         #autism.patient) %>%
   arrange(desc(weight))
 
 patients_matched_small <- patients_matched %>%
@@ -2662,8 +2662,8 @@ patients_matched_small <- patients_matched %>%
          sex_desc.patient, sex.patient,
          student_commune_name.patient, commune_code,
          ses_status.patient,
-         matched,
-         autism.patient)
+         matched) #,
+         #autism.patient)
 ```
 
 ```{r patientsUnique}
@@ -2676,19 +2676,19 @@ patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% 
 # No patient is inadvertently matched to two school records
 ```
 
-```{r patientsAut}
-# Check if any matches are to patients that only have intellectual disability
-patients_intdisab <- patients_matched_small %>% filter(matched == 1, autism.patient == 0)
-
-# There are some so check if any other patient records were available for those DOB and sex values.
-for(j in 1:nrow(patients_intdisab)) {
-  patients %>% 
-    filter(sex_desc == patients_intdisab$sex_desc.patient[j],
-           dob == patients_intdisab$dob.patient[j]) #%>% print()
-}
+```{r patientsAut, include = FALSE}
+# # Check if any matches are to patients that only have intellectual disability
+# patients_intdisab <- patients_matched_small %>% filter(matched == 1, autism.patient == 0)
+# 
+# # There are some so check if any other patient records were available for those DOB and sex values.
+# for(j in 1:nrow(patients_intdisab)) {
+#   patients %>% 
+#     filter(sex_desc == patients_intdisab$sex_desc.patient[j],
+#            dob == patients_intdisab$dob.patient[j]) #%>% print()
+# }
 ```
 
-Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blocked pairs. Probabilistic matching on sex, date of birth, commune of residence and the proxies for SES with selection of possible matches to create a bijective set of matches resulted in `r nrow(matches)` matches of unique school and patient records. This corresponds to `r round(nrow(matches) / nrow(school) * 100, 2)`% of the school records having a match in the patient records, `r round(nrow(matches) / nrow(patients) * 100, 2)`% of the patient records having a match in the school records and `r round(nrow(matches) / length(unique(patients$id)) * 100, 2)`% of the unique patients having a match in the school records. For each patient that had lived more than one commune and therefore appeared more than once in the patient data, only one match to a school record was made, meaning the linked data was bijective for school records and unique patients. `r patients_intdisab %>% nrow()` matches were made between a school record and a patient that did not have autism, rather had intellectual disability. For each of these, only one patient had sex and date of birth that perfectly matched the sex and date of birth in the school records, therefore no match to a patient with autism was available and thus these matches to patients with diagnosis of intellectual disability only were retained.
+Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blocked pairs. Probabilistic matching on sex, date of birth, commune of residence and the proxies for SES with selection of possible matches to create a bijective set of matches resulted in `r nrow(matches)` matches of unique school and patient records. This corresponds to `r round(nrow(matches) / nrow(school) * 100, 2)`% of the school records having a match in the patient records, `r round(nrow(matches) / nrow(patients) * 100, 2)`% of the patient records having a match in the school records and `r round(nrow(matches) / length(unique(patients$id)) * 100, 2)`% of the unique patients having a match in the school records. For each patient that had lived more than one commune and therefore appeared more than once in the patient data, only one match to a school record was made, meaning the linked data was bijective for school records and unique patients. 
 
 Analysis of differences between matched and unmatched records in the school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no difference in frequency of sexes between matched and unmatched school records, see Figure \@ref(fig:kolmogorovSchoolSex). They did find a difference in the frequency of sexes between matched and unmatched patient records, see Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the sex ratios differing across the datasets: the school data is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r round(school_matched_small %>% filter(matched == 1, sex_desc.school == "Female") %>% nrow() / school_matched_small %>% filter(matched == 1) %>% nrow() * 100, 2)`% females. Kolmogovo-Smirnov permutation testing found matched and unmatched records differed by commune for both the school data, see Figure \@ref(fig:kolmogorovSchoolCommune), and patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. Differences were also found by proxy SES for both school and patient data, see Figure \@ref(fig:kolmogorovSchoolSes) and Figure \@ref(fig:kolmogorovPatientSes) respectively, likely reflecting different frequencies in these values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
 
@@ -2702,17 +2702,25 @@ patients_matched_small_dedup <- patients_matched_small %>%
             student_commune_name.patient = student_commune_name.patient[which.max(matched)],
             ses_list = list(ses_status.patient),
             ses_status.patient = ses_status.patient[which.max(matched)],
-            autism.patient = max(autism.patient),
+            #autism.patient = max(autism.patient),
             matched = max(matched))
+
+
 
 n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) 
 # OR 
 n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
   dim(patients_matched_small_dedup %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
+```
 
+```{r schoolpatient}
 # Combine the school data for students in SSAS that do and don't have autism with the
 # deduplicated patient data for patients in SSAS that do and don't have autism, but leave
 # out the patients that are matches so the matched people are not double counted
+
+patients_nomatch_small_dedup <- patients_matched_small_dedup %>%
+  filter(matched == 0)
+
 school_patients <- patients_matched_small_dedup %>% 
   rename(id = patient_id,
          dob = dob.patient,
