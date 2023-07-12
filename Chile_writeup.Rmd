@@ -128,10 +128,20 @@ health_service_lookup <- chile_communes %>%
   group_by(health_service_name) %>%
   summarise() %>% 
   #rename(health_service_name_long = health_service_name) %>%
-  mutate(health_service_name_short = ifelse(grepl(" Del ", health_service_name), 
+  mutate(health_service_name_shortish = ifelse(grepl(" Del ", health_service_name), 
                                       str_sub(health_service_name, start = 23, end = -1), 
-                                      str_sub(health_service_name, start = 19, end = -1))) %>%
-  arrange(health_service_name) %>%
+                                      str_sub(health_service_name, start = 19, end = -1)),
+         health_service_name_short = ifelse(health_service_name_shortish == "Libertador B.O'Higgins", "O'Higgins",
+                                     ifelse(health_service_name_shortish == "Metropolitano Central", "Metro. Central",
+                                     ifelse(health_service_name_shortish == "Metropolitano Norte", "Metro. Norte",
+                                     ifelse(health_service_name_shortish == "Metropolitano Occidente", "Metro. Occidente",
+                                     ifelse(health_service_name_shortish == "Metropolitano Oriente", "Metro. Oriente",
+                                     ifelse(health_service_name_shortish == "Metropolitano Sur", "Metro. Sur",
+                                     ifelse(health_service_name_shortish == "Metropolitano Sur Oriente", "Metro. Sur Oriente",
+                                     ifelse(health_service_name_shortish == "Valparaíso San Antonio", "Valparaíso",
+                                     ifelse(health_service_name_shortish == "Viña del Mar Quillota", "Quillota",
+                                            health_service_name_shortish)))))))))) %>%
+  arrange(health_service_name_short) %>%
   rowid_to_column("health_service_code")
 
 # Get region codes with region name abbreviations
@@ -1217,7 +1227,7 @@ adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f)
 
 ```
 
-Autism prevalence is `r round(aut_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$crude_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(aut_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(aut_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, see Table \@ref(tab:prevAgecatSexAutTable) and Figure \@ref(fig:prevAgecatSexAutPlot). ADHD prevalence is `r round(adhd_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$crude_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(adhd_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(adhd_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, see Table \@ref(tab:prevAgecatSexAdhdTable) and Figure \@ref(fig:prevAgecatSexAdhdPlot). Autism and ADHD prevalences are higher in males than females for all ages, see also Supplementary Figures \@ref(fig:prevAgeSexAutPlot) and \@ref(fig:prevAgeSexAdhdPlot).
+In the school data, autism prevalence is `r round(aut_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$crude_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(aut_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(aut_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, with male to female ratio of `r round(aut_prev_sex_adj$crude_rate[1] / aut_prev_sex_adj$crude_rate[2], 2)`, see Table \@ref(tab:prevAgecatSexAutTable) and Figure \@ref(fig:prevAgecatSexAutPlot). ADHD prevalence is `r round(adhd_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$crude_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(adhd_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(adhd_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, with male to female ratio of `r round(adhd_prev_sex_adj$crude_rate[1] / adhd_prev_sex_adj$crude_rate[2], 2)` see Table \@ref(tab:prevAgecatSexAdhdTable) and Figure \@ref(fig:prevAgecatSexAdhdPlot). Autism and ADHD prevalences are higher in males than females for all ages, see also Supplementary Figures \@ref(fig:prevAgeSexAutPlot) and \@ref(fig:prevAgeSexAdhdPlot).
 
 ```{r prevAgecatSexAutTable}
 # Autism
@@ -1738,7 +1748,7 @@ ggplot(data = adhd_prev_rural.agecat_sex) +
 
 ## Frequentist prevalence estimation
 
-After using frequentist methods to adjust for the age and sex distribution of the child population of Chile in 2021, the adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 2)`%) and the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). Among females, the adjusted prevalence of autism was `r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[1] * 100, 2)`-`r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_ci_upper[1] * 100, 2))`%). Among females, the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[1] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[1] * 100, 2)`%). As we know the prevalences of autism and ADHD in this data are likely to be underestimates, the age- and sex-adjusted prevalences can be considered a lower bound on the true prevalence of autism and of ADHD in Chile. 
+After using frequentist methods to adjust for the age and sex distribution of the child population of Chile in 2021, the adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 2)`%) and the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). Among females, the adjusted prevalence of autism was `r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[1] * 100, 2)`-`r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_ci_upper[1] * 100, 2))`%). Among females, the adjusted prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[1] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[1] * 100, 2)`%). This gives male to female ratio of `r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_rate[1] / aut_prev_sex_adj$adjusted_rate[2], 2))` As we know the prevalences of autism and ADHD in this data are likely to be underestimates, the age- and sex-adjusted prevalences can be considered a lower bound on the true prevalence of autism and of ADHD in Chile. 
 
 Considering school data by health service, shown in Table \@ref(tab:adjPrevHealthAutTable), the adjusted prevalence of autism is much higher in Ñuble at `r round(aut_prev_health_adj$adjusted_rate[29] * 100, 2)`% (`r round(aut_prev_health_adj$adjusted_ci_lower[29] * 100, 2)` - `r round(aut_prev_health_adj$adjusted_ci_upper[29] * 100, 2)`%) than other health services and is low in rural areas such as Araucanía. It is also low in the Metropolitano health services which serve Santiago, Chile's largest city. Adjusted ADHD prevalence, shown in Table \@ref(tab:adjPrevHealthAdhdTable), is medial for Metropolitano health services and very low for Atacama, a fairly urbanised region, at `r round(adhd_prev_health_adj$adjusted_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$adjusted_ci_lower[8] * 100, 2)` - `r round(adhd_prev_health_adj$adjusted_ci_upper[8] * 100, 2)`%).
 
@@ -2714,33 +2724,53 @@ n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
 ```
 
 ```{r schoolpatient}
-# Combine the school data for students in SSAS that do and don't have autism with the
-# deduplicated patient data for patients in SSAS that do and don't have autism, but leave
-# out the patients that are matches so the matched people are not double counted
+# Get count of autism and no autism in school data
+school_all_grouped <- school_all %>%
+  group_by(age_june30, sex_desc, autism) %>%
+  summarise(count = n()) %>%
+  pivot_wider(names_from = "autism", values_from = "count") %>%
+  rename(no_autism_school = "0", yes_autism_school = "1")
 
-patients_nomatch_small_dedup <- patients_matched_small_dedup %>%
-  filter(matched == 0)
+# Remove matched patients because they are already counted as yes autism in the school data
+# Then get count of autism patients
+patients_nomatch_grouped <- patients_matched_small_dedup %>%
+  filter(matched == 0) %>%
+  mutate(age_june30 = trunc(time_length(interval(ymd(dob.patient), ymd("2021-06-30")), unit = "year"))) %>%
+  rename(sex_desc = sex_desc.patient) %>%
+  group_by(age_june30, sex_desc) %>%
+  summarise(yes_autism_patients = n())
 
-school_patients <- patients_matched_small_dedup %>% 
-  rename(id = patient_id,
-         dob = dob.patient,
-         sex_desc = sex_desc.patient,
-         student_commune_name = student_commune_name.patient,
-         autism = autism.patient,
-         ses_status = ses_status.patient
-         ) %>%
-  mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         age_cat_name = factor(ifelse(age_june30 <= 2, "0-2",
-                               ifelse(age_june30 <= 5, "3-5",
-                               ifelse(age_june30 <= 8, "6-8", 
+# Combine the counts. Move the number of autism patients from the no autism in school data to yes autism in school data
+school_patients_grouped <- merge(school_all_grouped, patients_nomatch_grouped,
+                                 by = c("age_june30", "sex_desc")) %>%
+  mutate(no_autism_linked = no_autism_school - yes_autism_patients,
+         yes_autism_linked = yes_autism_school + yes_autism_patients,
+         age_cat_name = factor(ifelse(age_june30 <= 8, "6-8", 
                                ifelse(age_june30 <= 11, "9-11", 
-                               ifelse(age_june30 <= 14, "12-14", "15-18"))))), 
-                               levels = c("0-2", "3-5", "6-8", "9-11", "12-14", "15-18"))) %>%
-  filter(matched == 0) %>% # remove matches so they're not double counted
-  select(id, dob, sex_desc, student_commune_name, autism, ses_status, age_june30, age_cat_name) %>%
-  mutate(dataset = "patients") %>%
-  rbind(school_all %>% rowid_to_column("id") %>% mutate(dataset = "school", id = as.character(id))) %>%
-  mutate(sex = ifelse(sex_desc == "Female", 2, 1))
+                               ifelse(age_june30 <= 14, "12-14", "15-18"))),
+                               levels = c("6-8", "9-11", "12-14", "15-18")),
+         sex = ifelse(sex_desc == "Female", 2, 1))
+
+# school_patients <- patients_matched_small_dedup %>% 
+#   rename(id = patient_id,
+#          dob = dob.patient,
+#          sex_desc = sex_desc.patient,
+#          student_commune_name = student_commune_name.patient,
+#          autism = autism.patient,
+#          ses_status = ses_status.patient
+#          ) %>%
+#   mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
+#          age_cat_name = factor(ifelse(age_june30 <= 2, "0-2",
+#                                ifelse(age_june30 <= 5, "3-5",
+#                                ifelse(age_june30 <= 8, "6-8", 
+#                                ifelse(age_june30 <= 11, "9-11", 
+#                                ifelse(age_june30 <= 14, "12-14", "15-18"))))), 
+#                                levels = c("0-2", "3-5", "6-8", "9-11", "12-14", "15-18"))) %>%
+#   filter(matched == 0) %>% # remove matches so they're not double counted
+#   select(id, dob, sex_desc, student_commune_name, autism, ses_status, age_june30, age_cat_name) %>%
+#   mutate(dataset = "patients") %>%
+#   rbind(school_all %>% rowid_to_column("id") %>% mutate(dataset = "school", id = as.character(id))) %>%
+#   mutate(sex = ifelse(sex_desc == "Female", 2, 1))
 ```
 
 The linked dataset contains `r format(nrow(school_patients), big.mark = ",", trim = TRUE)` records, comprising `r format(school_patients %>% filter(dataset == "school") %>% nrow(), big.mark = ",", trim = TRUE)` school records and `r format(school_patients %>% filter(dataset == "patients") %>% nrow(), big.mark = ",", trim = TRUE)` patient records.
@@ -2748,18 +2778,34 @@ The linked dataset contains `r format(nrow(school_patients), big.mark = ",", tri
 ## Updated autism prevalence estimates and delta
 
 ```{r adjNewprevAraucS}
-aut_newprev_araucS <- get_grouped_prev(x = school_patients, stdpop = chile_stdpop, 
-                                    grouping_vars = c("age_june30", "age_cat_name", "sex", "autism"),
-                                    disease = "autism")
+#aut_newprev_araucS <- get_grouped_prev(x = school_patients, stdpop = chile_stdpop, 
+#                                    grouping_vars = c("age_june30", "age_cat_name", "sex", "autism"),
+#                                    disease = "autism")
 
-aut_newprev_araucS_adj <- aut_newprev_araucS %>% # Don't use get_adjusted_prev here because we have no variables to group on
+n_stdpop <- sum(chile_stdpop$std_pop)
+
+aut_newprev_araucS <- school_patients_grouped %>%
+  #select(age_june30, age_cat_name, sex, no_autism_linked, yes_autism_linked) %>%
+  rename(age = age_june30) %>%
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
+         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  left_join(chile_stdpop, by = c("age", "sex")) %>%
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+         w2 = pop_prop / sample_pop_size,
+           #sum_std_pop = sum(std_pop)
+           ) %>%
+  ungroup()
+
+aut_newprev_araucS_adj <- aut_newprev_araucS %>%
   summarise(sum_sample_pop_size = sum(sample_pop_size),
-            crude_rate = sum(n_disease) / sum(sample_pop_size),
-            crude_count = sum(n_disease),
-            adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
+            crude_rate = sum(yes_autism_linked) / sum(sample_pop_size),
+            crude_count = sum(yes_autism_linked),
+            adjusted_rate = sum(yes_autism_linked / sample_pop_size * pop_prop),
             adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
             #adjusted_count = adjusted_rate * sum_sample_pop_size,
-            var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
+            var = sum(pop_prop^2 * yes_autism_linked / sample_pop_size^2),
             #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
             crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
@@ -2772,21 +2818,66 @@ aut_newprev_araucS_adj <- aut_newprev_araucS %>% # Don't use get_adjusted_prev h
 
 ```{r adjNewprevAraucSSex}
 # Adjusted prevalence by sex
-aut_newprev_araucS_f <- school_patients %>%
+aut_newprev_araucS_f <- school_patients_grouped %>%
   filter(sex == 2) %>%
-  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_newprev_araucS_adj_f <- get_adjusted_prev(aut_newprev_araucS_f, grouping_vars = c()) %>% mutate(sex_desc = "Female") %>%
+  rename(age = age_june30) %>%
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
+         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  left_join(chile_stdpop_f, by = c("age", "sex")) %>%
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+         w2 = pop_prop / sample_pop_size,
+           #sum_std_pop = sum(std_pop)
+           ) %>%
+  ungroup()
+
+aut_newprev_araucS_adj_f <- get_adjusted_prev(rename(aut_newprev_araucS_f, "n_disease" = "yes_autism_linked"),
+                                              grouping_vars = c()) %>%
+  mutate(sex_desc = "Female") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
-aut_newprev_araucS_m <- school_patients %>%
+aut_newprev_araucS_m <- school_patients_grouped %>%
   filter(sex == 1) %>%
-  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_newprev_araucS_adj_m <- get_adjusted_prev(aut_newprev_araucS_m, grouping_vars = c()) %>% mutate(sex_desc = "Male") %>%
+  rename(age = age_june30) %>%
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
+         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  left_join(chile_stdpop_m, by = c("age", "sex")) %>%
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+         w2 = pop_prop / sample_pop_size,
+           #sum_std_pop = sum(std_pop)
+           ) %>%
+  ungroup()
+
+aut_newprev_araucS_adj_m <- get_adjusted_prev(rename(aut_newprev_araucS_m, "n_disease" = "yes_autism_linked"),
+                                              grouping_vars = c()) %>%
+  mutate(sex_desc = "Male") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 aut_newprev_araucS_sex_adj <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS_adj_f) 
+```
+
+```{r adjNewprevAraucSSexOld}
+# # Adjusted prevalence by sex
+# aut_newprev_araucS_f <- school_patients %>%
+#   filter(sex == 2) %>%
+#   get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+# aut_newprev_araucS_adj_f <- get_adjusted_prev(aut_newprev_araucS_f, grouping_vars = c()) %>% mutate(sex_desc = "Female") %>%
+#   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+#          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+# 
+# aut_newprev_araucS_m <- school_patients %>%
+#   filter(sex == 1) %>%
+#   get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+# aut_newprev_araucS_adj_m <- get_adjusted_prev(aut_newprev_araucS_m, grouping_vars = c()) %>% mutate(sex_desc = "Male") %>%
+#   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+#          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+# 
+# aut_newprev_araucS_sex_adj <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS_adj_f) 
 ```
 
 ```{r adjNewprevAraucSAgecat}
@@ -2804,28 +2895,83 @@ chile_stdpop_15 <- chile_stdpop %>%
   filter(age >= 15 & age <= 18) %>%
   mutate(pop_prop = std_pop / sum(std_pop))
 
-aut_newprev_araucS_6 <- school_patients %>%
+# Age 6-8
+aut_newprev_araucS_6 <- school_patients_grouped %>%
   filter(age_cat_name == "6-8") %>%
-  get_grouped_prev(stdpop = chile_stdpop_6, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_newprev_araucS_adj_6 <- get_adjusted_prev(aut_newprev_araucS_6, grouping_vars = c()) %>% mutate(age_cat_name = "6-8") %>%
+  rename(age = age_june30) %>%
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
+         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  left_join(chile_stdpop_6, by = c("age", "sex")) %>%
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+         w2 = pop_prop / sample_pop_size) %>%
+  ungroup()
+
+aut_newprev_araucS_adj_6 <- get_adjusted_prev(rename(aut_newprev_araucS_6, "n_disease" = "yes_autism_linked"),
+                                              grouping_vars = c()) %>%
+  mutate(sex_desc = "Male",
+         age_cat_name = "6-8") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
-aut_newprev_araucS_9 <- school_patients %>%
+
+# Age 9-11
+aut_newprev_araucS_9 <- school_patients_grouped %>%
   filter(age_cat_name == "9-11") %>%
-  get_grouped_prev(stdpop = chile_stdpop_9, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_newprev_araucS_adj_9 <- get_adjusted_prev(aut_newprev_araucS_9, grouping_vars = c()) %>% mutate(age_cat_name = "9-11") %>%
+  rename(age = age_june30) %>%
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
+         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  left_join(chile_stdpop_9, by = c("age", "sex")) %>%
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+         w2 = pop_prop / sample_pop_size) %>%
+  ungroup()
+
+aut_newprev_araucS_adj_9 <- get_adjusted_prev(rename(aut_newprev_araucS_9, "n_disease" = "yes_autism_linked"),
+                                              grouping_vars = c()) %>%
+  mutate(sex_desc = "Male",
+         age_cat_name = "9-11") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
-aut_newprev_araucS_12 <- school_patients %>%
+
+# Age 12-14
+aut_newprev_araucS_12 <- school_patients_grouped %>%
   filter(age_cat_name == "12-14") %>%
-  get_grouped_prev(stdpop = chile_stdpop_12, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_newprev_araucS_adj_12 <- get_adjusted_prev(aut_newprev_araucS_12, grouping_vars = c()) %>% mutate(age_cat_name = "12-14") %>%
+  rename(age = age_june30) %>%
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
+         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  left_join(chile_stdpop_12, by = c("age", "sex")) %>%
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+         w2 = pop_prop / sample_pop_size) %>%
+  ungroup()
+
+aut_newprev_araucS_adj_12 <- get_adjusted_prev(rename(aut_newprev_araucS_12, "n_disease" = "yes_autism_linked"),
+                                              grouping_vars = c()) %>%
+  mutate(sex_desc = "Male",
+         age_cat_name = "12-14") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
-aut_newprev_araucS_15 <- school_patients %>%
+
+# Age 15-18
+aut_newprev_araucS_15 <- school_patients_grouped %>%
   filter(age_cat_name == "15-18") %>%
-  get_grouped_prev(stdpop = chile_stdpop_15, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_newprev_araucS_adj_15 <- get_adjusted_prev(aut_newprev_araucS_15, grouping_vars = c()) %>% mutate(age_cat_name = "15-18") %>%
+  rename(age = age_june30) %>%
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
+         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  left_join(chile_stdpop_15, by = c("age", "sex")) %>%
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
+         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+         w2 = pop_prop / sample_pop_size) %>%
+  ungroup()
+
+aut_newprev_araucS_adj_15 <- get_adjusted_prev(rename(aut_newprev_araucS_15, "n_disease" = "yes_autism_linked"),
+                                              grouping_vars = c()) %>%
+  mutate(sex_desc = "Male",
+         age_cat_name = "15-18") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
@@ -2846,7 +2992,7 @@ kbl(aut_newprev_araucS_agecat_adj.table,
   caption = "Age- and sex-adjusted autism prevalence from linked data in SSAS by age band with 95% gamma confidence intervals.") 
 ```
 
-Using the linked dataset, the crude prevalence of autism in SSAS is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 2)`%) and the age- and sex-adjusted prevalence of autism is `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 2)`%). For females, crude prevalence is `r round(aut_newprev_araucS_adj_f$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_f$crude_ci_upper * 100, 2))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 2)`%). For males, crude prevalence is `r round(aut_newprev_araucS_adj_m$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_m$crude_ci_upper * 100, 2))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 2)`%). Autism prevalence is highest among individuals aged 6-8 with crude prevalence of `r round(aut_newprev_araucS_adj_6$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$crude_ci_upper * 100, 2)`%) and age- and sex- adjusted prevalence of `r round(aut_newprev_araucS_adj_6$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$adjusted_ci_upper * 100, 2)`%) and decreases with age, see Table \@ref(tab:adjNewprevAraucSAgecat), 
+Using the linked dataset, the crude prevalence of autism in SSAS is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 2)`%) and the age- and sex-adjusted prevalence of autism is `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 2)`%). For females, crude prevalence is `r round(aut_newprev_araucS_adj_f$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_f$crude_ci_upper * 100, 2))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 2)`%). For males, crude prevalence is `r round(aut_newprev_araucS_adj_m$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_m$crude_ci_upper * 100, 2))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 2)`%). This gives an adjusted male to female ratio of `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)`. Autism prevalence is highest among individuals aged 6-8 with crude prevalence of `r round(aut_newprev_araucS_adj_6$crude_rate * 100, 2)`% (`r sprintf("%.2f", round(aut_newprev_araucS_adj_6$crude_ci_lower * 100, 2))`-`r round(aut_newprev_araucS_adj_6$crude_ci_upper * 100, 2)`%) and age- and sex- adjusted prevalence of `r round(aut_newprev_araucS_adj_6$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$adjusted_ci_upper * 100, 2)`%) and decreases with age, see Table \@ref(tab:adjNewprevAraucSAgecat). 
 
 ```{r newPrevAraucS}
 araucS_lower_prev <- aut_prev_health_adj %>%
