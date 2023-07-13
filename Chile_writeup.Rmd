@@ -2773,7 +2773,7 @@ school_patients_grouped <- merge(school_all_grouped, patients_nomatch_grouped,
 #   mutate(sex = ifelse(sex_desc == "Female", 2, 1))
 ```
 
-The linked dataset contains `r format(nrow(school_patients), big.mark = ",", trim = TRUE)` records, comprising `r format(school_patients %>% filter(dataset == "school") %>% nrow(), big.mark = ",", trim = TRUE)` school records and `r format(school_patients %>% filter(dataset == "patients") %>% nrow(), big.mark = ",", trim = TRUE)` patient records.
+
 
 ## Updated autism prevalence estimates and delta
 
