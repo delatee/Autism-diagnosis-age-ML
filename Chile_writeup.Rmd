@@ -1579,7 +1579,7 @@ kbl(aut_prev_ethnic.agecat_sex.table,
   linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of Autism cases by ethnicity and age band in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(font_size = 7.5)
+  kable_styling(font_size = 8)
 ```
 
 ```{r prevAgecatEthnicAdhdTable}
@@ -1602,7 +1602,7 @@ kbl(adhd_prev_ethnic.agecat_sex.table,
   linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of ADHD cases by ethnicity and age band in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
 add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(font_size = 7.5)
+  kable_styling(font_size = 8)
 ```
 
 ```{r prevAgecatEthnicAutPlot, fig.cap = "Sample prevalence of autism in school data by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only.", fig.height=3}
@@ -2540,7 +2540,7 @@ merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_nam
 # 197 matches
 ```
 
-Using perfect match on sex, date of birth, commune of residence and the proxies for SES, `r nrow(merged_ses)` matches can be found between the school and patient records. Of these, `r length(unique(merged_ses$id.x))` unique school records can be perfectly matched to clinical records, and all perfect matches were for unique patients. When mismatch on SES proxy is allowed, `r nrow(merged)` matches can be manually found between the school and patient records. Of these, `r length(unique(merged$id.x))` unique school records can be perfectly matched to clinical records and `r length(unique(merged$id.y))` patients can be perfectly matched to school records.
+Using perfect match on sex, date of birth, commune of residence and the proxies for SES, `r nrow(merged_ses)` matches can be found between the SSAS school and patient records. Of these, `r length(unique(merged_ses$id.x))` unique SSAS school records can be perfectly matched to SSAS patient records, and all perfect matches were for unique patients. When mismatch on SES proxy is allowed, `r nrow(merged)` matches can be manually found between the SSAS school and patient records. Of these, `r length(unique(merged$id.x))` unique school records can be perfectly matched to SSAS patient records and `r length(unique(merged$id.y))` SSAS patients can be perfectly matched to SSAS school records.
 
 ### Probabilistic record linkage
 
@@ -2559,7 +2559,7 @@ pairs_weighted <- epiWeights(pairs_blocked, e = c(0.01, # Default for DOB
                            0.01, # Default for sex
                            0.01, # Default for commune because we want a good match
                            #0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
-                           0.6   # Have more error for ses_status because it is loosely defined 
+                           0.1   # Have more error for ses_status because it is loosely defined 
                            ))
 
 pairs_classified <- emClassify(pairs_weighted, threshold.upper = 1, threshold.lower = 0.8)
@@ -2698,11 +2698,12 @@ patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% 
 # }
 ```
 
-Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blocked pairs. Probabilistic matching on sex, date of birth, commune of residence and the proxies for SES with selection of possible matches to create a bijective set of matches resulted in `r nrow(matches)` matches of unique school and patient records. This corresponds to `r round(nrow(matches) / nrow(school) * 100, 2)`% of the school records having a match in the patient records, `r round(nrow(matches) / nrow(patients) * 100, 2)`% of the patient records having a match in the school records and `r round(nrow(matches) / length(unique(patients$id)) * 100, 2)`% of the unique patients having a match in the school records. For each patient that had lived more than one commune and therefore appeared more than once in the patient data, only one match to a school record was made, meaning the linked data was bijective for school records and unique patients. 
+Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blocked pairs. Probabilistic matching on sex, date of birth, commune of residence and the proxies for SES with selection of possible matches to create a bijective set of matches resulted in `r nrow(matches)` matches of unique SSAS school and patient records. This corresponds to `r round(nrow(matches) / nrow(school) * 100, 2)`% of the school records for students with autism in SSAS having a match in the SSAS patient records, `r round(nrow(matches) / nrow(patients) * 100, 2)`% of the patient records having a match in the SSAS school records and `r round(nrow(matches) / length(unique(patients$id)) * 100, 2)`% of the unique patients having a match in the SSAS school records. For each patient that had lived in more than one commune and therefore appeared more than once in the patient data, only one match to an SSAS school record was made, meaning the matching was bijective for SSAS school records and unique patients. 
 
-Analysis of differences between matched and unmatched records in the school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no difference in frequency of sexes between matched and unmatched school records, see Figure \@ref(fig:kolmogorovSchoolSex). They did find a difference in the frequency of sexes between matched and unmatched patient records, see Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the sex ratios differing across the datasets: the school data is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r round(school_matched_small %>% filter(matched == 1, sex_desc.school == "Female") %>% nrow() / school_matched_small %>% filter(matched == 1) %>% nrow() * 100, 2)`% females. Kolmogovo-Smirnov permutation testing found matched and unmatched records differed by commune for both the school data, see Figure \@ref(fig:kolmogorovSchoolCommune), and patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. Differences were also found by proxy SES for both school and patient data, see Figure \@ref(fig:kolmogorovSchoolSes) and Figure \@ref(fig:kolmogorovPatientSes) respectively, likely reflecting different frequencies in these values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
+Analysis of differences between matched and unmatched records in the SSAS school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no significant difference in frequency of sexes between matched and unmatched SSAS school records, see Figure \@ref(fig:kolmogorovSchoolSex). They found a strongly significant difference in the frequency of sexes between matched and unmatched patient records, see Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the sex ratios differing across the datasets: the SSAS school data is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r round(school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow() / school_matched_small %>% nrow() * 100, 2)`% females. Kolmogovo-Smirnov permutation testing found matched and unmatched records differed significantly by commune for the SSAS school data, see Figure \@ref(fig:kolmogorovSchoolCommune), and that there was no significant difference between matched and unmatched records by commune for the patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. By proxy SES, there was a strongly significant difference between matched and unmatched records in the SSAS school and a somewhat significant difference for the patient data, see Figure \@ref(fig:kolmogorovSchoolSes) and Figure \@ref(fig:kolmogorovPatientSes) respectively, likely reflecting different frequencies in these values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
 
-### Linked dataset
+
+## Updated autism prevalence estimates and delta
 
 ```{r newPrev}
 # Aggregate patients to single row per patient by choosing the commune that has a match where available.
@@ -2772,10 +2773,6 @@ school_patients_grouped <- merge(school_all_grouped, patients_nomatch_grouped,
 #   rbind(school_all %>% rowid_to_column("id") %>% mutate(dataset = "school", id = as.character(id))) %>%
 #   mutate(sex = ifelse(sex_desc == "Female", 2, 1))
 ```
-
-
-
-## Updated autism prevalence estimates and delta
 
 ```{r adjNewprevAraucS}
 #aut_newprev_araucS <- get_grouped_prev(x = school_patients, stdpop = chile_stdpop, 
@@ -2989,10 +2986,10 @@ kbl(aut_newprev_araucS_agecat_adj.table,
   booktabs = TRUE,
   format = "pandoc",
   linesep = c(""), # No white space
-  caption = "Age- and sex-adjusted autism prevalence from linked data in SSAS by age band with 95% gamma confidence intervals.") 
+  caption = "Age- and sex-adjusted updated autism prevalence from data linkage in SSAS by age band with 95% gamma confidence intervals.") 
 ```
 
-Using the linked dataset, the crude prevalence of autism in SSAS is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 2)`%) and the age- and sex-adjusted prevalence of autism is `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 2)`%). For females, crude prevalence is `r round(aut_newprev_araucS_adj_f$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_f$crude_ci_upper * 100, 2))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 2)`%). For males, crude prevalence is `r round(aut_newprev_araucS_adj_m$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_m$crude_ci_upper * 100, 2))`%) and the adjusted prevalence is `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 2)`%). This gives an adjusted male to female ratio of `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)`. Autism prevalence is highest among individuals aged 6-8 with crude prevalence of `r round(aut_newprev_araucS_adj_6$crude_rate * 100, 2)`% (`r sprintf("%.2f", round(aut_newprev_araucS_adj_6$crude_ci_lower * 100, 2))`-`r round(aut_newprev_araucS_adj_6$crude_ci_upper * 100, 2)`%) and age- and sex- adjusted prevalence of `r round(aut_newprev_araucS_adj_6$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$adjusted_ci_upper * 100, 2)`%) and decreases with age, see Table \@ref(tab:adjNewprevAraucSAgecat). 
+The crude updated prevalence of autism in SSAS is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 2)`%) and the age- and sex-adjusted prevalence of autism is `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 2)`%). For females, crude updated prevalence is `r round(aut_newprev_araucS_adj_f$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_f$crude_ci_upper * 100, 2))`%) and the adjusted updated prevalence is `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 2)`%). For males, crude updated prevalence is `r round(aut_newprev_araucS_adj_m$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$crude_ci_lower * 100, 2)`-`r sprintf("%.2f", round(aut_newprev_araucS_adj_m$crude_ci_upper * 100, 2))`%) and the adjusted updated prevalence is `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 2)`%). This gives an adjusted male to female ratio of `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)`. Updated autism prevalence is highest among individuals aged 6-8 with crude prevalence of `r round(aut_newprev_araucS_adj_6$crude_rate * 100, 2)`% (`r sprintf("%.2f", round(aut_newprev_araucS_adj_6$crude_ci_lower * 100, 2))`-`r round(aut_newprev_araucS_adj_6$crude_ci_upper * 100, 2)`%) and age- and sex- adjusted prevalence of `r round(aut_newprev_araucS_adj_6$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$adjusted_ci_upper * 100, 2)`%) and decreases with age, see Table \@ref(tab:adjNewprevAraucSAgecat). 
 
 ```{r newPrevAraucS}
 araucS_lower_prev <- aut_prev_health_adj %>%
@@ -3041,16 +3038,16 @@ aut_newprev_health_adj.table <- aut_prev_health_adj %>%
                             ")")) %>%
   select(health_service_name, adjusted_prev_ci, new_prev_ci)
 kbl(aut_newprev_health_adj.table,
-    col.names = c("Health service", "School data (95% CI)", "Projected linked data (Equivalent CI)"),
+    col.names = c("Health service", "Adjusted prevalence (95% CI)", "Adjusted updated prevalence (Equivalent CI)"),
     align = "lrr",
     booktabs = TRUE,
     format = "pandoc",
     linesep = c(""), # No extra white space
-    caption = "Projected age- and sex-adjusted autism prevalence by health service in Chile school data and linked school and patient data. Projections for the linked adjusted prevalence for health services other than Araucanía Sur were calculated by adding delta to each health service's adjusted prevalence from the school data. Adjusted prevalence from the school data has 95% gamma confidence intervals and projected adjusted prevalence from the linked data has confidence intervals equal in width to the school data adjusted prevalence intervals for each health service other than Araucanía Sur which has the 95% gamma confidence intervals found earlier.") %>%
+    caption = "Adjusted prevalence and adjusted updated prevalence of autism by health service in Chile. Adjusted prevalence is from school data only. Adjusted updated prevalence is from linkage of school data and patient data. Prevalences for Servicio de Salud Araucanía Sur were calculated directly from linkage results. Prevalences for other health services were calcuated by adding the adjusted prevalence delta to each health service's adjusted prevalence from the school data only. Adjusted prevalence has 95% gamma confidence intervals and adjusted updated prevalence has confidence intervals equal in width to the school data adjusted prevalence intervals for each health service, except for SSAS which has the 95% gamma confidence intervals found earlier.") %>%
   add_header_above(c(" " = 1, "Adjusted prevalence" = 2))
 ```
 
-This gives an adjusted prevalence delta for SSAS of `r round(prev_delta * 100, 2)`%. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted prevalence from the linked data for SSAS onto the other health services. The patterns of prevalence across health services are retained and Ñuble has the highest projected adjusted prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%).
+This gives an adjusted prevalence delta for SSAS of `r round(prev_delta * 100, 2)`%. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted updated prevalence from the data linkage for SSAS onto the other health services. The patterns of prevalence across health services are retained and Ñuble has the highest adjusted updated prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%).
 
 ## Bayesian prevalence projection
 
@@ -3204,9 +3201,9 @@ ggplot() +
 
 ```
 
-Figure \@ref(fig:bayesLowPrior) shows Bayesian prevalence projections by health service with health service specific priors and as expected, the posteriors 95% credible intervals are coincident with the adjusted sample prevalence 95% confidence intervals. The posterior prevalence peaks can be considered lower bounds for the true autism prevalence in each health service.
+Figure \@ref(fig:bayesLowPrior) shows Bayesian prevalence projections by health service with health service specific priors. As expected, the posterior 95% credible intervals are coincident with the adjusted sample prevalence 95% confidence intervals. The posterior prevalence peaks can be considered lower bounds for the true autism prevalence in each health service.
 
-```{r bayesHighPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted projected autism prevalence from linked data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+```{r bayesHighPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted updated autism prevalence from data linkage. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 # Now have health service specific priors so need to provide them as vectors and index each as needed
 rand_model_high <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
@@ -3288,9 +3285,9 @@ ggplot() +
 
 ```
 
-With projected prevalence priors, the Bayesian prevalence projections shown in Figure \@ref(fig:bayesHighPrior) are pulled upward toward their priors by approximately delta. For regions with high sample prevalence such as Ñuble, this addition of delta results in a posterior prevalence projects up to 1.5 percentage points higher than the global adjusted prevalence for the school data. The posterior prevalence peaks can be considered plausible upper bounds for the prevalence of recorded cases of autism in each health service.
+With projected prevalence priors, the Bayesian prevalence projections shown in Figure \@ref(fig:bayesHighPrior) are pulled upward toward their priors by approximately delta. For regions with high sample prevalence such as Ñuble, this addition of delta results in a posterior prevalence projects up to 1.5 percentage points higher than the global adjusted prevalence for the school data only which may not be plausible.
 
-```{r bayesUniformPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Uniform prior bounded by health service specific age- and sex-adjusted autism prevalence from school data, and health service specific age- and sex-adjusted projected autism prevalence from linked data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+```{r bayesUniformPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Uniform prior bounded by health service specific age- and sex-adjusted autism prevalence from school data, and health service specific age- and sex-adjusted updated autism prevalence from data linkage. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 
 ####### Need to do all by health service code not name because name sorts in different orders.
 
@@ -3381,6 +3378,10 @@ ggplot() +
 
 In Figure \@ref(fig:bayesUniformPrior), the posterior distributions are reflective of their uniform priors with posterior credible intervals slightly within the prior bounds (Table \@ref(tab:newPrevAraucS)). These predictive densities show a considerable departure from the adjusted sample prevalence from the school data and provide a window within which the true prevalence of recorded autism in each health service would plausibly fall.
 
+## Projected unmet need in school support
+
+Do unmet need if delta is true across all regions and if araucS adjusted updated prev is true for all regions except Nuble which can keeps its observed prev.
+
 #	Discussion
 
 ## Findings
@@ -3441,7 +3442,7 @@ This investigation assumed the adjusted prevalence delta found for SSAS was dire
 
 # Conclusions
 
-This investigation has furthered the understanding of autism and ADHD prevalence in Chile. It has found a lower bound on the prevalence of autism to be `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% in females and `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% in males) and a lower bound on the prevalence of ADHD to be `r round(adhd_prev_adj$adjusted_rate * 100, 2)`% (`r round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2)`% in females and `r round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2)`% in males). Prevalence of autism and ADHD differs across age, socio-economic status, ethnicity and rurality of students’ schools. In Servicio de Salud Araucanía Sur, age, ethnicity and commune of residence were found to be important components for explaining the variance in data on patients with autism. School data and patient data on individuals with autism in Servicio de Salud Araucanía Sur were successfully linked and used to calculate that a more accurate estimate of the prevalence of autism in this region is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_sex_adj$crude_rate[2] * 100, 2)`% for females and `r round(aut_newprev_araucS_sex_adj$crude_rate[1] * 100, 2)`% for males). Bayesian prevalence projection extended this findings across health services and demonstrated that prevalence of recorded autism cases in Chile could up to `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`%.
+This investigation has furthered the understanding of autism and ADHD prevalence in Chile. The patterns of autism and ADHD prevalence in Chile are consistent with other countries. A lower bound on prevalence of autism in Chile is `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% in females and `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% in males) and a lower bound on the prevalence of ADHD is `r round(adhd_prev_adj$adjusted_rate * 100, 2)`% (`r round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2)`% in females and `r round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2)`% in males). In Servicio de Salud Araucanía Sur, age, ethnicity and commune of residence were found to be important components for explaining the variance in data on patients with autism. School data and patient data on individuals with autism in SSAS were successfully linked and used to calculate that a more accurate estimate of the prevalence of autism in this region is `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% with male to female ratio of `r sprintf("%.2f", round(aut_newprev_araucS_sex_adj$crude_rate[1] / aut_newprev_araucS_sex_adj$crude_rate[2]))` (`r round(aut_newprev_araucS_sex_adj$crude_rate[2] * 100, 2)`% for females and `r round(aut_newprev_araucS_sex_adj$crude_rate[1] * 100, 2)`% for males). This corresponds to an unmet need of `r sum(patients_nomatch_grouped$yes_autism_patients)` additional students in SSAS with autism that do not receive SEED funding for autism. Bayesian prevalence projection extended prevalence projections across health services and demonstrated that the prevalence of recorded autism cases in Chile could up to `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`%.
 
 # Supplementary materials
 
@@ -4075,7 +4076,7 @@ kolmog_school_sex.bar <- ggplot(school_match.sex) +
                fill = factor(matched, labels = c("Unmatched", "Matched")))) +
   theme(legend.position = "none") +
   facet_wrap(~sex_desc) +
-  labs(title = "Matching of school record to clinical record by sex",
+  labs(title = "Matched status of SSAS school records by sex",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -4083,7 +4084,7 @@ kolmog_school_sex.bar <- ggplot(school_match.sex) +
 kolmog_school_sex.density <- ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
   geom_density() +
   geom_vline(xintercept = ks.school.sex$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by sex and observed p-value (red)",
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status of SSAS school records by sex, with observed p-value",
        x = "Sex",
        y = "Density")
 
@@ -4104,7 +4105,7 @@ kolmog_patient_ses.bar <- ggplot(patients_match.sex) +
                fill = factor(matched, labels = c("Unmatched", "Matched")))) +
   theme(legend.position = "none") +
   facet_wrap(~sex_desc) +
-  labs(title = "Matching of clinical record to school record by sex",
+  labs(title = "Matched status of SSAS patient records by sex",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -4112,7 +4113,7 @@ kolmog_patient_ses.bar <- ggplot(patients_match.sex) +
 kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = sex, y = after_stat(density))) +
   geom_density() +
   geom_vline(xintercept = ks.patients.sex$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in patient data by sex and observed p-value (red)",
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status of patient records by sex, with observed p-value",
        x = "Sex",
        y = "Density")
 
@@ -4141,7 +4142,7 @@ kolmog_school_commune.bar <- ggplot(school_match.student_commune_name) +
   theme(legend.position = "none") +
   facet_wrap(~student_commune_name.school, scales = "fixed") +
   #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of school record to clinical record by commune",
+  labs(title = "Matched status of SSAS school records by commune",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -4150,7 +4151,7 @@ kolmog_school_commune.bar <- ggplot(school_match.student_commune_name) +
 kolmog_school_commune.density <- ggplot(ks_perm.school.pvals, aes(x = commune_code, y = after_stat(density))) +
   geom_density() +
   geom_vline(xintercept = ks.school.commune_code$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by commune and observed p-value (red)",
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status of SSAS school records by commune, with observed p-value",
        x = "Commune",
        y = "Density")
 
@@ -4180,7 +4181,7 @@ kolmog_patient_commune.bar <- ggplot(patients_match.student_commune_name) +
   theme(legend.position = "none") +
   facet_wrap(~student_commune_name.patient, scales = "fixed") +
   #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of clinical record to school record by commune",
+  labs(title = "Matched status of SSAS patient records by commune",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -4189,7 +4190,7 @@ kolmog_patient_commune.bar <- ggplot(patients_match.student_commune_name) +
 kolmog_patient_commune.density <- ggplot(ks_perm.patients.pvals, aes(x = commune_code, y = after_stat(density))) +
   geom_density() +
   geom_vline(xintercept = ks.patients.commune_code$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in patient data by commune and observed p-value (red)",
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status of patient records by commune, with observed p-value",
        x = "Commune",
        y = "Density")
 
@@ -4209,7 +4210,7 @@ kolmog_school_ses.bar <- ggplot(school_match.ses_status) +
                fill = factor(matched, labels = c("Unmatched", "Matched")))) +
   theme(legend.position = "none") +
   facet_wrap(~ses_status.school) +
-  labs(title = "Matching of school record to clinical record by SES status",
+  labs(title = "Matched status of SSAS school records by SES",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -4217,7 +4218,7 @@ kolmog_school_ses.bar <- ggplot(school_match.ses_status) +
 kolmog_school_ses.density <- ggplot(ks_perm.school.pvals, aes(x = ses_status, y = after_stat(density))) +
   geom_density() +
   geom_vline(xintercept = ks.school.ses_status$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in school data by proxy SES and observed p-value (red)",
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status of SSAS school records by SES, with observed p-value",
        x = "Proxy SES",
        y = "Density")
 
@@ -4237,7 +4238,7 @@ kolmog_patient_ses.bar <- ggplot(patients_match.ses_status) +
                fill = factor(matched, labels = c("Unmatched", "Matched")))) +
   theme(legend.position = "none") +
   facet_wrap(~ses_status.patient) +
-  labs(title = "Matching of clinical record to school record by SES status",
+  labs(title = "Matched status of SSAS patient records by SES",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -4245,7 +4246,7 @@ kolmog_patient_ses.bar <- ggplot(patients_match.ses_status) +
 kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = ses_status, y = after_stat(density))) +
   geom_density() +
   geom_vline(xintercept = ks.patients.ses_status$p.value, color = "red") +
-  labs(title = "Kolmogorov-Smirnov permutation test on matched status in patient data by proxy SES and observed p-value (red)",
+  labs(title = "Kolmogorov-Smirnov permutation test on matched status of patient records by SES, with observed p-value",
        x = "Proxy SES",
        y = "Density")
 
