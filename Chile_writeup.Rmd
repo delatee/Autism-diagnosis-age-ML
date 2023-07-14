@@ -139,7 +139,7 @@ health_service_lookup <- chile_communes %>%
                                      ifelse(health_service_name_shortish == "Metropolitano Sur", "Metro. Sur",
                                      ifelse(health_service_name_shortish == "Metropolitano Sur Oriente", "Metro. Sur Oriente",
                                      ifelse(health_service_name_shortish == "Valparaíso San Antonio", "Valparaíso",
-                                     ifelse(health_service_name_shortish == "Viña del Mar Quillota", "Quillota",
+                                     ifelse(health_service_name_shortish == "Viña del Mar Quillota", "Viña del Mar",
                                             health_service_name_shortish)))))))))) %>%
   arrange(health_service_name_short) %>%
   rowid_to_column("health_service_code")
@@ -1374,7 +1374,7 @@ kbl(aut_prev_health.agecat_sex.table,
               "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of autism cases by health service and age band in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(latex_options = c("repeat_header"), font_size = 7)
+  kable_styling(latex_options = c("repeat_header"), font_size = 7.5)
 ```
 
 ```{r prevAgecatHealthAdhdTable}
@@ -1402,7 +1402,7 @@ kbl(adhd_prev_health.agecat_sex.table,
               "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of ADHD cases by health service and age band in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(latex_options = c("repeat_header"), font_size = 7)
+  kable_styling(latex_options = c("repeat_header"), font_size = 7.5)
 
 ```
 
@@ -3422,7 +3422,7 @@ The proportions of matched and unmatched records in the SSAS school and patient 
 
 The updated estimate for the prevalence of autism in SSAS is `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% with a male to female ratio of `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)`. This sex ratio is consistent with the 4:1 ratio found by Yáñez et al (41). The is updated prevalence estimate found here is likely to be an underestimate due to not having private sector diagnoses in the clinical data and it is  somewhat smaller than Yáñez et al’s estimate of 1.96% (0.81-4.63) in Santiago communes but well within their estimate’s confidence interval (41). This investigation therefore provides further evidence that the prevalence of autism and its sex distribution in Chile is comparable to other countries. 
 
-Projecting the adjusted prevalence delta across all regions resulted in updated estimates for all health services that are comparable to Yáñez et al’s estimate (41). Ñuble’s standard adjusted prevalence estimate is considerably higher than for other communes which may indicate that Ñuble uses a different approach for autism SEED funding assessment and this figure may be more indicative of Chile’s true autism prevalence. Using the same adjusted prevalence delta for all regions may not have been appropriate given the regions differ considerably in prevalence observed from the school data. Additionally, SSAS is in the bottom third of adjusted prevalence estimates, meaning it is likely to have a larger difference between adjusted prevalence from the school data and true prevalence. If we can assume the adjusted updated prevalence for SSAS is the true autism prevalence of Chile then the delta to reach this will be larger for SSAS than for regions with higher original adjusted prevalence from the school data. Therefore using SSAS’s delta in higher prevalence regions will produce overestimates. Ñuble’s adjusted updated prevalence is xxx% which is possible but there is a phenotypic upper bound on true autism prevalence and it is more likely that a larger proportion of people with autism in Ñuble are accessing SEED than in other regions.  
+Projecting the adjusted prevalence delta across all regions resulted in updated estimates for all health services that are comparable to Yáñez et al’s estimate (41). Ñuble’s standard adjusted prevalence estimate is considerably higher than for other communes which may indicate that Ñuble uses a different approach for autism SEED funding assessment and this figure may be more indicative of Chile’s true autism prevalence. Using the same adjusted prevalence delta for all regions may not have been appropriate given the regions differ considerably in prevalence observed from the school data. Additionally, SSAS is in the bottom third of adjusted prevalence estimates, meaning it is likely to have a larger difference between adjusted prevalence from the school data and true prevalence. If we can assume the adjusted updated prevalence for SSAS is the true autism prevalence of Chile then the delta to reach this will be larger for SSAS than for regions with higher original adjusted prevalence from the school data. Therefore using SSAS’s delta in higher prevalence regions will produce overestimates. Ñuble’s adjusted updated prevalence is `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% which is biologically possible but there is a phenotypic upper bound on true autism prevalence and it is more likely that a larger proportion of people with autism in Ñuble are accessing SEED than in other regions.  
 
 The Bayes prevalence projection was able to circumvent issues with the applicability of the adjusted prevalence delta by modelling prevalence within plausible bounds provided by the school and clinical dataset. Using uniform priors specific to the health services that spanned the lower bounds found through frequentist methods to the possibly overestimated adjusted updated prevalences found through linkage, the Bayesian modelling found that the true prevalence of autism in each commune is likely to be considerably higher than the prevalences observed from the school data alone. This analysis has determined a plausible range within which the true prevalence for each region is quantifiably likely to fall. 
 
@@ -4264,3 +4264,19 @@ kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = ses_status,
 
 grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
 ```
+
+\newpage
+
+# References
+
+TODO
+
+\newpage
+
+# Appendix A | R code
+
+
+# Appendix B | Research Protocol
+
+See overleaf.
+
