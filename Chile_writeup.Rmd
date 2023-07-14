@@ -162,7 +162,8 @@ region_service_commune_lookup <- chile.adm3 %>%
          health_service_name = 
            ifelse(ADM3_PCODE == "CL01401", "Servicio de Salud Iquique", 
            ifelse(ADM3_PCODE == "CL11201", "Servicio de Salud Aisén",
-           ifelse(ADM3_PCODE == "CL05201", "Servicio de Salud Metropolitano Oriente",
+           ifelse(ADM3_PCODE == "CL05201", "Servicio de Salud Valparaíso San Antonio", 
+                    # Isla del Pascua is actually served by Metro Oriente but maps to Valparaiso
            ifelse(ADM3_PCODE == "CL08206", "Servicio de Salud Arauco",
            ifelse(ADM3_PCODE == "CL08301", "Servicio de Salud Biobío",
            ifelse(ADM3_PCODE == "CL06204", "Servicio de Salud Del Libertador B.O'Higgins",
@@ -187,15 +188,21 @@ region_service_commune_lookup <- merge(region_service_commune_lookup,
                               substr(region_name_long, start = 12, stop = nchar(region_name_long)), NA)))) %>%
   select(region_name_long, region_name, region_name_abr, region_code, ADM1_PCODE,
          commune_name, commune_name_upper, commune_code, 
-         health_service_name_long, health_service_name, health_service_code,
+         health_service_name_long, health_service_name_shortish, health_service_name, health_service_code,
          geometry)
 
 # Aggregate to region level (no )
 region_lookup <- region_service_commune_lookup %>% 
-  as.tibble %>%
+  as.tibble() %>%
   select(-geometry) %>%
   group_by(region_code, ADM1_PCODE, region_name, region_name_abr) %>% 
   summarise() 
+
+region_service_lookup <- region_service_commune_lookup %>%
+  as.tibble() %>%
+  select(-geometry) %>%
+  group_by(region_code, region_name, health_service_code, health_service_name_shortish, health_service_name) %>%
+  summarise()
 
 # Extract communes for the Araucania Sur and Norte health services
 araucnorte_communes <- region_service_commune_lookup %>%
@@ -251,6 +258,14 @@ chile_regionincome <- chile_regionincome_raw %>%
                          ifelse(region_short == "Metropolitana", "Metropolitana de Santiago",
                          ifelse(region_short == "O’Higgins", "Libertador Bernardo O'Higgins", region_short)))))) %>%
   select(region_name, ingreso_medio_nominal)
+
+chile_regionrural_raw <- read_excel("04_Data/1_2_poblacion.xls", sheet = "Sheet1") %>%
+  clean_names()
+
+chile_regionrural <- chile_regionrural_raw %>%
+  mutate(pop = urban + rural,
+         urban_perc = urban / pop * 100,
+         rural_perc = rural / pop * 100)
 
 ```
 
@@ -790,7 +805,8 @@ TODO - copy in intro text
 demog_geom <- chile.adm1 %>%
   left_join(region_lookup, by = "ADM1_PCODE") %>%
   left_join(chile_regionpop, by = "region_name") %>%
-  left_join(chile_regionincome, by = "region_name")
+  left_join(chile_regionincome, by = "region_name") %>%
+  left_join(select(chile_regionrural, -region), by = "region_code")
 
 #chile.adm2 <- st_read("04_Data/CHL_adm/CHL_adm2.shp") # Also doesn't have Biobio
 #chile.adm2 <- st_transform(chile.adm2, crs = 32629)
@@ -801,42 +817,70 @@ demog_geom <- chile.adm1 %>%
 #  select(-region)
 ```
 
-```{r mapPop, include = TRUE, fig.cap = "Population of 0-14 year olds in Chile in 2021 by region, from 2017 census projections."}
+```{r mapPop, include = FALSE, fig.cap = "Population of 0-14 year olds in Chile in 2021 by region, from 2017 census projections.", fig.height=8}
 # Population
 ggplot(demog_geom) + 
-  geom_sf(mapping = aes(geometry = geometry, fill = youth_pop_2021), linewidth = 0.01) +
-  geom_sf_text(mapping = aes(geometry = geometry, label = region_name), nudge_x = 8, size = 3) +
-  scale_fill_viridis(option = "viridis", direction = 1, name = "Population") + #, limits = c(23000, 400000), oob = scales::squish) +
-  labs(title = "Population aged 0-14 (2021 projections)") +
+  geom_sf(mapping = aes(geometry = geometry, fill = youth_pop_2021), linewidth = 0.001, colour = "#555555") +
+  geom_sf_text(mapping = aes(geometry = geometry, label = region_name), nudge_x = 9, size = 3.5) +
+  scale_fill_viridis(option = "viridis", direction = 1, name = "Population aged 0-14") + #, limits = c(23000, 400000), oob = scales::squish) +
+  labs(title = "Population aged 0-14") +
+  theme_void() +
   xlab("Longitude") +
   ylab("Latitude") +
-  coord_sf(xlim = c(-85, -50), ylim = c(-60, -15))
+  coord_sf(xlim = c(-75, -55), ylim = c(-56, -18))
 ```
 
-```{r mapIncome, include = TRUE, fig.cap = "Net income from main job in Chile in 2021 by region, from the INE's Supplementary Income Survey."}
+```{r mapIncome, include = TRUE, fig.cap = "Net income from main job in Chile in 2021 by region, from the INE's Supplementary Income Survey.", fig.height=8}
 # Income
 ggplot(demog_geom) + 
-  geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.01) +
-  geom_sf_text(mapping = aes(geometry = geometry, label = region_name), nudge_x = 8, size = 3) +
+  geom_sf(mapping = aes(geometry = geometry, fill = ingreso_medio_nominal), linewidth = 0.001, color = "#555555") +
+  geom_sf_text(mapping = aes(geometry = geometry, label = region_name), nudge_x = 9, size = 3.5) +
   scale_fill_viridis(option = "viridis", direction = 1, name = "Median income (Peso)") +
-  labs(title = "Net income (2021)") +
+  labs(title = "Net income from main job") +
+  theme_void() +
   xlab("Longitude") +
   ylab("Latitude") +
-  coord_sf(xlim = c(-85, -50), ylim = c(-60, -15))
+  coord_sf(xlim = c(-75, -55), ylim = c(-56, -18))
+```
+
+```{r mapRural, include = TRUE, fig.cap = "Percentage of population living in rural areas in Chile in 2017 from 2017 census.", fig.height=8}
+# Income
+ggplot(demog_geom) + 
+  geom_sf(mapping = aes(geometry = geometry, fill = rural_perc), linewidth = 0.001, color = "#555555") +
+  geom_sf_text(mapping = aes(geometry = geometry, label = region_name), nudge_x = 9, size = 3.5) +
+  scale_fill_viridis(option = "viridis", direction = 1, name = "Rural population (%)") +
+  labs(title = "Percentage of population living in rural areas") +
+  theme_void() +
+  xlab("Longitude") +
+  ylab("Latitude") +
+  coord_sf(xlim = c(-75, -55), ylim = c(-56, -18))
 ```
 
 
-```{r healthRegion, fig.cap = "Residential communes aggregated to region level and the health services associated with the aggregated communes, with counts of the number of students resident in the communes in each health service's catchment area."}
-map_tab_df <- as.data.frame(table(chile_bayes$region_name, chile_bayes$health_service_name))
-ggplot(map_tab_df, aes(x = Var1, y = Var2, fill = Freq)) +
-  geom_tile() +
-  scale_fill_viridis_c(option = "rocket", direction = -1) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1),
-        panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
-        panel.background = element_blank(), axis.line = element_line(colour = "black")) +
-  scale_y_discrete(limits = rev(levels(map_tab_df$Var2))) +
-  labs(title = "Students' residential region and health service",
-       x = "Region", y = "Health service", fill = "Count")
+```{r healthRegion}
+kbl(region_service_lookup %>% as.tibble() %>% select(region_name, health_service_name_shortish) %>% arrange(region_name),
+    col.names = c("Region", "Health services"),
+    align = "ll",
+    booktabs = TRUE,
+    format = "latex",
+    linesep = c("\\addlinespace", "\\addlinespace", "\\addlinespace", "\\addlinespace", 
+                "", "", "", "\\addlinespace", "\\addlinespace", "", "\\addlinespace", 
+                "\\addlinespace",  "", "", "\\addlinespace", "\\addlinespace", "\\addlinespace", 
+                "\\addlinespace", "", "", "", "", "", "\\addlinespace", "\\addlinespace", "", "", "\\addlinespace"),
+    caption = "Chilean health services by region")
+```
+
+```{r healthRegionOld, include = FALSE, fig.cap = "Residential communes aggregated to region level and the health services associated with the aggregated communes, with counts of the number of students resident in the communes in each health service's catchment area."}
+# map_tab_df <- as.data.frame(table(chile_bayes$region_name, chile_bayes$health_service_name))
+# ggplot(map_tab_df, aes(x = Var1, y = Var2, fill = Freq)) +
+#   geom_tile() +
+#   scale_fill_viridis_c(option = "rocket", direction = -1) +
+#   theme(axis.text.x = element_text(angle = 45, hjust = 1),
+#         panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+#         panel.background = element_blank(), axis.line = element_line(colour = "black")) +
+#   scale_y_discrete(limits = rev(levels(map_tab_df$Var2))) +
+#   labs(title = "Students' residential region and health service",
+#        x = "Region", y = "Health service", fill = "Count")
 ```
 
 ```{r mapHealthServices, include = FALSE, fig.cap = "Health services in Chile, coloured by region they serve."}
@@ -859,20 +903,6 @@ ggplot(map_tab_df, aes(x = Var1, y = Var2, fill = Freq)) +
 # region_service_commune_lookup %>% 
 #   filter(health_service_name == "Iquique") %>%
 #   summarise(geometry = st_union(geometry))
-```
-
-```{r mapArauc, fig.cap = "Communes in the Araucanía region, coloured red for the Araucanía Norte (north Araucanía) health services and blue for the Araucanía Sur (south Araucanía) health service."}
-# ARAUC communes
-arauc <- region_service_commune_lookup %>%
-  filter(ADM1_PCODE == "CL09")
-
-ggplot(arauc) +
-  geom_sf(mapping = aes(geometry = geometry, fill = health_service_name)) +
-  geom_sf_text(mapping = aes(geometry = geometry, label = commune_name), size = 3) +
-  coord_sf(xlim = c(-74, -70.5), ylim = c(-40, -37.5)) +
-  labs(title = "Communes in La Araucania") +
-  xlab("Longitude") +
-  ylab("Latitude")
 ```
 
 #	Aims
@@ -907,11 +937,28 @@ The school data shows whether students have accessed the Subvención de Educaci�
 
 ### Clinical data
 
-This research also uses data from Chile’s Servicio de Salud Araucanía Sur (South Araucanía health service, SSAS), obtained under a freedom of information request. These data are collated from secondary care clinical records, particularly from mental health community care services. They comprise clinical records for public sector specialist health visits of patients aged 6-18 with a primary diagnosis of autism between February 2014 and December 2021 for all communes in the SSES catchment. These data include wage deducted health insurance contributions from Chile’s Fondo Nacional de Salud (National Health Fund, FONASA), from which a colleague previously inferred socio-economic status of patients’ families. The majority of records are for patients resident in the SSAS catchment area and they do not include any records for privately provided healthcare. These data will be referred to as the clinical data. 
+```{r mapArauc, fig.cap = "Communes in the La Araucanía region, with Servicio de Salud Araucanía Sur (SSAS) communes in green and Servicio de Salud Araucanía Norte (SSAN) communes in blue.", fig.height=8}
+# ARAUC communes
+arauc <- region_service_commune_lookup %>%
+  filter(ADM1_PCODE == "CL09")
+
+ggplot(arauc) +
+  geom_sf(mapping = aes(geometry = geometry, fill = health_service_name), color = "grey") +
+  geom_sf_text(mapping = aes(geometry = geometry, label = commune_name), size = 3.5) +
+  coord_sf(xlim = c(-73.5, -70.8), ylim = c(-39.7, -37.6)) +
+  scale_fill_manual(name = "Health service", values = c("#A6FDFD", "#D6FD75")) +
+  theme_void() +
+  theme(legend.position = "bottom") +
+  labs(title = "La Araucanía communes by health service") +
+  xlab("Longitude") +
+  ylab("Latitude") 
+```
+
+This research also uses data from Chile’s Servicio de Salud Araucanía Sur (South Araucanía health service, SSAS), obtained under a freedom of information request. These data are collated from secondary care clinical records, particularly from mental health community care services. They comprise clinical records for public sector specialist health visits of patients aged 6-18 with a primary diagnosis of autism between February 2014 and December 2021 for all communes in the SSES catchment. Figure \@ref(fig:mapArauc) shows the communes in the SSAS and Servicio de Salud Araucanía Norte (North Araucanía health service, SSAN) catchments. The clinical records include wage deducted health insurance contributions from Chile’s Fondo Nacional de Salud (National Health Fund, FONASA), from which a colleague previously inferred socio-economic status of patients’ families. The majority of records are for patients resident in the SSAS catchment area and they do not include any records for privately provided healthcare. These data will be referred to as the clinical data. 
 
 A subset of the clinical data, those for appointments provided by Villarrica Hospital in the Villarrica commune of Chile’s Araucanía region, were manually validated prior to this investigation. Validation involved a neurologist and a psychiatrist in the SEED network of providers checking the clinical records against central health records to confirm individuals did have autism, adding secondary and tertiary diagnoses where relevant, and adding demographic information including ethnicity, rurality of residence, disability status and experience of foster care status where available. We can be very confident that patients in this subset do have autism. Most patients in this subset were resident in Loncoche, Pucón and Villarrica communes in the SSAS catchment area. These data will be referred to as the validated clinical data, see Figure \@ref(fig:flowchart).
 
-```{r flowchart, fig.cap="Clinical data pre-processing pathway. N = number of appointment records, N' = number of appointment records for patients resident in SSAS communes.", echo=FALSE, out.width = '90%'}
+```{r flowchart, fig.cap="Clinical data pre-processing pathway. N = number of appointment records, N' = number of appointment records for patients resident in SSAS communes.", echo=FALSE, out.width = '80%'}
 knitr::include_graphics("Flowchart.jpg", error = FALSE)
 ```
 
@@ -1374,7 +1421,7 @@ kbl(aut_prev_health.agecat_sex.table,
               "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of autism cases by health service and age band in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(latex_options = c("repeat_header"), font_size = 7.5)
+  kable_styling(latex_options = c("repeat_header"), font_size = 8)
 ```
 
 ```{r prevAgecatHealthAdhdTable}
@@ -1402,7 +1449,7 @@ kbl(adhd_prev_health.agecat_sex.table,
               "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of ADHD cases by health service and age band in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(latex_options = c("repeat_header"), font_size = 7.5)
+  kable_styling(latex_options = c("repeat_header"), font_size = 8)
 
 ```
 
@@ -3476,10 +3523,9 @@ kbl(school_vars,
     col.names = c("Feature type", "Features"),
     align = "l",
     booktabs = TRUE,
-    format = "pandoc",
+    format = "latex",
     linesep = c("", "", "", "", "", "", "", "\\addlinespace", "", "", ""),
     caption = "Features available in the school data")
-
 ```
 
 ```{r prevAgeAutPlot, fig.cap = "Sample prevalence of autism in school data by age band. Bars show 95% normal confidence intervals.", fig.height=3, fig.pos='H'}
