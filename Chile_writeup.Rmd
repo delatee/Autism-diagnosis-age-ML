@@ -1081,7 +1081,7 @@ An updated estimate of autism prevalence in SSAS was made and projected across h
 ### Updated autism prevalence estimation 
 
 ```{r caseSelection, fig.cap="Case selection for prevalence calculation after the SSAS school and patient data linkage. White shows students with no known autism diagnosis. Yellow shows known autism cases in the school data for students resident in the Araucanía Sur health service (SSAS) catchment. Green shows patients that matched to a school record. Blue shows patients that did not match to a school record and are assumed to be present in the school data but do not access SEED. Grey shows patients with an autism diagnosis made in the private health sector and therefore not present in the patient dataset.", echo=FALSE, out.width = '80%'}
-knitr::include_graphics("Flowchart.jpg", error = FALSE)
+knitr::include_graphics("Case_selection.jpg", error = FALSE)
 ```
 
 The patient data was de-duplicated to a single row per patient with the commune of their matched record chosen if they had multiple communes of residence. The unmatched patients were aggregated to counts per age and sex group. The full school dataset was restricted to students resident in SSAS, then was aggregated to counts per age, sex and autism status group. It was assumed that the patients that did not match to the SSAS school data, which only includes students with SEED for autism, do exist in the larger school data of students resident in SSAS but that do not have a diagnosis of autism in the school data because they do not receive SEED or do not receive it for autism. Thus the count of students with autism for each age and sex group in the restricted school data was increased by the number of unmatched patients in that age and sex group, and the number of students without autism was decreased by the same amount. This effectively reallocated the appropriate number of SSAS students recorded as not having autism to having autism and retained the school data sample sizes. Figure \@ref(fig:caseSection) illustrates the autism cases present after data linkage; the updated prevalence was taken to be the number of cases in the combined left-hand side of the figure plus the blue shaded region of additional cases found in the patient data, divided by the number of students resident in SSAS.
@@ -3680,7 +3680,7 @@ This investigation has furthered the understanding of autism and ADHD prevalence
 
 # Supplementary materials
 
-```{r schooldata}
+```{r schooldata, include = FALSE}
 school_vars <- data.frame(type = c("Student", "", "", "", "", "", "", "",
                                    "School", "", ""),
                           vars = c("Sex",
