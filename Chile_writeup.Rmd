@@ -381,6 +381,7 @@ chile_bayes <- chile_merged %>%
          # school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium",
          #                                                        "No information"))) %>% 
   left_join(region_service_commune_lookup %>% as.tibble() %>% select(-geometry), by = "commune_code") %>%
+  mutate(ssas = ifelse(commune_name %in% araucnorte_communes$commune_name, 1, 0)) %>%
   select(#school_region_name_abr,
     region_code,
     region_name,
@@ -410,7 +411,8 @@ chile_bayes <- chile_merged %>%
     special_needs_status,
     special_needs_code,
     autism,
-    adhd
+    adhd,
+    ssas
   ) 
 
 chile_bayes_aut <- chile_bayes %>% select(-adhd)
@@ -1146,13 +1148,13 @@ school.table <- chile_bayes %>%
           rename(values = age_cat_name),
         chile_bayes %>%
           group_by(health_service_name) %>% 
-          summarise(variable = "Commune",
+          summarise(variable = "Health service",
                     count = n(), 
                     perc = sprintf("%.2f", round(count/nrow(chile_bayes)*100, 2))) %>%
           rename(values = health_service_name),
         chile_bayes %>%
           group_by(school_fee) %>% 
-          summarise(variable = "Proxy SES (monthly school fee)",
+          summarise(variable = "School fee",
                     count = n(), 
                     perc = sprintf("%.2f", round(count/nrow(chile_bayes)*100, 2))) %>%
           rename(values = school_fee),
@@ -1189,13 +1191,14 @@ school.table <- chile_bayes %>%
                     perc = sprintf("%.2f", round(count/nrow(chile_bayes)*100, 2))) %>%
           rename(values = adhd) %>%
           mutate(values = ifelse(values == 0, "No ADHD", "Yes ADHD"))) %>%
-  mutate(count_perc = paste0(count, " (", perc, "%)")) %>%
+  mutate(count_perc = paste0(format(count, big.mark = ",", trim = TRUE), " (", perc, "%)")) %>%
   select(variable, values, count_perc)
 
 kbl(school.table,
     col.names = c("Feature", "Available values", "Count (%)"),
     align = "llr",
     booktabs = TRUE,
+    longtable = TRUE,
     format = "latex",
     linesep = c("", "\\addlinespace", # Sex
                 "", "", "", "\\addlinespace", # Age
@@ -1205,8 +1208,8 @@ kbl(school.table,
                 "", "", "", "", "", 
                 "", "", "", "", "",
                 "", "", "",  "\\addlinespace", # Health service
-                "", "", "", "", "\\addlinespace", # SES
-                "", "", "", "", "\\addlinespace", # Ethnicity
+                "", "", "", "", "", "", "\\addlinespace", # SES
+                "", "", "\\addlinespace", # Ethnicity
                 "", "\\addlinespace", # Rurality
                 "", "\\addlinespace", # SEED
                 "", "\\addlinespace", # Autism
@@ -2580,7 +2583,7 @@ mca_aut_commune_plot
 ## Linkage of school and patient records
 
 ```{r school}
-school_all <- chile_bayes %>%
+school_ssas <- chile_bayes %>%
   select(-student_commune_name) %>%
   #left_join(region_service_commune_lookup %>% as.tibble %>% select(-geometry), by = "commune_code") %>%
   filter(commune_code %in% araucsur_communes$commune_code) %>%
@@ -2603,52 +2606,182 @@ school_all <- chile_bayes %>%
          age_june30,
          age_cat_name)
 
-school_temp <- school_all %>% 
+school_ssas_aut <- school_ssas %>% 
   filter(autism == 1) %>%
   # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
   select(-age_june30, -age_cat_name, -autism) %>%
   rowid_to_column("id")
   
 # Add a fake row so that pairing works later
-school <- rbind(school_temp, c("2023-06-01", NA, NA, NA, NA))
+school <- rbind(school_ssas_aut, c("2023-06-01", NA, NA, NA, NA))
+```
+
+```{r schoolChisq}
+# Check if students in SSAS are different to other students
+
+chile_bayes_ssas_grouped <- chile_bayes %>% 
+  filter(ssas == 1) %>%
+  group_by(sex_desc) %>%
+  summarise(variable = "Sex",
+            count = n(), 
+            ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+  rename(values = sex_desc) %>%
+  rbind(chile_bayes %>%
+          filter(ssas == 1) %>%
+          group_by(age_cat_name) %>% 
+          summarise(variable = "Age band",
+                    count = n(), 
+                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = age_cat_name),
+        chile_bayes %>%
+          filter(ssas == 1) %>%
+          group_by(school_fee) %>% 
+          summarise(variable = "School fee",
+                    count = n(), 
+                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = school_fee),
+        chile_bayes %>%
+          filter(ssas == 1) %>%
+          group_by(ethnic_2_group) %>% 
+          summarise(variable = "Ethnicity",
+                    count = n(), 
+                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = ethnic_2_group),
+        chile_bayes %>%
+          filter(ssas == 1) %>%
+          group_by(school_rurality) %>% 
+          summarise(variable = "Rurality",
+                    count = n(), 
+                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = school_rurality),
+        chile_bayes %>%
+          filter(ssas == 1) %>%
+          group_by(special_needs_status) %>% 
+          summarise(variable = "Accesses SEED",
+                    count = n(), 
+                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = special_needs_status)) %>%
+  select(variable, values, ssas_perc)
+
+# Add a row for $1000-10000 group which is not represented in SSAS data
+chile_bayes_ssas_grouped <- rbind(chile_bayes_ssas_grouped[1:7,], 
+                                  c("School fee", "$1,000-$10,000", "0.00%"), 
+                                  chile_bayes_ssas_grouped[8:19,])
+
+chile_bayes_nonssas_grouped <- chile_bayes %>% 
+  filter(ssas == 0) %>%
+  group_by(sex_desc) %>%
+  summarise(variable = "Sex",
+            count = n(), 
+            nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+  rename(values = sex_desc) %>%
+  rbind(chile_bayes %>%
+          filter(ssas == 0) %>%
+          group_by(age_cat_name) %>% 
+          summarise(variable = "Age band",
+                    count = n(), 
+                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = age_cat_name),
+        chile_bayes %>%
+          filter(ssas == 0) %>%
+          group_by(school_fee) %>% 
+          summarise(variable = "School fee",
+                    count = n(), 
+                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = school_fee),
+        chile_bayes %>%
+          filter(ssas == 0) %>%
+          group_by(ethnic_2_group) %>% 
+          summarise(variable = "Ethnicity",
+                    count = n(), 
+                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = ethnic_2_group),
+        chile_bayes %>%
+          filter(ssas == 0) %>%
+          group_by(school_rurality) %>% 
+          summarise(variable = "Rurality",
+                    count = n(), 
+                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = school_rurality),
+        chile_bayes %>%
+          filter(ssas == 0) %>%
+          group_by(special_needs_status) %>% 
+          summarise(variable = "Accesses SEED",
+                    count = n(), 
+                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+          rename(values = special_needs_status)) %>%
+  select(variable, values, nonssas_perc)
+
+chisq_pvals <- c(ifelse(chisq.test(chile_bayes$sex_desc, chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$sex_desc, chile_bayes$ssas)$p.value, 3)), "",
+                 ifelse(chisq.test(chile_bayes$age_cat_name, chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$age_cat_name, chile_bayes$ssas)$p.value, 3)), "", "", "",
+                 ifelse(chisq.test(chile_bayes$school_fee, chile_bayes$ssas)$p.value < 0.0001, 
+                        "<<0.001", signif(chisq.test(chile_bayes$school_fee, chile_bayes$ssas)$p.value, 3)), "", "", "", "", "", "",
+                 ifelse(chisq.test(chile_bayes$ethnic_2_group, chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$ethnic_2_group, chile_bayes$ssas)$p.value, 3)), "", "",
+                 ifelse(chisq.test(chile_bayes$school_rurality, chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$school_rurality, chile_bayes$ssas)$p.value, 3)), "",
+                 ifelse(chisq.test(chile_bayes$special_needs_status, chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$special_needs_status, chile_bayes$ssas)$p.value, 3)), "")
+
+chile_bayes_grouped <- cbind(chile_bayes_ssas_grouped, 
+                             chile_bayes_nonssas_grouped[, 3],
+                             chisq_pvals)
+
+kbl(chile_bayes_grouped,
+    col.names = c("Feature", "Available values", "% for SSAS", "% for non-SSAS", "p-value"),
+    align = "llrrr",
+    booktabs = TRUE,
+    format = "latex",
+    linesep = c("", "\\addlinespace", # Sex
+                "", "", "", "\\addlinespace", # Age
+                "", "", "", "", "", "", "\\addlinespace", # SES
+                "", "", "\\addlinespace", # Ethnicity
+                "", "\\addlinespace", # Rurality,
+                "", "\\addlinespace"), # SEED
+    caption = "Percentage of features' values for each category for the students in the school data resident in SSAS and those not resident in SSAS with the p-value resulting from Chi squared tests of the difference between SSAS and non-SSAS students for each feature.") %>%
+  kable_styling(latex_options = c("repeat_header"))
 ```
 
 ```{r SSASschoolTable}
-ssas_school.table <- school_temp %>%
+school_sass_aut.table <- school_ssas_aut %>%
   group_by(sex_desc) %>% 
   summarise(variable = "Sex",
             count = n(), 
-            perc = sprintf("%.2f", round(count/nrow(school_temp)*100, 2))) %>%
+            perc = sprintf("%.2f", round(count/nrow(school_ssas_aut)*100, 2))) %>%
   rename(values = sex_desc) %>%
-  rbind(school_temp %>%
+  rbind(school_ssas_aut %>%
           group_by(student_commune_name) %>% 
           summarise(variable = "Commune",
                     count = n(), 
-                    perc = sprintf("%.2f", round(count/nrow(school_temp)*100, 2))) %>%
+                    perc = sprintf("%.2f", round(count/nrow(school_ssas_aut)*100, 2))) %>%
           rename(values = student_commune_name),
-        school_temp %>%
+        school_ssas_aut %>%
           group_by(ses_status) %>% 
           summarise(variable = "Proxy SES (school fee group)",
                     count = n(), 
-                    perc = sprintf("%.2f", round(count/nrow(school_temp)*100, 2))) %>%
+                    perc = sprintf("%.2f", round(count/nrow(school_ssas_aut)*100, 2))) %>%
           rename(values = ses_status)) %>%
   mutate(count_perc = paste0(count, " (", perc, "%)")) %>%
   select(variable, values, count_perc)
 
-kbl(ssas_school.table,
+kbl(school_sass_aut.table,
     col.names = c("Feature", "Available values", "Count (%)"),
     align = "llr",
     booktabs = TRUE,
     format = "latex",
     linesep = c("", "\\addlinespace", # Sex
                 "", "", "", "", "", 
+                "", "", "", "", "", 
+                "", "", "", "", "", 
                 "", "", "", "", "", "\\addlinespace", # Commune
-                "", "", "", "", "\\addlinespace"), # SES
+                "", "", "", "\\addlinespace"), # SES
     caption = "Count and percentage of features' values in the SSAS school dataset which comprises students with autism resident in the SSAS catchment.") %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-In the school records, `r format(school_all %>% nrow(), big.mark = ",", trim = TRUE)` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_all) * 100, 2)`%) have autism. Among the students with autism, shown in \@ref(tab:SSASschoolTable), there are many more males than females, Temuco is the most common commune of residence and most students have a proxy SES of 1. 
+In the school records, `r format(school_ssas %>% nrow(), big.mark = ",", trim = TRUE)` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_ssas) * 100, 2)`%) have autism. Among the students with autism, shown in \@ref(tab:SSASschoolTable), there are many more males than females, Temuco is the most common commune of residence and most students have a proxy SES of 1. 
 
 ```{r patients}
 patients <- clinical %>%
@@ -2719,8 +2852,10 @@ kbl(ssas_patients.table,
     format = "latex",
     linesep = c("", "\\addlinespace", # Sex
                 "", "", "", "", "", 
+                "", "", "", "", "", 
+                "", "", "", "", "", 
                 "", "", "", "", "", "\\addlinespace", # Commune
-                "", "", "", "", "\\addlinespace"), # SES
+                "", "", "\\addlinespace"), # SES
     caption = "Count and percentage of features' values in the patient dataset.") %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
@@ -2956,7 +3091,7 @@ n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
 
 ```{r schoolpatient}
 # Get count of autism and no autism in school data
-school_all_grouped <- school_all %>%
+school_ssas_grouped <- school_ssas %>%
   group_by(age_june30, sex_desc, autism) %>%
   summarise(count = n()) %>%
   pivot_wider(names_from = "autism", values_from = "count") %>%
@@ -2972,7 +3107,7 @@ patients_nomatch_grouped <- patients_matched_small_dedup %>%
   summarise(yes_autism_patients = n())
 
 # Combine the counts. Move the number of autism patients from the no autism in school data to yes autism in school data
-school_patients_grouped <- merge(school_all_grouped, patients_nomatch_grouped,
+school_patients_grouped <- merge(school_ssas_grouped, patients_nomatch_grouped,
                                  by = c("age_june30", "sex_desc")) %>%
   mutate(no_autism_linked = no_autism_school - yes_autism_patients,
          yes_autism_linked = yes_autism_school + yes_autism_patients,
@@ -3000,7 +3135,7 @@ school_patients_grouped <- merge(school_all_grouped, patients_nomatch_grouped,
 #   filter(matched == 0) %>% # remove matches so they're not double counted
 #   select(id, dob, sex_desc, student_commune_name, autism, ses_status, age_june30, age_cat_name) %>%
 #   mutate(dataset = "patients") %>%
-#   rbind(school_all %>% rowid_to_column("id") %>% mutate(dataset = "school", id = as.character(id))) %>%
+#   rbind(school_ssas %>% rowid_to_column("id") %>% mutate(dataset = "school", id = as.character(id))) %>%
 #   mutate(sex = ifelse(sex_desc == "Female", 2, 1))
 ```
 
@@ -3636,7 +3771,7 @@ MCA revealed that age, ethnicity and commune of residence, and to some extent di
 
 Both manual and probabilistic linkage of SSAS school and patient data of individuals with autism were able to identify a reasonable number of matches. Probabilistic matching was more effective than manual matching here because matching on commune of residence was desirable but not essential, proxy SES features were known to be imprecise so requiring perfect matches would miss many correct matches, and probabilistic matching was able to identify more likely matches.
 
-The proportions of matched and unmatched records in the SSAS school and patient datasets did differ by sex, commune of residence and proxy SES. The differences appear to be driven by differences in the frequency of these features’ categories across the two datasets. In particular, the male to female ratio of people with autism in the patient data is `r round(patients %>% filter(sex_desc == "Male") %>% nrow() / patients %>% filter(sex_desc == "Female") %>% nrow(), 2)`:1 which is very consistent with Yáñez et al’s estimate of 4:1 in the Estación Central commune of Servicio de Salud Metropolitano Central and Santiago commune of Servicio de Salud Metropolitano Occidente, both in Santiago (18). In the SSAS school data, the male to female ratio is `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Male") %>% nrow() / school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow(), 2))`:1, and in the school data for SSAS for students with and without autism it is `r sprintf("%.2f", round(school_all %>% filter(sex_desc == "Male") %>% nrow() / school_all %>% filter(sex_desc == "Female") %>% nrow(), 2))`:1. This suggests females with autism are underrepresented in the school data and may indicate that there are barriers to females accessing SEED for autism.
+The proportions of matched and unmatched records in the SSAS school and patient datasets did differ by sex, commune of residence and proxy SES. The differences appear to be driven by differences in the frequency of these features’ categories across the two datasets. In particular, the male to female ratio of people with autism in the patient data is `r round(patients %>% filter(sex_desc == "Male") %>% nrow() / patients %>% filter(sex_desc == "Female") %>% nrow(), 2)`:1 which is very consistent with Yáñez et al’s estimate of 4:1 in the Estación Central commune of Servicio de Salud Metropolitano Central and Santiago commune of Servicio de Salud Metropolitano Occidente, both in Santiago (18). In the SSAS school data, the male to female ratio is `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Male") %>% nrow() / school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow(), 2))`:1, and in the school data for SSAS for students with and without autism it is `r sprintf("%.2f", round(school_ssas %>% filter(sex_desc == "Male") %>% nrow() / school_ssas %>% filter(sex_desc == "Female") %>% nrow(), 2))`:1. This suggests females with autism are underrepresented in the school data and may indicate that there are barriers to females accessing SEED for autism.
 
 ###	Aim 3b: Accurately estimate autism prevalence and project prevalence bounds across health services using Bayesian prevalence prediction
 
