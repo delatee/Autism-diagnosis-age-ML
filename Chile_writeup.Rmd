@@ -35,7 +35,7 @@ $$\\[1in]$$
 
 **Acknowledgements**
 
-With thanks to my supervisor, Dr Andres Roman-Urrestarazu, Department of Psychiatry, University of Cambridge, for his time, expertise and encouragement throughout this project, to Jonathan Lewis at Cambridgeshire and Peterborough NHS Foundation Trust for assisting with access to their data, to Health Data Research UK for their generous scholarship, and to my Dad for first sparking my interest in health data science many years ago.
+With thanks to my supervisor, Dr Andres Roman-Urrestarazu, Department of Psychiatry, University of Cambridge, for his time, expertise and encouragement throughout this project; to Jonathan Lewis at Cambridgeshire and Peterborough NHS Foundation Trust for assisting with access to their data; to Health Data Research UK for their generous scholarship; to Ant Bagshaw for suggesting a Cambridge adventure; and to Dad for first sparking my interest in health data science so many years ago.
 
 \newpage
 
@@ -790,7 +790,7 @@ turbo_colours <- viridis(17, option = "H") #"#30123BFF" "#4662D7FF" "#36AAF9FF" 
 
 # Abstract
 
-TODO
+The prevalence of autism and ADHD in Chile is not well characterised and therefore the unmet need of children with these conditions that do not have school-based support interventions is not known. This investigation aims to quantify the prevalence of autism and ADHD in Chilean children and understand the characteristics of children with autism through analysis of 3 million school records and linkage to supplementary clinical records. Using frequentist age- and sex-adjustment, a lower bound on the prevalence of autism was found to be 0.48% with sex ratio xxx and a lower bound on the prevalence of ADHD to be 1.21% with sex ratio of xxx. Something on groups with lower prevalence. Multiple component analysis of categories in clinical autism diagnosis data for Servicio de Salud Araucanía Sur showed ethnicity, age and commune of residence are important in distinguishing patients with autism. Probabilistic linkage of school records and clinical autism diagnoses identified an unmet need of xxx students with autism in Servicio de Salud Araucanía Sur that were not accessing school-based supports. This equated to an updated autism prevalence estimate of xxx with sex ratio xxx. Projecting this prevalence across Chile, there is an unmet need of xxx students not accessing school support with females disproportionately affected. Bayesian prevalence projection found credible intervals of autism prevalence for each Chilean health service. 
 
 
 
@@ -1026,13 +1026,13 @@ The validated clinical data was aggregated to patient level by selecting each pa
 
 ### Multiple correspondence analysis
 
-The machine learning technique of multiple correspondence analysis (MCA) was conducted using R’s FactoMineR package with the number of output dimensions equal to the number of input features. MCA was an appropriate technique to use here because the small clinical dataset contains primarily categorical features which MCA is designed to handle. 
+The machine learning technique of multiple correspondence analysis (MCA) was conducted using R’s FactoMineR package with the number of output dimensions equal to the number of input features. MCA was an appropriate technique to use here because the validated clinical dataset contains primarily categorical features which MCA is designed to handle. 
 
-Data-led analytics was used to identify features in the small clinical dataset that explained the variance in this patient-level data. Initially, all available features with suspected association with autism were included in MCA, specifically: sex, age group, commune of residence, health insurance contribution level as a proxy for SES, ethnicity, residential rurality, disability status and foster care status. The data grouped well into having information about disability and about foster care and not having information about each, therefore the MCA was rerun with the disability and foster care features exchanged for their respective imputed versions. This identified age, commune and ethnicity as important for explaining the variance, so the MCA was rerun with only these three features.
+Data-led analytics was used to identify features in the validated clinical dataset that explained the variance in this patient-level data. Initially, all available features with suspected association with autism were included in MCA, specifically: sex, age group, commune of residence, health insurance contribution level as a proxy for SES, ethnicity, residential rurality, disability status and foster care status. The data grouped well into having information about disability and about foster care and not having information about each, therefore the MCA was rerun with the disability and foster care features exchanged for their respective imputed versions. This identified age, commune and ethnicity as important for explaining the variance, so the MCA was rerun with only these three features.
 
 ### Alternative machine learning approaches
 
-Other machine learning techniques including component factor analysis (CFA) and principle component analysis (PCA) were also considered to analyse the features associated with autism diagnosis in the small clinical data. Both are powerful methods for uncovering the latent structure of data, however CFA typically requires ordered categorical variables and PCA requires continuous variables. As the commune feature, an unordered categorical variable, was thought to be important to the features associated with autism diagnosis and therefore needed to be included in analysis, using CFA or PCA would require one-hot-encoding of commune which would reduce the appropriateness of these tests.
+Other machine learning techniques including component factor analysis (CFA) and principle component analysis (PCA) were also considered to analyse the features associated with autism diagnosis in the validated clinical data. Both are powerful methods for uncovering the latent structure of data, however CFA typically requires ordered categorical variables and PCA requires continuous variables. As the commune feature, an unordered categorical variable, was thought to be important to the features associated with autism diagnosis and therefore needed to be included in analysis, using CFA or PCA would require one-hot-encoding of commune which would reduce the appropriateness of these tests.
 
 ## Aim 3a: Use machine learning to link school and clinical records
 
@@ -1088,7 +1088,7 @@ An updated estimate of autism prevalence in SSAS was made and projected across h
 knitr::include_graphics("Case_selection.jpg", error = FALSE)
 ```
 
-The patient data was de-duplicated to a single row per patient with the commune of their matched record chosen if they had multiple communes of residence. The unmatched patients were aggregated to counts per age and sex group. The full school dataset was restricted to students resident in SSAS, then was aggregated to counts per age, sex and autism status group. It was assumed that the patients that did not match to the SSAS school data, which only includes students with SEED for autism, do exist in the larger school data of students resident in SSAS but that do not have a diagnosis of autism in the school data because they do not receive SEED or do not receive it for autism. Thus the count of students with autism for each age and sex group in the restricted school data was increased by the number of unmatched patients in that age and sex group, and the number of students without autism was decreased by the same amount. This effectively reallocated the appropriate number of SSAS students recorded as not having autism to having autism and retained the school data sample sizes. Figure \@ref(fig:caseSelection) illustrates the autism cases present after data linkage; the updated prevalence was taken to be the number of cases in the combined left-hand side of the figure plus the blue shaded region of additional cases found in the patient data, divided by the number of students resident in SSAS.
+The patient data was de-duplicated to a single row per patient with the commune of their matched record chosen if they had multiple communes of residence. The unmatched patients were aggregated to counts per age and sex group. The full school dataset was restricted to students resident in SSAS, then was aggregated to counts per age, sex and autism status group. It was assumed that the patients that did not match to the SSAS school data, which only includes students with SEED for autism, do exist in the larger school data of students resident in SSAS but that do not have a diagnosis of autism in the school data because they do not receive SEED or do not receive it for autism. Thus the count of students with autism for each age and sex group in the restricted school data was increased by the number of unmatched patients in that age and sex group, and the number of students without autism was decreased by the same amount. This effectively reallocated the appropriate number of SSAS students recorded as not having autism to having autism and retained the school data sample sizes. Figure \@ref(fig:sampleSize) illustrates the autism cases present after data linkage; the updated prevalence was taken to be the number of cases in the combined left-hand side of the figure plus the blue shaded region of additional cases found in the patient data, divided by the number of students resident in SSAS.
 
 The crude and age- and sex-adjusted updated prevalence of autism was calculated from the updated counts as in sections [4.4.2][Crude prevalence] and [4.4.3][Frequentist age and sex adjustment]. The difference between the adjusted updated prevalence for SSAS (using the reallocated autism diagnosis figures and thus including the additional autism cases found from linkage) and the adjusted school data prevalence for SSAS (using only students with SEED) was calculated and will be reference to as the adjusted prevalence delta. It represents the prevalence of individuals with an autism diagnosis in the public health system that do not access SEED for autism. Unmet need was calculated as the adjusted prevalence delta multiplied by the number of students in the full school dataset.
 
@@ -1512,7 +1512,7 @@ kbl(adhd_prev_econA_adj.table,
     caption = "Crude and age- and sex-adjusted ADHD prevalence by monthly school fee (Peso) in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-For school fees, which are used here as a proxy for SES, autism prevalence was highest among students that received free or low fee education, though the sample size for students that paid \$1,000-\$10,000 monthly was very small, see Table \@ref(tab:adjPrevEconAAutTable). ADHD prevalence was variable across school fee levels, with the \$1,000-\$10,000 band having low prevalence and very few cases, see Table \@ref(tab:adjPrevEconAdhdTable). For both autism and ADHD, prevalence is very low among students paying more than \$100,000 monthly, suggesting students from wealthier families may not be accessing SEED or may not be eligible for it due to attending non-subsidised private schools. See also Supplementary Tables \@ref(tab:prevAgecatEconAAutTable) and \@ref(tab:prevAgecatEconAAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatEconAAutPlot), \@ref(fig:prevAgecatEconAAdhdPlot), \@ref(fig:prevAgeEconAAutPlot) and \@ref(fig:prevAgeEconAAdhdPlot).
+For school fees, which are used here as a proxy for SES, autism prevalence was highest among students that received free or low fee education, though the sample size for students that paid \$1,000-\$10,000 monthly was very small, see Table \@ref(tab:adjPrevEconAAutTable). ADHD prevalence was variable across school fee levels, with the \$1,000-\$10,000 band having low prevalence and very few cases, see Table \@ref(tab:adjPrevEconAAdhdTable). For both autism and ADHD, prevalence is very low among students paying more than \$100,000 monthly, suggesting students from wealthier families may not be accessing SEED or may not be eligible for it due to attending non-subsidised private schools. See also Supplementary Tables \@ref(tab:prevAgecatEconAAutTable) and \@ref(tab:prevAgecatEconAAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatEconAAutPlot), \@ref(fig:prevAgecatEconAAdhdPlot), \@ref(fig:prevAgeEconAAutPlot) and \@ref(fig:prevAgeEconAAdhdPlot).
 
 ```{r adjPrevEthnic}
 # Autism
@@ -1695,7 +1695,7 @@ patients_mca_small <- clinical_small_raw %>%
          hospital = as.factor(hospital))
 ```
 
-The small clinical dataset has data on `r format(nrow(clinical_small), big.mark = ",", trim = TRUE)` appointments for `r length(unique(clinical_small$id))` unique patients aged 1-18 in 2021, of which `r patients_mca_small %>% nrow()` patients have autism and have lived in a commune in the SSAS catchment area during the period the data covers. Among the patients with autism that live in SSAS, `r patients_mca_small %>% filter(sex_desc == "Female") %>% nrow` (`r round(patients_mca_small %>% filter(sex_desc == "Female") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) are female, `r patients_mca_small %>% filter(ethnicity == "Mapuche") %>% nrow` (`r round(patients_mca_small %>% filter(ethnicity == "Mapuche") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) are Mapuche, `r patients_mca_small %>% filter(rurality == "Urban") %>% nrow` (`r round(patients_mca_small %>% filter(rurality == "Urban") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) live in an urban area, `r patients_mca_small %>% filter(disability == "Yes disability") %>% nrow` (`r round(patients_mca_small %>% filter(disability == "Yes disability") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have a disability and `r patients_mca_small %>% filter(foster_care == "Yes foster care") %>% nrow` (`r round(patients_mca_small %>% filter(foster_care == "Yes foster care") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have experienced foster care. `r patients_mca_small %>% filter(intdisab == "Yes intellectual disability") %>% nrow` (`r round(patients_mca_small %>% filter(intdisab == "Yes intellectual disability") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have an intellectual disability as well as autism.
+The validated clinical dataset has data on `r format(nrow(clinical_small), big.mark = ",", trim = TRUE)` appointments for `r length(unique(clinical_small$id))` unique patients aged 1-18 in 2021, of which `r patients_mca_small %>% nrow()` patients have autism and have lived in a commune in the SSAS catchment area during the period the data covers. Among the patients with autism that live in SSAS, `r patients_mca_small %>% filter(sex_desc == "Female") %>% nrow` (`r round(patients_mca_small %>% filter(sex_desc == "Female") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) are female, `r patients_mca_small %>% filter(ethnicity == "Mapuche") %>% nrow` (`r round(patients_mca_small %>% filter(ethnicity == "Mapuche") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) are Mapuche, `r patients_mca_small %>% filter(rurality == "Urban") %>% nrow` (`r round(patients_mca_small %>% filter(rurality == "Urban") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) live in an urban area, `r patients_mca_small %>% filter(disability == "Yes disability") %>% nrow` (`r round(patients_mca_small %>% filter(disability == "Yes disability") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have a disability and `r patients_mca_small %>% filter(foster_care == "Yes foster care") %>% nrow` (`r round(patients_mca_small %>% filter(foster_care == "Yes foster care") %>% nrow / nrow(patients_mca_small) * 100, 2)`%) have experienced foster care. 
 
 ```{r macPatientsSmallTable}
 patients_mca_small.table <- patients_mca_small %>%
@@ -1745,13 +1745,7 @@ patients_mca_small.table <- patients_mca_small %>%
           summarise(variable = "Foster care",
                     count = n(), 
                     perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
-          rename(values = foster_care),
-        patients_mca_small %>%
-          group_by(intdisab) %>% 
-          summarise(variable = "Intellectual disability",
-                    count = n(), 
-                    perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
-          rename(values = intdisab)) %>%
+          rename(values = foster_care)) %>%
   mutate(count_suppress = ifelse(count < 20, "<20", count),
          count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)"))) %>%
   select(variable, values, count_perc)
@@ -1769,10 +1763,8 @@ kbl(patients_mca_small.table,
                 "", "", "", "\\addlinespace", # Ethnicity
                 "", "\\addlinespace", # Rurality
                 "", "", "\\addlinespace", # Disability
-                "", "", "\\addlinespace", # Foster care
-                "", "\\addlinespace", # Autism
-                "", "\\addlinespace"), # Intdisab
-    caption = "Count and percentage of features' values in the small clinical dataset.") %>%
+                "", "", "\\addlinespace"), # Foster care
+    caption = "Count and percentage of features' values in the validated clinical dataset.") %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
@@ -1806,7 +1798,7 @@ res_mca_patients_noimp <- FactoMineR::MCA(patients_mca_noimp,
                                           graph = FALSE) 
 ```
 
-```{r mcaNoimpFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation.", fig.height=3}
+```{r mcaNoimpFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation.", fig.height=3}
 # Plot features
 fviz_mca_var(res_mca_patients_noimp, 
              choice = "mca.cor", 
@@ -1818,7 +1810,7 @@ fviz_mca_var(res_mca_patients_noimp,
   labs(title = "Categorical features by first two dimensions, no imputation")
 ```
 
-```{r mcaNoimpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation. The red line shows the expected average if contributions were uniform.", fig.height=3}
+```{r mcaNoimpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation. The red line shows the expected average if contributions were uniform.", fig.height=3}
 
 # Total contribution to dimension 1 and 2
 fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15) +
@@ -1827,7 +1819,7 @@ fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15) +
        y = "Contribution (%)")
 ```
 
-```{r mcaNoimpCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation. Brigther, more yellow colours indicate larger contribution to the first two dimensions.", fig.height=10, fig.width=8.5}
+```{r mcaNoimpCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation. Brigther, more yellow colours indicate larger contribution to the first two dimensions.", fig.height=10, fig.width=8.5}
 # Plot categories
 fviz_mca_var(res_mca_patients_noimp,
              col.var = "contrib",
@@ -1901,35 +1893,35 @@ mca_noimp_foster_plot <- fviz_mca_ind(res_mca_patients_noimp,
              ggtheme = theme_minimal())
 ```
 
-```{r mcaNoimpAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by age band.", fig.height=3}
+```{r mcaNoimpAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation, coloured by age band.", fig.height=3}
 mca_noimp_age_plot
 ```
 
-```{r mcaNoimpEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by ethnicity.", fig.height=3}
+```{r mcaNoimpEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation, coloured by ethnicity.", fig.height=3}
 mca_noimp_ethnic_plot
 ```
 
-```{r mcaNoimpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by commune of residence.", fig.height=3}
+```{r mcaNoimpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation, coloured by commune of residence.", fig.height=3}
 mca_noimp_commune_plot
 ```
 
-```{r mcaNoimpSES, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by health insurance level.", fig.height=3}
+```{r mcaNoimpSES, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation, coloured by health insurance level.", fig.height=3}
 mca_noimp_ses_plot
 ```
 
-```{r mcaNoimpSex, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by sex.", fig.height=3}
+```{r mcaNoimpSex, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation, coloured by sex.", fig.height=3}
 mca_noimp_sex_plot
 ```
 
-```{r mcaNoimpRural, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by rurality of residence.", fig.height=3}
+```{r mcaNoimpRural, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation, coloured by rurality of residence.", fig.height=3}
 mca_noimp_rural_plot
 ```
 
-```{r mcaNoimpDisab, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by disability status.", fig.height=3}
+```{r mcaNoimpDisab, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation, coloured by disability status.", fig.height=3}
 mca_noimp_disab_plot
 ```
 
-```{r mcaNoimpFoster, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features without imputation, coloured by foster care status.", fig.height=3}
+```{r mcaNoimpFoster, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation, coloured by foster care status.", fig.height=3}
 grid.arrange(mca_noimp_foster_plot)
 ```
 
@@ -1960,7 +1952,7 @@ res_mca_patients_imp <- FactoMineR::MCA(patients_mca_imp,
                                           graph = FALSE) 
 ```
 
-```{r mcaImpFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation.", fig.height=3}
+```{r mcaImpFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation.", fig.height=3}
 # Plot features
 fviz_mca_var(res_mca_patients_imp, 
              choice = "mca.cor", 
@@ -1972,7 +1964,7 @@ fviz_mca_var(res_mca_patients_imp,
   labs(title = "Categorical features by first two dimensions, with imputation")
 ```
 
-```{r mcaImpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation. The red line shows the expected average if contributions were uniform.", fig.height=3}
+```{r mcaImpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation. The red line shows the expected average if contributions were uniform.", fig.height=3}
 
 # Total contribution to dimension 1 and 2
 fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15) +
@@ -1981,7 +1973,7 @@ fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15) +
        y = "Contribution (%)")
 ```
 
-```{r mcaImpCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation. Brigther, more yellow colours indicate larger contribution to the first two dimensions.", fig.height=10, fig.width=8.5}
+```{r mcaImpCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation. Brigther, more yellow colours indicate larger contribution to the first two dimensions.", fig.height=10, fig.width=8.5}
 # Plot categories
 fviz_mca_var(res_mca_patients_imp,
              col.var = "contrib",
@@ -2055,39 +2047,39 @@ mca_imp_foster_plot <- fviz_mca_ind(res_mca_patients_imp,
              ggtheme = theme_minimal())
 ```
 
-```{r mcaImpAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by age band.", fig.height=3}
+```{r mcaImpAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation, coloured by age band.", fig.height=3}
 mca_imp_age_plot
 ```
 
-```{r mcaImpEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by ethnicity.", fig.height=3}
+```{r mcaImpEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation, coloured by ethnicity.", fig.height=3}
 mca_imp_ethnic_plot
 ```
 
-```{r mcaImpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by commune of residence.", fig.height=3}
+```{r mcaImpCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation, coloured by commune of residence.", fig.height=3}
 mca_imp_commune_plot
 ```
 
-```{r mcaImpSES, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by health insurance level.", fig.height=3}
+```{r mcaImpSES, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation, coloured by health insurance level.", fig.height=3}
 mca_imp_ses_plot
 ```
 
-```{r mcaImpSex, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by sex.", fig.height=3}
+```{r mcaImpSex, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation, coloured by sex.", fig.height=3}
 mca_imp_sex_plot
 ```
 
-```{r mcaImpRural, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by rurality of residence.", fig.height=3}
+```{r mcaImpRural, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation, coloured by rurality of residence.", fig.height=3}
 mca_imp_rural_plot
 ```
 
-```{r mcaImpDisab, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by disability status.", fig.height=3}
+```{r mcaImpDisab, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation, coloured by disability status.", fig.height=3}
 mca_imp_disab_plot
 ```
 
-```{r mcaImpFoster, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using all features with imputation, coloured by foster care status.", fig.height=3}
+```{r mcaImpFoster, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation, coloured by foster care status.", fig.height=3}
 mca_imp_foster_plot
 ```
 
-MCA on the small clinical data using only age band, ethnicity and commune results in the first two dimensions capturing 17.8% of the variance in that data, see Figure \@ref(fig:mcaAutFeatures), and these features are fairly well represented by the first two dimensions. Again age bands 0-2 and 3-5, foreign, no information and Chilean ethnicity and Toltén and Nueva Imperial communes contribute most to the first two dimensions, see Figures \@ref(fig:mcaAutGraph) and \@ref(fig:mcaAutCategories). By patient, age bands 0-2 and 3-5 still cluster well (Figure \@ref(fig:mcaAutAge)), ethnicity clusters are very distinct (Figure \@ref(fig:mcaAutEthnic)), and communes show more structure than previously (Figure \@ref(fig:mcaAutCommune)).
+MCA on the validated clinical data using only age band, ethnicity and commune results in the first two dimensions capturing 17.8% of the variance in that data, see Figure \@ref(fig:mcaAutFeatures), and these features are fairly well represented by the first two dimensions. Again age bands 0-2 and 3-5, foreign, no information and Chilean ethnicity and Toltén and Nueva Imperial communes contribute most to the first two dimensions, see Figures \@ref(fig:mcaAutGraph) and \@ref(fig:mcaAutCategories). By patient, age bands 0-2 and 3-5 still cluster well (Figure \@ref(fig:mcaAutAge)), ethnicity clusters are very distinct (Figure \@ref(fig:mcaAutEthnic)), and communes show more structure than previously (Figure \@ref(fig:mcaAutCommune)).
 
 ```{r mcaAut}
 patients_mca_aut <- patients_mca_small %>%
@@ -2104,7 +2096,7 @@ res_mca_patients_aut <- FactoMineR::MCA(patients_mca_aut,
                                           graph = FALSE) 
 ```
 
-```{r mcaAutFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using patients' age band, commune of residence and ethnicity.", fig.height=3}
+```{r mcaAutFeatures, fig.cap="Categorical features by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using patients' age band, commune of residence and ethnicity.", fig.height=3}
 # Plot features
 fviz_mca_var(res_mca_patients_aut, 
              choice = "mca.cor", 
@@ -2116,7 +2108,7 @@ fviz_mca_var(res_mca_patients_aut,
   labs(title = "Categorical features by first two dimensions for age band, commune and ethnicity")
 ```
 
-```{r mcaAutGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using patients' age band, commune and ethnicity. The red line shows the expected average if contributions were uniform.", fig.height=3}
+```{r mcaAutGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using patients' age band, commune and ethnicity. The red line shows the expected average if contributions were uniform.", fig.height=3}
 
 # Total contribution to dimension 1 and 2
 fviz_contrib(res_mca_patients_aut, choice = "var", axes = 1:2, top = 15) +
@@ -2125,7 +2117,7 @@ fviz_contrib(res_mca_patients_aut, choice = "var", axes = 1:2, top = 15) +
        y = "Contribution (%)")
 ```
 
-```{r mcaAutCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using patients' age band, commune and ethnicity. Brigther, more yellow colours indicate larger contribution to the first two dimensions.", fig.height=10, fig.width=8.5}
+```{r mcaAutCategories, fig.cap="Available categories by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using patients' age band, commune and ethnicity. Brigther, more yellow colours indicate larger contribution to the first two dimensions.", fig.height=10, fig.width=8.5}
 # Plot categories
 fviz_mca_var(res_mca_patients_aut,
              col.var = "contrib",
@@ -2164,15 +2156,15 @@ mca_aut_ethnic_plot <- fviz_mca_ind(res_mca_patients_aut,
              ggtheme = theme_minimal())
 ```
 
-```{r mcaAutAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using patients' age band, commune and ethnicity, coloured by age band.", fig.height=3}
+```{r mcaAutAge, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using patients' age band, commune and ethnicity, coloured by age band.", fig.height=3}
 mca_aut_age_plot
 ```
 
-```{r mcaAutEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using age band, commune and ethnicity, coloured by ethnicity.", fig.height=3}
+```{r mcaAutEthnic, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using age band, commune and ethnicity, coloured by ethnicity.", fig.height=3}
 mca_aut_ethnic_plot
 ```
 
-```{r mcaAutCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the small clinical data using age band, commune and ethnicity, coloured by commune of residence.", fig.height=3}
+```{r mcaAutCommune, fig.cap="Patients by the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using age band, commune and ethnicity, coloured by commune of residence.", fig.height=3}
 mca_aut_commune_plot
 ```
 
@@ -2369,7 +2361,7 @@ school_sass_aut.table <- school_ssas_aut %>%
           rename(values = student_commune_name),
         school_ssas_aut %>%
           group_by(ses_status) %>% 
-          summarise(variable = "Proxy SES (school fee group)",
+          summarise(variable = "Proxy SES",
                     count = n(), 
                     perc = sprintf("%.2f", round(count/nrow(school_ssas_aut)*100, 2))) %>%
           rename(values = ses_status)) %>%
@@ -2389,11 +2381,11 @@ kbl(school_sass_aut.table,
                 "", "", "", "", "", 
                 "", "", "", "", "", "\\addlinespace", # Commune
                 "", "", "", "\\addlinespace"), # SES
-    caption = "Count and percentage of features' values in the SSAS school dataset which comprises students with autism resident in the SSAS catchment.") %>%
+    caption = "Count and percentage of features' values in the SSAS school dataset which comprises students with autism resident in the SSAS catchment. Proxy SES is school fee group.") %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-In the school records, `r format(school_ssas %>% nrow(), big.mark = ",", trim = TRUE)` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_ssas) * 100, 2)`%) have autism. Among the students with autism, shown in \@ref(tab:ssasSchoolTable), there are many more males than females, Temuco is the most common commune of residence and most students have a proxy SES of 1. 
+In the school records, `r format(school_ssas %>% nrow(), big.mark = ",", trim = TRUE)` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_ssas) * 100, 2)`%) have autism. Among the students with autism, shown in Table  \@ref(tab:ssasSchoolTable), there are many more males than females, Temuco is the most common commune of residence and most students have a proxy SES of 1. 
 
 ```{r patients}
 patients_age <- clinical %>%
@@ -2464,7 +2456,7 @@ ssas_patients.table <- patients_age %>%
           rename(values = student_commune_name),
         patients_age %>%
           group_by(ses_status) %>% 
-          summarise(variable = "Proxy SES (health insurance contribution group)",
+          summarise(variable = "Proxy SES",
                     count = n(), 
                     perc = sprintf("%.2f", round(count/nrow(patients_age)*100, 2))) %>%
           rename(values = ses_status)) %>%
@@ -2484,7 +2476,7 @@ kbl(ssas_patients.table,
                 "", "", "", "", "", 
                 "", "", "", "", "", "\\addlinespace", # Commune
                 "", "", "\\addlinespace"), # SES
-    caption = "Count and percentage of features' values in the patient dataset.") %>%
+    caption = "Count and percentage of features' values in the patient dataset. Proxy SES is health insurance contribution group.") %>%
   kable_styling(latex_options = c("repeat_header"))
 ```
 
@@ -3899,8 +3891,8 @@ aut_prev_ethnic.agecat_sex.table <- aut_prev_ethnic.agecat_sex %>%
   select(ethnic_2_group, age_cat_name, n_disease_f, prev_ci) %>% 
   cbind(aut_prev_ethnic.agecat_sex %>% 
           filter(sex_desc == "Male") %>% 
-          mutate(ifelse(n_disease < 20, "<20", n_disease)) %>%
-          select(n_disease=m, prev_ci))
+          mutate(n_disease_m = ifelse(n_disease < 20, "<20", n_disease)) %>%
+          select(n_disease_m, prev_ci))
 
 kbl(aut_prev_ethnic.agecat_sex.table, 
   col.names = c("Ethnicity", "Age band", "Autism cases", "Prevalence % (95% CI)", "Autism cases", "Prevalence % (95% CI)"),
@@ -3927,8 +3919,8 @@ adhd_prev_ethnic.agecat_sex.table <- adhd_prev_ethnic.agecat_sex %>%
   select(ethnic_2_group, age_cat_name, n_disease_f, prev_ci) %>% 
   cbind(adhd_prev_ethnic.agecat_sex %>% 
           filter(sex_desc == "Male") %>% 
-          mutate(ifelse(n_disease < 20, "<20", n_disease)) %>%
-          select(n_disease=m, prev_ci))
+          mutate(n_disease_m = ifelse(n_disease < 20, "<20", n_disease)) %>%
+          select(n_disease_m, prev_ci))
 
 kbl(adhd_prev_ethnic.agecat_sex.table, 
   col.names = c("Ethnicity", "Age band", "ADHD cases", "Prevalence % (95% CI)", "ADHD cases", "Prevalence % (95% CI)"),
