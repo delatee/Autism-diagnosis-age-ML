@@ -22,23 +22,12 @@ library(RecordLinkage)
 library(dgof) # for statistical testing
 library(fdm2id) # for predict that works for kmeans
 library(ppclust) # for cmeans
-library(factoextra) # for get_cluster_?
-library(FactoMineR) # for MCA
 library(tidyverse)
 
 ```
 
 ```{r import commune lookup}
-commune_region_lookup <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>%
-  clean_names() %>%
-  select(-geometry)
-#chile.adm3 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm3_bcn_20211008.shp") %>%
-#  mutate(commune_code = str_sub(ADM3_PCODE, start = 3, end = -1))
-
-araucnorte_communes <- commune_region_lookup %>%
-  filter(str_detect(health_service_name, "a Norte"))
-araucsur_communes <- commune_region_lookup %>%
-  filter(str_detect(health_service_name, "a Sur"))
+commune_region_lookup <- read_excel("04_Data/Outputs/region_service_commune.xlsx") %>% clean_names()
 
 ```
 
@@ -84,10 +73,7 @@ chile_merged <- chile_merged_raw %>%
          economic_specialty_code = cod_espe,
          economic_branch_code = cod_rama,
          economic_profspec_code = cod_men,
-         teaching_code_new = ens) %>%
-  mutate(commune_code = ifelse(nchar(as.character(student_commune_code)) == 4,
-                               paste0("0", as.character(student_commune_code)),
-                               as.character(student_commune_code)))
+         teaching_code_new = ens)
 
 
 ```
@@ -99,61 +85,53 @@ clinical_large_raw <- read_excel("04_Data/dataset_ssas_2015_2021.xlsx") %>% clea
 clinical_large <- clinical_large_raw %>%
   select(c(-procedence, -ethnicity, -education_level, -disability, -foster_care)) %>%
   # Fix the date columns
-  mutate(dob_eng = ifelse(str_detect(date_of_birth, "/"), 1,
-                   ifelse(str_detect(date_of_birth, "-"), 0, NA)),
+  mutate(dob_eng = ifelse(str_detect(date_of_birth, "/"), 1, ifelse(str_detect(date_of_birth, "-"), 0, NA)),
          apt_eng = ifelse(str_detect(date_appointment, "/"), 1, ifelse(str_detect(date_appointment, "-"), 0, NA)),
          dob_day = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "^\\d+")), 
-                   ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "^\\d+")), NA)),
+                          ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "^\\d+")), NA)),
          dob_month = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "(?<=/)\\d+(?=/)")), 
-                     ifelse(dob_eng == 0, str_extract(date_of_birth, "(?<=-)\\w+(?=-)"), NA)),
+                            ifelse(dob_eng == 0, str_extract(date_of_birth, "(?<=-)\\w+(?=-)"), NA)),
          dob_year = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "\\d+$")), 
-                    ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "\\d+$")) + 2000, NA)),
+                           ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "\\d+$")) + 2000, NA)),
          dob_month_eng = as.integer(ifelse(dob_month == "ene", 1,
-                                    ifelse(dob_month == "abr", 4, 
-                                    ifelse(dob_month == "ago", 8, 
-                                    ifelse(dob_month == "sept", 9, 
-                                    ifelse(dob_month == "dic", 12, dob_month)))))),
+                                           ifelse(dob_month == "abr", 4, 
+                                                  ifelse(dob_month == "ago", 8, 
+                                                         ifelse(dob_month == "sept", 9, 
+                                                                ifelse(dob_month == "dic", 12, dob_month)))))),
          dob = make_date(year = dob_year, month = dob_month_eng, day = dob_day),
          apt_day = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "^\\d+")), 
-                   ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "^\\d+")), NA)),
+                          ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "^\\d+")), NA)),
          apt_month = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "(?<=/)\\d+(?=/)")), 
-                     ifelse(apt_eng == 0, str_extract(date_appointment, "(?<=-)\\w+(?=-)"), NA)),
+                            ifelse(apt_eng == 0, str_extract(date_appointment, "(?<=-)\\w+(?=-)"), NA)),
          apt_year = ifelse(apt_eng == 1, as.integer(str_extract(date_appointment, "\\d+$")), 
-                    ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "\\d+$")) + 2000, NA)),
+                           ifelse(apt_eng == 0, as.integer(str_extract(date_appointment, "\\d+$")) + 2000, NA)),
          apt_month_eng = as.integer(ifelse(apt_month == "ene", 1,
-                                    ifelse(apt_month == "abr", 4, 
-                                    ifelse(apt_month == "ago", 8, 
-                                    ifelse(apt_month == "sept", 9, 
-                                    ifelse(apt_month == "dic", 12, apt_month)))))),
+                                           ifelse(apt_month == "abr", 4, 
+                                                  ifelse(apt_month == "ago", 8, 
+                                                         ifelse(apt_month == "sept", 9, 
+                                                                ifelse(apt_month == "dic", 12, apt_month)))))),
          apt_date = make_date(year = apt_year, month = apt_month_eng, day = apt_day),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
-                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN",
-                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN",
-                        ifelse(comuna == "PUCON", "PUCÓN",
-                        ifelse(comuna == "TOLTEN", "TOLTÉN",
-                        ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
-         #commune_name_upper = comuna,
+         commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+                                      ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
+                                             ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
+                                                    ifelse(comuna == "PUCON", "PUCÓN", 
+                                                           ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                                                                  ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
          ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
-                      ifelse(socio_economic_level == "FONASA - B", 2,
-                      ifelse(socio_economic_level == "FONASA - C", 2, 
-                      ifelse(socio_economic_level == "FONASA - D", 2,
-                      ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA)))))),
+                            ifelse(socio_economic_level == "FONASA - B", 2,
+                                   ifelse(socio_economic_level == "FONASA - C", 2, 
+                                          ifelse(socio_economic_level == "FONASA - D", 2,
+                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, 
+                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA)))))),
          autism = 1,
          intdisab = 0,
          aut_rank = 1
          ) %>%
-  left_join(commune_region_lookup, by = "commune_name_upper") %>%
-  select(id, gender, 
-         commune_code, commune_name, commune_name_upper, 
-         health_service_name, region_name, 
-         socio_economic_level, ses_status, 
-         dob, age_june30, 
-         apt_date, hospital, medical_specialty, type_appointment,
-         autism, intdisab, aut_rank) 
+  left_join(commune_region_lookup, by = "commune_name") %>%
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, codigo, diagnosis, autism, intdisab, aut_rank) 
 
-aut_codes <- unique(clinical_large_raw$codigo)
+aut_codes <- unique(clinical_large$codigo)
 
 clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
 
@@ -167,29 +145,28 @@ clinical_small <- clinical_small_raw %>%
                            cod_dg_2 %in% aut_codes | 
                            cod_dg_3 %in% aut_codes, 1, 0),
          aut_rank = ifelse(cod_dg_1 %in% aut_codes, 1,
-                    ifelse(cod_dg_2 %in% aut_codes, 2,
-                    ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
+                           ifelse(cod_dg_2 %in% aut_codes, 2,
+                                  ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
-                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
-                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
-                        ifelse(comuna == "PUCON", "PUCÓN", 
-                        ifelse(comuna == "TOLTEN", "TOLTÉN", 
-                        ifelse(comuna == "VILCUN", "VILCÚN", 
-                        ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
-                        ifelse(comuna == "MACHALI", "MACHALÍ",
-                        ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
+         commune_name = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
+                                      ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
+                                             ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
+                                                    ifelse(comuna == "PUCON", "PUCÓN", 
+                                                           ifelse(comuna == "TOLTEN", "TOLTÉN", 
+                                                                  ifelse(comuna == "VILCUN", "VILCÚN", 
+                                                                         ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
+                                                                                ifelse(comuna == "MACHALI", "MACHALÍ",
+                                                                                       ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
          ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
-                      ifelse(socio_economic_level == "FONASA - B", 2,
-                      ifelse(socio_economic_level == "FONASA - C", 2, 
-                      ifelse(socio_economic_level == "FONASA - D", 2,
-                      ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA))))))
+                            ifelse(socio_economic_level == "FONASA - B", 2,
+                                   ifelse(socio_economic_level == "FONASA - C", 2, 
+                                          ifelse(socio_economic_level == "FONASA - D", 2,
+                                                 ifelse(socio_economic_level == "Private Health Insurance", 3, 
+                                                        ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA))))))
          ) %>%
-  left_join(commune_region_lookup, by = "commune_name_upper") %>%
+  left_join(commune_region_lookup, by = "commune_name") %>%
   #filter(autism == 1) %>%
-  select(id, gender, commune_code, commune_name, commune_name_upper, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, cod_dg_1, cod_dg_2, cod_dg_3, diagnosis, autism, aut_rank) 
-# Throws a warning because there are 2 records for Tocopila which is in two regions. Will keep both because we have no way of knowing which is correct.
+  select(id, gender, commune_name, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, cod_dg_1, cod_dg_2, cod_dg_3, diagnosis, autism, aut_rank) 
 
 intdisab_codes <- unique(c(clinical_small_raw$cod_dg_1, clinical_small_raw$cod_dg_2, clinical_small_raw$cod_dg_3)) %>%
   str_subset("F7") %>%
@@ -199,14 +176,16 @@ clinical_small <- clinical_small %>%
   mutate(intdisab = ifelse(cod_dg_1 %in% intdisab_codes |
                              cod_dg_2 %in% intdisab_codes | 
                              cod_dg_3 %in% intdisab_codes, 1, 0)) %>%
-  #rename("codigo" = "cod_dg_1") %>%
-  select(c(-cod_dg_1, -cod_dg_2, -cod_dg_3, -diagnosis))
+  rename("codigo" = "cod_dg_1") %>%
+  select(c(-cod_dg_2, -cod_dg_3))
 
 clinical <- rbind(clinical_large, clinical_small)
 
-clinical_communes <- clinical %>% group_by(commune_code) %>% summarise() %>% arrange() %>%
-  mutate(commune_in_school_data = ifelse(commune_code %in% unique(chile_merged$commune_code), 1, 0)) # Needs to all be 1's
+clinical_communes <- clinical %>% group_by(commune_name) %>% summarise() %>% arrange() %>%
+  mutate(commune_in_school_data = ifelse(commune_name %in% unique(chile_merged$student_commune_name), 1, 0)) # Needs to all be 1's
 
+araucnorte_communes <- commune_region_lookup %>%
+  filter(health_service_name == "Servicio de Salud Araucanía Norte")
 
 ```
 
@@ -222,9 +201,9 @@ get.min.na <- function(x) ifelse( !all(is.na(x)), min(x, na.rm = TRUE), NA)
 get.max.na <- function(x) ifelse( !all(is.na(x)), max(x, na.rm = TRUE), NA)
 
 patients <- clinical %>%
-  filter(commune_code %in% araucsur_communes$commune_code) %>%
-  group_by(id, gender, dob, commune_name, region_name) %>% # Maybe move SES back to here
-  summarise(ses_status = get.min.na(ses_status),
+  filter(health_service_name %in% araucnorte_communes) %>%
+  group_by(id, gender, dob, commune_name, region_name, ses_status) %>% # Maybe move SES back to here
+  summarise(#ses_status = get.min.na(ses_status),
             autism = get.max.na(autism),
             #intdisab = get.max.na(intdisab),
             aut_rank = get.min.na(aut_rank)) %>%
@@ -257,7 +236,7 @@ write_csv(patients_unique, "04_Data/Outputs/patients_unique.csv") # can't write 
 
 ```
 
-NB: there are 1688 unique ID's in patients and it's 1702 rows long because some people are represented in 2 communes.
+NB: there are 1473 unique ID's in patients and it's 1478 rows long, therefore 5 repeated people - probably moved communes.
 
 Are all the records in the small dataset in the big one? No
 
@@ -273,13 +252,9 @@ Only try to link clinical data to records in the schools data for the Southern h
 
 ```{r set up data}
 school <- chile_merged %>%
-  # mutate(commune_code = ifelse(nchar(as.character(student_commune_code)) == 4,
-  #                              paste0("0", as.character(student_commune_code)),
-  #                              as.character(student_commune_code))) %>%
-  select(-student_commune_name) %>%
-  left_join(commune_region_lookup, by = "commune_code") %>%
-  filter(commune_code %in% araucsur_communes$commune_code) %>%
-  #filter(health_service_name == "Servicio de Salud Araucanía Sur") %>% # This should be filtered either on the specific ARAUC communes in the clinical data or using student_commune_region not school_region.
+  rename(commune_name = student_commune_name) %>%
+  left_join(commune_region_lookup, by = "commune_name") %>%
+  filter(health_service_name == "Servicio de Salud Araucanía Sur") %>% # This should be filtered either on the specific ARAUC communes in the clinical data or using student_commune_region not school_region.
   filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% # Could try without this filter to pick up edge cases just in case
   # filter only the communes represented in the clinical data here?
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
@@ -287,20 +262,18 @@ school <- chile_merged %>%
          aut_rank = 1,
          dob = ymd(dob),
          ses_status = ifelse(school_fee == "", NA, 
-                      ifelse(school_fee == "GRATUITO", 1, 
-                      ifelse(school_fee == "$1.000 A $10.000", 2,
-                      ifelse(school_fee == "$10.001 A $25.000", 2, 
-                      ifelse(school_fee == "$25.001 A $50.000", 2,
-                      ifelse(school_fee == "$50.001 A $100.000", 2, 
-                      ifelse(school_fee == "MAS DE $100.000", 2, 
-                      ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
+                             ifelse(school_fee == "GRATUITO", 1, 
+                                    ifelse(school_fee == "$1.000 A $10.000", 2,
+                                           ifelse(school_fee == "$10.001 A $25.000", 2, 
+                                                  ifelse(school_fee == "$25.001 A $50.000", 2,
+                                                         ifelse(school_fee == "$50.001 A $100.000", 2, 
+                                                                ifelse(school_fee == "MAS DE $100.000", 2, 
+                                                                       ifelse(school_fee == "SIN INFORMACION", NA, NA))))))))) %>%
   filter(autism == 1) %>% # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
-  rename(student_commune_name = commune_name) %>%
+  rename(student_region_name = region_name, student_commune_name = commune_name) %>%
   select(dob,
          sex_desc,
          student_commune_name,
-         #commune_name, 
-         #health_service_name,
          autism,
          ses_status,
          #intdisab,
@@ -308,7 +281,6 @@ school <- chile_merged %>%
          #student_region_name
   ) %>%
   rowid_to_column("id")
-school[dim(school)[1]+1, ] <- c(dim(school)[1]+1, "2023-06-26", "Female", "Misc", 0, 3, 0)
 
 # Do the commune names align well? Yes
 table(sort(unique(patients$student_commune_name, sort(unique(school$student_commune_name)))))
@@ -317,9 +289,7 @@ sort(unique(school$student_commune_name))
 
 ```
 
-Added a fake row at the end of school to have a ses=3 represented so that pairing works.
 
-Perfect match in communes between patient and school dataset when both are filtered to only be communes in Arauc Sur health region.
 
 # Try manual linkage
 
@@ -343,15 +313,11 @@ school_grouped <- school %>%
 sort(unique(patients$student_commune_name))
 sort(unique(school$student_commune_name))
 
-merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name"), all = FALSE)
+merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name"), all = TRUE)
 merged %>% filter(!is.na(id.x) & !is.na(id.y)) # 205 matches
-length(unique(merged$id.x))
-length(unique(merged$id.y))
 
 ```
-
-
-187 unique school records can be perfectly matched to clinical records, representing 191 patients.
+All the students that can't be uniquely identified (6) are males in Temuco and SES status doesn't help distinguish them.
 
 
 # Probabilistic record linkage
@@ -402,9 +368,9 @@ b2 <- epiWeights(a2, e = c(0.01, # Default for DOB
                            0.01, # Default for sex
                            0.01, # Default for commune because we want a good match
                            0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
-                           0.4, # Have more error for ses_status because it is loosely defined 
+                           0.6, # Have more error for ses_status because it is loosely defined 
                            #0.3, # Allow more mismatch intellectual disability status so that autism matches in preference
-                           0.01 # Allow some mismatch on whether autism is the primary diagnosis so we take record with higher placed autism diagnosis when there are multiple clinical record options for a single school record
+                           0.1 # Allow some mismatch on whether autism is the primary diagnosis so we take record with higher placed autism diagnosis when there are multiple clinical record options for a single school record
 ))
 summary(b2)
 allPairs2 <- getPairs(b2)
@@ -448,8 +414,7 @@ pairs <- pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
 matches <- select_n_to_m(pairs, threshold = 0.5, score = "weight", n = 1, m = 1, var = "match") %>%
   filter(match == TRUE) %>%
   rename("id" = ".x",
-         "row_id" = ".y") %>%
-  mutate(id = as.character(id))
+         "row_id" = ".y")
 
 ```
 
@@ -457,7 +422,6 @@ matches <- select_n_to_m(pairs, threshold = 0.5, score = "weight", n = 1, m = 1,
 
 # Now add the matched clinical records to the school records
 school_matched <- school %>%
-  filter(student_commune_name != "Misc") %>%
   left_join(matches, by = "id") %>%
   rename(id.school = id,
          dob.school = dob.x,
@@ -489,14 +453,14 @@ write_csv(school_matched, "04_Data/Outputs/school_matched.csv")
 #school_matched_yes <- school_matched %>% filter(!is.na(weight))
 #school_matched_no <- school_matched %>% filter(is.na(weight))
 
-# commune_nums <- data.frame(student_commune_name.school = sort(unique(school_matched$student_commune_name.school)),
-#                            commune_num = c(1:length(unique(school_matched$student_commune_name.school))))
+commune_nums <- data.frame(student_commune_name.school = sort(unique(school_matched$student_commune_name.school)),
+                           commune_num = c(1:length(unique(school_matched$student_commune_name.school))))
 
 school_matched_small <- school_matched %>%
   mutate(matched = ifelse(is.na(patient_id), 0, 1),
          sex.school = ifelse(sex_desc.school == "Male", 1, ifelse(sex_desc.school == "Female", 2, NA))) %>%
-  merge(commune_region_lookup, by.x = "student_commune_name.school", by.y = "commune_name") %>% # doesn't include all.x = TRUE because that would keep the fake record.
-  select(id.school, dob.school, sex_desc.school, sex.school, student_commune_name.school, commune_code, ses_status.school, matched)
+  left_join(commune_nums, by = "student_commune_name.school") %>%
+  select(id.school, dob.school, sex_desc.school, sex.school, student_commune_name.school, commune_num, ses_status.school, matched)
 
 ```
 
@@ -533,25 +497,17 @@ patients_matched <- patients %>%
 
 write_csv(patients_matched, "04_Data/Outputs/patients_matched.csv")
 
+#school_matched_yes <- school_matched %>% filter(!is.na(weight))
+#school_matched_no <- school_matched %>% filter(is.na(weight))
 
-patients_matched_small <- patients_matched %>%
-  mutate(matched = ifelse(is.na(id.school), 0, 1),
-         sex.patient = ifelse(sex_desc.patient == "Male", 1, ifelse(sex_desc.patient == "Female", 2, NA))) %>%
-  merge(commune_region_lookup, by.x = "student_commune_name.patient", by.y = "commune_name") %>%
-  select(patient_id, id.patient, dob.patient, sex_desc.patient, sex.patient, student_commune_name.patient, commune_code, ses_status.patient, matched)
+commune_nums <- data.frame(student_commune_name.school = sort(unique(school_matched$student_commune_name.school)),
+                           commune_num = c(1:length(unique(school_matched$student_commune_name.school))))
 
-```
-
-
-Check patients that lived in different communes therefore were in the patient dataset twice aren't matched to multiple school records
-
-```{r patients unique}
-patients_matched_unique <- patients_matched_small %>%
-  group_by(matched, patient_id) %>%
-  summarise(count = n())
-
-patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% select(patient_id)
-# No patient is inadvertently matched to two school records
+school_matched_small <- school_matched %>%
+  mutate(matched = ifelse(is.na(patient_id), 0, 1),
+         sex.school = ifelse(sex_desc.school == "Male", 1, ifelse(sex_desc.school == "Female", 2, NA))) %>%
+  left_join(commune_nums, by = "student_commune_name.school") %>%
+  select(id.school, dob.school, sex_desc.school, sex.school, student_commune_name.school, commune_num, ses_status.school, matched)
 
 ```
 
@@ -585,20 +541,14 @@ school_yes <- school_matched_small %>% filter(matched == 1) #%>% select(sex.scho
 school_no <- school_matched_small %>% filter(matched == 0)
 
 # Kolmogorov tests for our matched results
-ks.school.sex <- ks.test(na.omit(school_yes$sex.school),
-                         na.omit(school_no$sex.school),
-                         alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.sex <- ks.test(na.omit(school_yes$sex.school), na.omit(school_no$sex.school), alternative = "two.sided", simulate.p.value = TRUE)
 ks.school.sex
 
-ks.school.ses_status <- ks.test(as.numeric(na.omit(school_yes$ses_status.school)),
-                                as.numeric(na.omit(school_no$ses_status.school)),
-                                alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.ses_status <- ks.test(na.omit(school_yes$ses_status.school), na.omit(school_no$ses_status.school), alternative = "two.sided", simulate.p.value = TRUE)
 ks.school.ses_status
 
-ks.school.commune_code<- ks.test(as.numeric(na.omit(school_yes$commune_code)),
-                                 as.numeric(na.omit(school_no$commune_code)),
-                                 alternative = "two.sided", simulate.p.value = TRUE)
-ks.school.commune_code
+ks.school.commune_num <- ks.test(na.omit(school_yes$commune_num), na.omit(school_no$commune_num), alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.commune_num
 
 # Try manual Kolmogorov for SES
 # bins <- unique(na.omit(school_matched_small$ses_status.school))
@@ -610,9 +560,7 @@ ks.school.commune_code
 # Kolmogorov tests with permutation distributions
 set.seed(123)
 nPerm <- 200 # change to 2000
-ks_perm.school.pvals <- data.frame(sex = numeric(nPerm),
-                                   commune_code = numeric(nPerm),
-                                   ses_status = numeric(nPerm))
+ks_perm.school.pvals <- data.frame(sex = numeric(nPerm), ses_status = numeric(nPerm))
 
 school_matched_small_perm <- school_matched_small
 
@@ -622,18 +570,12 @@ for (i in 1:nPerm) {
   school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
   school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
   
-  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school),
-                                na.omit(school_perm_no$sex.school), 
-                                alternative = "two.sided")
-  ks_perm.school.commune_code <- ks.test(as.numeric(na.omit(school_perm_yes$commune_code)),
-                                        as.numeric(na.omit(school_perm_no$commune_code)),
-                                        alternative = "two.sided")
-  ks_perm.school.ses_status <- ks.test(as.numeric(na.omit(school_perm_yes$ses_status.school)),
-                                       as.numeric(na.omit(school_perm_no$ses_status.school)),
-                                       alternative = "two.sided")
+  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school), na.omit(school_perm_no$sex.school), alternative = "two.sided")
+  ks_perm.school.commune_num <- ks.test(na.omit(school_perm_yes$commune_num), na.omit(school_perm_no$commune_num), alternative = "two.sided")
+  ks_perm.school.ses_status <- ks.test(na.omit(school_perm_yes$ses_status.school), na.omit(school_perm_no$ses_status.school), alternative = "two.sided")
   
   ks_perm.school.pvals$sex[i] <- ks_perm.school.sex$p.value
-  ks_perm.school.pvals$commune_code[i] <- ks_perm.school.commune_code$p.value
+  ks_perm.school.pvals$commune_num[i] <- ks_perm.school.commune_num$p.value
   ks_perm.school.pvals$ses_status[i] <- ks_perm.school.ses_status$p.value
 }
 
@@ -647,7 +589,7 @@ school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
 ggplot(school_match.sex) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~sex_desc) +
-  labs(title = "Matching of school record to clinical record by sex",
+  labs(title = "Matching of school record to clinical record by feature (sex)",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -657,33 +599,28 @@ ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
   geom_vline(xintercept = ks.school.sex$p.value, color = "red")
 
 # Results for commune
-school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-school_match_no.student_commune_name <- school_no %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
+school_match_yes.commune_num <- school_yes %>% group_by(commune_num) %>% summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  merge(commune_nums, by = "commune_num", all = TRUE) %>% mutate(matched = 1) 
+school_match_no.commune_num <- school_no %>% group_by(commune_num) %>% summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  merge(commune_nums, by = "commune_num", all = TRUE) %>% mutate(matched = 0)
 
-school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, school_match_no.student_commune_name) %>%
-  arrange(student_commune_name.school, matched)
+school_match.commune_num <- rbind(school_match_yes.commune_num, school_match_no.commune_num) %>%
+  arrange(commune_num, matched)
 
-ggplot(school_match.student_commune_name) +
+ggplot(school_match.commune_num) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~student_commune_name.school, scales = "fixed") +
   #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of school record to clinical record by commune",
+  labs(title = "Matching of school record to clinical record by feature (commune)",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
 # most of the difference in matched commune frequency is for Temuco which is the biggest commune.
 
 
-ggplot(ks_perm.school.pvals, aes(x = commune_code, y = after_stat(density))) +
+ggplot(ks_perm.school.pvals, aes(x = commune_num, y = after_stat(density))) +
   geom_density() +
-  geom_vline(xintercept = ks.school.commune_code$p.value, color = "red")
+  geom_vline(xintercept = ks.school.commune_num$p.value, color = "red")
 
 # Results for ses status
 school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
@@ -694,7 +631,7 @@ school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.se
 ggplot(school_match.ses_status) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~ses_status.school) +
-  labs(title = "Matching of school record to clinical record by SES status",
+  labs(title = "Matching of school record to clinical record by feature (SES status)",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
@@ -715,572 +652,115 @@ Our matched/non-matched are not different by sex (p-value in Kolmog is same as m
 
 ```{r kolmogorov tests patient, warning = FALSE}
 
-patients_yes <- patients_matched_small %>% filter(matched == 1) #%>% select(sex.school)
-patients_no <- patients_matched_small %>% filter(matched == 0)
+patient_yes <- patient_matched_small %>% filter(matched == 1) #%>% select(sex.school)
+patient_no <- patient_matched_small %>% filter(matched == 0)
 
 # Kolmogorov tests for our matched results
-ks.patients.sex <- ks.test(na.omit(patients_yes$sex.patient),
-                         na.omit(patients_no$sex.patient),
-                         alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.sex
+ks.school.sex <- ks.test(na.omit(school_yes$sex.school), na.omit(school_no$sex.school), alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.sex
 
-ks.patients.ses_status <- ks.test(as.numeric(na.omit(patients_yes$ses_status.patient)),
-                                as.numeric(na.omit(patients_no$ses_status.patient)),
-                                alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.ses_status
+ks.school.ses_status <- ks.test(na.omit(school_yes$ses_status.school), na.omit(school_no$ses_status.school), alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.ses_status
 
-ks.patients.commune_code<- ks.test(as.numeric(na.omit(patients_yes$commune_code)),
-                                 as.numeric(na.omit(patients_no$commune_code)),
-                                 alternative = "two.sided", simulate.p.value = TRUE)
-ks.patients.commune_code
+ks.school.commune_num <- ks.test(na.omit(school_yes$commune_num), na.omit(school_no$commune_num), alternative = "two.sided", simulate.p.value = TRUE)
+ks.school.commune_num
 
+# Try manual Kolmogorov for SES
+# bins <- unique(na.omit(school_matched_small$ses_status.school))
+# ecdf.ses_status.yes <- ecdf(schoolyes$ses_status.school)
+# ecdf.ses_status.yes(schoolyes$ses_status.school)
+# ecdf.ses_status.no <- ecdf(schoolno$ses_status.school)
+# plot(ecdf.ses_status.yes) ; plot(ecdf.ses_status.no)
 
 # Kolmogorov tests with permutation distributions
 set.seed(123)
 nPerm <- 200 # change to 2000
-ks_perm.patients.pvals <- data.frame(sex = numeric(nPerm),
-                                   commune_code = numeric(nPerm),
-                                   ses_status = numeric(nPerm))
+ks_perm.school.pvals <- data.frame(sex = numeric(nPerm), ses_status = numeric(nPerm))
 
-patients_matched_small_perm <- patients_matched_small
+school_matched_small_perm <- school_matched_small
 
 for (i in 1:nPerm) {
   #print(i)
-  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] # permute matched status
-  patients_perm_yes <- patients_matched_small_perm %>% filter(matched == 1)
-  patients_perm_no <- patients_matched_small_perm %>% filter(matched == 0)
+  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
+  school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
+  school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
   
-  ks_perm.patients.sex <- ks.test(na.omit(patients_perm_yes$sex.patient),
-                                na.omit(patients_perm_no$sex.patient), 
-                                alternative = "two.sided")
-  ks_perm.patients.commune_code <- ks.test(as.numeric(na.omit(patients_perm_yes$commune_code)),
-                                        as.numeric(na.omit(patients_perm_no$commune_code)),
-                                        alternative = "two.sided")
-  ks_perm.patients.ses_status <- ks.test(as.numeric(na.omit(patients_perm_yes$ses_status.patient)),
-                                       as.numeric(na.omit(patients_perm_no$ses_status.patient)),
-                                       alternative = "two.sided")
+  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school), na.omit(school_perm_no$sex.school), alternative = "two.sided")
+  ks_perm.school.commune_num <- ks.test(na.omit(school_perm_yes$commune_num), na.omit(school_perm_no$commune_num), alternative = "two.sided")
+  ks_perm.school.ses_status <- ks.test(na.omit(school_perm_yes$ses_status.school), na.omit(school_perm_no$ses_status.school), alternative = "two.sided")
   
-  ks_perm.patients.pvals$sex[i] <- ks_perm.patients.sex$p.value
-  ks_perm.patients.pvals$commune_code[i] <- ks_perm.patients.commune_code$p.value
-  ks_perm.patients.pvals$ses_status[i] <- ks_perm.patients.ses_status$p.value
+  ks_perm.school.pvals$sex[i] <- ks_perm.school.sex$p.value
+  ks_perm.school.pvals$commune_num[i] <- ks_perm.school.commune_num$p.value
+  ks_perm.school.pvals$ses_status[i] <- ks_perm.school.ses_status$p.value
 }
 
 # Results for sex
-patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-patients_match_no.sex <- patients_no %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.patient == 1, "Male", ifelse(sex.patient == 2, "Female", NA))) %>% 
+school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
+  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
   arrange(sex_desc, matched)
 
-ggplot(patients_match.sex) +
+ggplot(school_match.sex) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
   facet_wrap(~sex_desc) +
-  labs(title = "Matching of clinical record to school record by sex",
+  labs(title = "Matching of school record to clinical record by feature (sex)",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
 
-ggplot(ks_perm.patients.pvals, aes(x = sex, y = after_stat(density))) +
+ggplot(ks_perm.school.pvals, aes(x = sex, y = after_stat(density))) +
   geom_density() +
-  geom_vline(xintercept = ks.patients.sex$p.value, color = "red")
+  geom_vline(xintercept = ks.school.sex$p.value, color = "red")
 
 # Results for commune
-patients_match_yes.student_commune_name <- patients_yes %>% group_by(student_commune_name.patient) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-patients_match_no.student_commune_name <- patients_no %>% group_by(student_commune_name.patient) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
+school_match_yes.commune_num <- school_yes %>% group_by(commune_num) %>% summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  merge(commune_nums, by = "commune_num", all = TRUE) %>% mutate(matched = 1) 
+school_match_no.commune_num <- school_no %>% group_by(commune_num) %>% summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  merge(commune_nums, by = "commune_num", all = TRUE) %>% mutate(matched = 0)
 
-patients_match.student_commune_name <- rbind(patients_match_yes.student_commune_name, patients_match_no.student_commune_name) %>%
-  arrange(student_commune_name.patient, matched)
+school_match.commune_num <- rbind(school_match_yes.commune_num, school_match_no.commune_num) %>%
+  arrange(commune_num, matched)
 
-ggplot(patients_match.student_commune_name) +
+ggplot(school_match.commune_num) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~student_commune_name.patient, scales = "fixed") +
+  facet_wrap(~student_commune_name.school, scales = "fixed") +
   #facet_wrap(~student_commune_name.school, scales = "free") +
-  labs(title = "Matching of clinical record to school record by commune",
+  labs(title = "Matching of school record to clinical record by feature (commune)",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
 # most of the difference in matched commune frequency is for Temuco which is the biggest commune.
 
 
-ggplot(ks_perm.patients.pvals, aes(x = commune_code, y = after_stat(density))) +
+ggplot(ks_perm.school.pvals, aes(x = commune_num, y = after_stat(density))) +
   geom_density() +
-  geom_vline(xintercept = ks.patients.commune_code$p.value, color = "red")
+  geom_vline(xintercept = ks.school.commune_num$p.value, color = "red")
 
 # Results for ses status
-patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-patients_match_no.ses_status <- patients_no %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-patients_match.ses_status <- rbind(patients_match_yes.ses_status, patients_match_no.ses_status) %>%
-  arrange(ses_status.patient, matched)
+school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
+school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
+school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.ses_status) %>%
+  arrange(ses_status.school, matched)
 
-ggplot(patients_match.ses_status) +
+ggplot(school_match.ses_status) +
   geom_col(aes(x = as.factor(matched), y = freq, fill = as.factor(matched))) +
-  facet_wrap(~ses_status.patient) +
-  labs(title = "Matching of clinical record to school record by SES status",
+  facet_wrap(~ses_status.school) +
+  labs(title = "Matching of school record to clinical record by feature (SES status)",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
 
-ggplot(ks_perm.patients.pvals, aes(x = ses_status, y = after_stat(density))) +
+ggplot(ks_perm.school.pvals, aes(x = ses_status, y = after_stat(density))) +
   geom_density() +
-  geom_vline(xintercept = ks.patients.ses_status$p.value, color = "red")
+  geom_vline(xintercept = ks.school.ses_status$p.value, color = "red")
 
 
 ```
 
-
-# New prevalence estimates
-
-```{r new prev}
-n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) # Use this version because accounts for non-unique patients with both match and non-match
-#n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
-#  dim(patients_matched_small %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
+Then quantify clinical records for ARAUC Sur that haven't been matched.
 
 
-```
-
-# Multiple Correspondence Analysis
-
-https://www.tibco.com/reference-center/what-is-correspondence-analysis#:~:text=Correspondence%20analysis%2C%20also%20called%20reciprocal,two%20or%20more%20data%20points.
-https://ladal.edu.au/clust.html
-https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3810057/
-http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/
-
-```{r MCA clinical}
-
-clinical_mca <- clinical %>%
-  mutate(gender = as.factor(gender),
-         age_june30 = as.factor(age_june30),
-         commune_name = as.factor(commune_name),
-         appt_type = as.factor(type_appointment),
-         ses_status = as.factor(ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level)),
-         hospital = as.factor(hospital),
-         medical_specialty = as.factor(medical_specialty)
-         ) %>%
-  select(gender, 
-         age_june30,
-         #commune_name, 
-         #appt_type,
-         ses_status, 
-         hospital) #, 
-         #medical_specialty)
-
-# Test if there is sufficient structure in the data to do clustering
-#clusttendency <- get_clust_tendency(clinical_mca,
-#                                    n = 5, # Needs to be same as number of features
-#                                    gradient = list(low = "steelblue", high = "white"))  
-# Can only handle numeric data so not that useful but even with only the numeric features,
-# the Hopkins stat is very close to 1 (0.997) so the data is highly clusterable
-
-res_mca_clinical <- FactoMineR::MCA(clinical_mca, ncp = 4, graph = TRUE) # Can only take categorical variables and they have to be cast to factors
-fviz_mca_var(res_mca_clinical, choice = "mca.cor", 
-            repel = TRUE, # Avoid text overlapping (slow)
-            ggtheme = theme_minimal())
-
-```
-
-Probably better to do MCA on patient-level data because there will be a substructure of clusters of the patients' appointments.
-Especially as there are some duplicates in the clinical data, seemingly as a result of translating the medical_specialty vales
-
-```{r MCA patients}
-get.mode <- function(x) {
-  ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))]
-}
-
-patients_mca <- clinical %>% 
-  #filter(commune_code %in% araucsur_communes$commune_code) %>%
-  mutate(medical_specialty_english = ifelse(medical_specialty == "Physiatry", "Psychiatry",
-                                     ifelse(medical_specialty == "PEDIATRIA", "Paediatrics",
-                                     ifelse(medical_specialty == "PSIQUIATRIA", "Psychiatry",
-                                     ifelse(medical_specialty == "NEUROLOGIA", "Neurology", medical_specialty)))),
-         medical_specialty_grouped = ifelse(medical_specialty_english %in% c("Psychiatry", "Child Psychiatry"), "Psychiatry",
-                                     ifelse(medical_specialty_english %in% c("Neurology", "Pediatric Neurology"), "Neurology",
-                                     ifelse(medical_specialty_english == "Paediatrics", "Paediatrics", "Other specialty"))),
-         ses_status = ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level)) %>%
-  group_by(id, gender, dob, commune_name) %>%
-  summarise(ses_status = get.min.na(ses_status), # Fortunately the available values are in alphabetical order by status
-            autism = get.max.na(autism),
-            medical_specialty_grouped = get.mode(medical_specialty_grouped), # Most common medical specialty across visits
-            hospital = hospital[which.max(apt_date)], # most recent hospital
-            age = age_june30[which.max(apt_date)] # Age should be the same for all appts because it's based on dob
-            ) %>%
-  ungroup() %>% 
-  rename("sex_desc" = "gender") %>%
-  mutate(sex_desc = as.factor(sex_desc),
-         age_group = as.factor(ifelse(age <= 2, "Age 0-2", 
-                               ifelse(age >= 3 & age <= 5, "Age 3-5",
-                               ifelse(age >=6 & age <= 8, "Age 6-8", 
-                               ifelse(age >=9 & age <=11, "Age 9-11", 
-                               ifelse(age >=12 & age <= 14, "Age 12-14", 
-                               ifelse(age >= 15 & age <= 18, "Age 15-18", "Adult"))))))), # Shouldn't be any adults in this dataset
-         age = as.factor(age),
-         commune_name = as.factor(commune_name),
-         ses_status = as.factor(ses_status),
-         autism = as.factor(autism),
-         medical_specialty_grouped = as.factor(medical_specialty_grouped),
-         hospital = as.factor(hospital)) %>%
-  select(sex_desc,
-         #age,
-         age_group,
-         commune_name,
-         hospital,
-         ses_status,
-         autism,
-         medical_specialty_grouped)
-# Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
-  
-
-res_mca_patients <- FactoMineR::MCA(patients_mca, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 7, # Needs to match number of features
-                                    graph = TRUE) 
-
-# Plot features
-fviz_mca_var(res_mca_patients, choice = "mca.cor", 
-            repel = TRUE, # Avoid text overlapping
-            ggtheme = theme_minimal())
-
-# Plot categories
-fviz_mca_var(res_mca_patients,
-             col.var = "cos2",
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE, # Avoid text overlapping (slow if many points)
-             ggtheme = theme_minimal())
-
-# Plot individual patients
-fviz_mca_ind(res_mca_patients, col.ind = "cos2", 
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = FALSE, # Graphs is not meaningful if this is TRUE
-             ggtheme = theme_minimal())
-# OR
-fviz_mca_ind(res_mca_patients, 
-             label = "none", # hide individual labels
-             habillage = "sex_desc", # color by groups 
-             palette = c("green", "blue"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by sex",
-             ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients, 
-             label = "none", # hide individual labels
-             habillage = "age_group", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by age",
-             ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients, 
-             label = "none", # hide individual labels
-             habillage = "commune_name", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by commune of residence",
-             ggtheme = theme_minimal()) # Really not meaningful
-fviz_mca_ind(res_mca_patients, 
-             label = "none", # hide individual labels
-             habillage = "ses_status", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by SES status",
-             ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients, 
-             label = "none", # hide individual labels
-             habillage = "hospital", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by hospital",
-             ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients, 
-             label = "none", # hide individual labels
-             habillage = "autism", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by autism status",
-             ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients, 
-             label = "none", # hide individual labels
-             habillage = "medical_specialty_grouped", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by most common medical specialty",
-             ggtheme = theme_minimal())
-
-#fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
-#fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
-#fviz_ellipses(res_mca_patients, 1, geom = "point")
-
-fviz_cos2(res_mca_patients, choice = "var", axes = 1:2)
-round(res_mca_patients$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
-
-# Contributions of variable categories to dimension 1
-fviz_contrib(res_mca_patients, choice = "var", axes = 1, top = 15) 
-# Contributions of variable categories to dimension 2
-fviz_contrib(res_mca_patients, choice = "var", axes = 2, top = 15)
-# Total contribution to dimension 1 and 2
-fviz_contrib(res_mca_patients, choice = "var", axes = 1:2, top = 15)
-# "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
-
-
-```
-
-```{r MCA patients small}
-
-
-get.yes.disability <- function(x) {
-  y <- NA
-  if(any(x == "Yes")) {
-    y <- "Yes disability"
-  } else if(any(x == "No")) {
-    y <- "No disability"
-  } else {
-    y <- "No disability information"
-  }
-  return(y)
-}
-
-get.yes.fostercare <- function(x) {
-  y <- NA
-  if(any(x == "Yes")) {
-    y <- "Yes foster care"
-  } else if(any(x == "No")) {
-    y <- "No foster care"
-  } else {
-    y <- "No foster care information"
-  }
-  return(y)
-}
-
-patients_mca_small <- clinical_small_raw %>% 
-  rename("rurality" = "procedence",
-         "dob" = "fecha_nacimiento",
-         "apt_date" = "fecha_ejecutada",
-         "type_appointment" = "appoinment") %>%
-  mutate(gender = str_to_title(gender),
-         autism = ifelse(cod_dg_1 %in% aut_codes | 
-                           cod_dg_2 %in% aut_codes | 
-                           cod_dg_3 %in% aut_codes, 1, 0),
-         aut_rank = ifelse(cod_dg_1 %in% aut_codes, 1,
-                    ifelse(cod_dg_2 %in% aut_codes, 2,
-                    ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
-         intdisab = ifelse(cod_dg_1 %in% intdisab_codes | 
-                           cod_dg_2 %in% intdisab_codes | 
-                           cod_dg_3 %in% intdisab_codes, 1, 0),
-         age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-         commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
-                        ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
-                        ifelse(comuna == "PITRUFQUEN", "PITRUFQUÉN", 
-                        ifelse(comuna == "PUCON", "PUCÓN", 
-                        ifelse(comuna == "TOLTEN", "TOLTÉN", 
-                        ifelse(comuna == "VILCUN", "VILCÚN", 
-                        ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
-                        ifelse(comuna == "MACHALI", "MACHALÍ",
-                        ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
-         ses_status = ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level),
-         ethnicity = ifelse(ethnicity == "CHILENO", "Chilean",
-                     ifelse(ethnicity == "MAPUCHE", "Mapuche",
-                     ifelse(ethnicity == "EXTRANJERO", "Foreign", "No ethnicity information"))),
-         ethnicity = ifelse(is.na(ethnicity), "No ethnicity information", ethnicity), # for some reason the NA fix doesn't work in preceding line
-         disability = ifelse(is.na(disability), "No disability information", disability),
-         foster_care = ifelse(is.na(foster_care), "No foster care information", foster_care),
-         medical_specialty_english = ifelse(medical_specialty == "Physiatry", "Psychiatry",
-                                     ifelse(medical_specialty == "PEDIATRIA", "Paediatrics",
-                                     ifelse(medical_specialty == "PSIQUIATRIA", "Psychiatry",
-                                     ifelse(medical_specialty == "NEUROLOGIA", "Neurology", medical_specialty)))),
-         medical_specialty_grouped = ifelse(medical_specialty_english %in% c("Psychiatry", "Child Psychiatry"), "Psychiatry",
-                                     ifelse(medical_specialty_english %in% c("Neurology", "Pediatric Neurology"), "Neurology",
-                                     ifelse(medical_specialty_english == "Paediatrics", "Paediatrics", "Other specialty"))),
-         ) %>%
-  left_join(commune_region_lookup, by = "commune_name_upper") %>%
-  group_by(id, gender, age_june30) %>%
-  summarise(ses_status = get.min.na(ses_status), # Fortunately the available values are in alphabetical order by status
-            autism = get.max.na(autism),
-            intdisab = get.max.na(intdisab),
-            medical_specialty_grouped = get.mode(medical_specialty_grouped), # Most common medical specialty across visits
-            hospital = hospital[which.max(apt_date)], # most recent hospital
-            commune_name = commune_name[which.max(apt_date)],
-            rurality = get.mode(rurality),
-            ethnicity = get.mode(ethnicity),
-            disability = get.yes.disability(disability), # change to if any are yes
-            foster_care = get.yes.fostercare(foster_care) # change to if any are yes
-            ) %>%
-  ungroup() %>% 
-  rename("sex_desc" = "gender",
-         "age" = "age_june30") %>%
-  mutate(sex_desc = as.factor(sex_desc),
-         age_group = as.factor(ifelse(age <= 2, "Age 0-2", 
-                               ifelse(age >= 3 & age <= 5, "Age 3-5",
-                               ifelse(age >=6 & age <= 8, "Age 6-8", 
-                               ifelse(age >=9 & age <=11, "Age 9-11", 
-                               ifelse(age >=12 & age <= 14, "Age 12-14", 
-                               ifelse(age >= 15 & age <= 18, "Age 15-18", "Adult"))))))), # Shouldn't be any adults in this dataset
-         age = as.factor(age),
-         commune_name = as.factor(commune_name),
-         ses_status = as.factor(ses_status),
-         rurality = as.factor(rurality),
-         ethnicity = as.factor(ethnicity),
-         disability_imp = as.factor(ifelse(disability == "No disability information", "No disability", disability)),
-         disability = as.factor(disability),
-         foster_care_imp = as.factor(ifelse(foster_care == "No foster care information", "No foster care", foster_care)),
-         foster_care = as.factor(foster_care),
-         autism = as.factor(autism),
-         intdisab = as.factor(intdisab),
-         medical_specialty_grouped = as.factor(medical_specialty_grouped),
-         hospital = as.factor(hospital)) %>%
-   select(#id,
-          sex_desc,
-          #age,
-          age_group,
-          commune_name,
-          #hospital, # Don't use hospital because in the small dataset they are all from Villarrica Hospital
-          #medical_specialty_grouped,
-          autism,
-          intdisab,
-          ses_status,
-          rurality,
-          ethnicity,
-          disability,
-          #disability_imp,
-          foster_care#,
-          #foster_care_imp
-          )
-# Note we still have more than 1 row for some patients because they have multiple communes, could go with their most recent commune
-# We have 416 rows and 406 patients
-  
-
-res_mca_patients_small <- FactoMineR::MCA(patients_mca_small, # Can only take categorical variables and they have to be cast to factors
-                                    ncp = 8, # Needs to match number of features
-                                    graph = TRUE) 
-
-# Plot features
-fviz_mca_var(res_mca_patients_small, choice = "mca.cor", 
-            repel = TRUE, # Avoid text overlapping
-            ggtheme = theme_minimal())
-
-# Plot categories
-fviz_mca_var(res_mca_patients_small,
-             col.var = "cos2",
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = TRUE, # Avoid text overlapping (slow if many points)
-             ggtheme = theme_minimal())
-
-# Plot individual patients
-fviz_mca_ind(res_mca_patients_small, col.ind = "cos2", 
-             gradient.cols = c("#00AFBB", "#E7B800", "#FC4E07"),
-             repel = FALSE, # Graphs is not meaningful if this is TRUE
-             ggtheme = theme_minimal())
-# OR
-fviz_mca_ind(res_mca_patients_small, 
-             label = "none", # hide individual labels
-             habillage = "sex_desc", # color by groups 
-             palette = c("green", "blue"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by sex",
-             ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_small, 
-             label = "none", # hide individual labels
-             habillage = "age_group", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by age",
-             ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_small, 
-             label = "none", # hide individual labels
-             habillage = "commune_name", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by commune of residence",
-             ggtheme = theme_minimal()) # Really not meaningful
-fviz_mca_ind(res_mca_patients_small, 
-             label = "none", # hide individual labels
-             habillage = "ses_status", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by SES status",
-             ggtheme = theme_minimal()) 
-fviz_mca_ind(res_mca_patients_small, 
-             label = "none", # hide individual labels
-             habillage = "rurality", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by rurality",
-             ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_small, 
-             label = "none", # hide individual labels
-             habillage = "ethnicity", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by ethnicity",
-             ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_small, 
-             label = "none", # hide individual labels
-             habillage = "disability_imp", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by disability status",
-             ggtheme = theme_minimal())
-fviz_mca_ind(res_mca_patients_small, 
-             label = "none", # hide individual labels
-             habillage = "foster_care_imp", # color by groups 
-             #palette = c("#00AFBB", "#E7B800"),
-             addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by foster care status",
-             ggtheme = theme_minimal())
-
-#fviz_ellipses(res_mca_patients, 1:4, geom = "point") # Ugly and too many warnings
-#fviz_ellipses(res_mca_patients, c("sex_desc", "age_group", "ses_status"), geom = "point")
-#fviz_ellipses(res_mca_patients, 1, geom = "point")
-
-fviz_cos2(res_mca_patients_small, choice = "var", axes = 1:2)
-round(res_mca_patients_small$var$contrib,2) # "The variable categories with the larger value, contribute the most to the definition of the dimensions. Variable categories that contribute the most to Dim.1 and Dim.2 are the most important in explaining the variability in the data set."
-
-# Contributions of variable categories to dimension 1
-fviz_contrib(res_mca_patients_small, choice = "var", axes = 1, top = 15) 
-# Contributions of variable categories to dimension 2
-fviz_contrib(res_mca_patients_small, choice = "var", axes = 2, top = 15)
-# Total contribution to dimension 1 and 2
-fviz_contrib(res_mca_patients_small, choice = "var", axes = 1:2, top = 15)
-# "The red dashed line on the graph above indicates the expected average value, If the contributions were uniform" See http://www.sthda.com/english/articles/31-principal-component-methods-in-r-practical-guide/114-mca-multiple-correspondence-analysis-in-r-essentials/ for calculations
-
-
-```
-
-# CFA for clinical data
-
-```{r cfa, include = FALSE}
-# clinical_fa <- clinical %>%
-#   mutate(sex = ifelse(gender == "Male", 1, ifelse(gender == "Female", 2, NA)),
-#          appt_type = ifelse(type_appointment == "New", 1,
-#                             ifelse(type_appointment == "Control" | type_appointment == "CONTROL", 2,
-#                                    ifelse(type_appointment == "Discharge", 3, NA))),
-#          commune_code = as.numeric(commune_code),
-#          ses_detailed = ifelse(socio_economic_level == "FONASA - A", 1, 
-#                       ifelse(socio_economic_level == "FONASA - B", 2,
-#                       ifelse(socio_economic_level == "FONASA - C", 3, 
-#                       ifelse(socio_economic_level == "FONASA - D", 4,
-#                       ifelse(socio_economic_level == "Private Health Insurance", 5, 
-#                       ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 5, NA))))))) %>%
-#   select(id, sex, age_june30, ses_detailed, appt_type)
-# # would like to have medical specialty here too
-# 
-# # Using all sn categories together isn't really legit
-# clinical_cor <- cor(select(clinical_fa, c(-id)), use = "pairwise")
-# clinical_cor
-# corrplot(clinical_cor)
-# clinical_eigen <- eigen(clinical_cor)
-# clinical_eigen$values
-# scree(clinical_cor) # , factors = FALSE) # PC is principle components, FA is factors
-# # Only keep the factors that have eigenvalue above 1. Will use PC results for now https://www.researchgate.net/post/Both-PC-and-FA-in-scree-plot-which-to-use-in-an-EFA
-# # There are 4 such factors.
-# 
-# clinical_efa <- fa(select(clinical_fa, c(-id)), nfactors = 2)
-# clinical_efa
-
-
-```
 
 
 
