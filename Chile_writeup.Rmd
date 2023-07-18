@@ -947,7 +947,7 @@ The statistical software package R has been used to clean, link, analyse and vis
 
 ## Data collection
 
-See Figure \@ref(fig:sampleSizes) for an illustration of the data sources and how they through the analysis detailed below. 
+See Figure \@ref(fig:sampleSize) for an illustration of the data sources and how they through the analysis detailed below. 
 
 ### School data
 
@@ -976,11 +976,11 @@ ggplot(arauc) +
 
 This research also uses data from Chile’s Servicio de Salud Araucanía Sur (South Araucanía health service, SSAS), obtained under a freedom of information request. These data are collated from secondary care clinical records, particularly from mental health community care services. They comprise clinical records for public sector specialist health visits of patients aged 6-18 with a primary diagnosis of autism between February 2014 and December 2021 for all communes in the SSES catchment. Figure \@ref(fig:mapArauc) shows the communes in the SSAS and Servicio de Salud Araucanía Norte (North Araucanía health service, SSAN) catchments. The clinical records include wage deducted health insurance contributions from Chile’s Fondo Nacional de Salud (National Health Fund, FONASA), from which a colleague previously inferred socio-economic status of patients’ families. The majority of records are for patients resident in the SSAS catchment area and they do not include any records for privately provided healthcare. These data will be referred to as the clinical data. 
 
-```{r flowchart, fig.cap="Clinical data pre-processing pathway. N = number of appointment records, N' = number of appointment records for patients resident in SSAS communes.", echo=FALSE, out.width = '80%'}
+```{r flowchart, include = FALSE, fig.cap="Clinical data pre-processing pathway. N = number of appointment records, N' = number of appointment records for patients resident in SSAS communes.", echo=FALSE, out.width = '80%'}
 knitr::include_graphics("Flowchart.jpg", error = FALSE)
 ```
 
-A subset of the clinical data, those for appointments provided by Villarrica Hospital in the Villarrica commune of Chile’s Araucanía region, were manually validated prior to this investigation. Validation involved a neurologist and a psychiatrist in the SEED network of providers checking the clinical records against central health records to confirm individuals did have autism, adding secondary and tertiary diagnoses where relevant, and adding demographic information including ethnicity, rurality of residence, disability status and experience of foster care status where available. We can be very confident that patients in this subset do have autism. Most patients in this subset were resident in Loncoche, Pucón and Villarrica communes in the SSAS catchment area. These data will be referred to as the validated clinical data, see Figure \@ref(fig:flowchart).
+A subset of the clinical data, those for appointments provided by Villarrica Hospital in the Villarrica commune of Chile’s Araucanía region, were manually validated prior to this investigation. Validation involved a neurologist and a psychiatrist in the SEED network of providers checking the clinical records against central health records to confirm individuals did have autism, adding secondary and tertiary diagnoses where relevant, and adding demographic information including ethnicity, rurality of residence, disability status and experience of foster care status where available. We can be very confident that patients in this subset do have autism. Most patients in this subset were resident in Loncoche, Pucón and Villarrica communes in the SSAS catchment area. These data will be referred to as the validated clinical data, see Figure \@ref(fig:sampleSize).
 
 ###	Additional data
 
@@ -1044,7 +1044,7 @@ For data linkage, the school data was further restricted to students with autism
 
 ### Clinical data preparation
 
-For data linkage, the full clinical dataset was used. It was restricted to appointments for individuals resident in communes in the SSAS catchment as the data is believed to be complete for this catchment area only. It was also restricted to patients aged 6-18 as of 30th June 2021 to maximise compatibility to the school data. Appointment year was not restricted in order to retain more data and thus maximise linkage opportunities, and only patients of female and male sex were present. Patients with familial socio-economic level of FONASA-A were interpreted to be of low SES status and given proxy status of 1 (equivalent to students with free school fees); patients with FONASA-B, FONASA-C and FONASA-D were interpreted to have moderate SES status and given 2 (equivalent to students paying \$1,000-\$100,000 monthly for state schooling); and patients with private health insurance were interpreted to have high SES and given 3 (equivalent to students paying more than \$100,000 monthly). 
+For data linkage, the full clinical dataset was used. It was restricted to appointments for individuals resident in communes in the SSAS catchment as the data is believed to be complete for this catchment area only. It was also restricted to patients aged 6-18 as of 30th June 2021 to maximise compatibility to the school data. Appointment year was not restricted in order to retain more data and thus maximise linkage opportunities, and only patients of female and male sex were present. Patients with familial socio-economic level of FONASA-A were interpreted to have low SES and given proxy status of 1 (equivalent to students with free school fees); patients with FONASA-B, FONASA-C and FONASA-D were interpreted to have moderate SES and given 2 (equivalent to students paying \$1,000-\$100,000 monthly for state schooling); and patients with private health insurance were interpreted to have high SES and given 3 (equivalent to students paying more than \$100,000 monthly). 
 
 The clinical dataset had no missingness in the features of interest for data linkage. 
 
@@ -1084,7 +1084,7 @@ An updated estimate of autism prevalence in SSAS was made and projected across h
 
 ### Updated autism prevalence estimation 
 
-```{r caseSelection, fig.cap="Case selection for prevalence calculation after the SSAS school and patient data linkage. White shows students with no known autism diagnosis. Yellow shows known autism cases in the school data for students resident in the Araucanía Sur health service (SSAS) catchment. Green shows patients that matched to a school record. Blue shows patients that did not match to a school record and are assumed to be present in the school data but do not access SEED. Grey shows patients with an autism diagnosis made in the private health sector and therefore not present in the patient dataset.", echo=FALSE, out.width = '80%'}
+```{r caseSelection, include = FALSE, fig.cap="Case selection for prevalence calculation after the SSAS school and patient data linkage. White shows students with no known autism diagnosis. Yellow shows known autism cases in the school data for students resident in the Araucanía Sur health service (SSAS) catchment. Green shows patients that matched to a school record. Blue shows patients that did not match to a school record and are assumed to be present in the school data but do not access SEED. Grey shows patients with an autism diagnosis made in the private health sector and therefore not present in the patient dataset.", echo=FALSE, out.width = '80%'}
 knitr::include_graphics("Case_selection.jpg", error = FALSE)
 ```
 
@@ -1133,7 +1133,7 @@ Bayesian prevalence modelling used the JAGS (Just Another Gibbs Sampler) R packa
 
 # Results
 
-```{r sampleSize, fig.cap="The datasets used in this investigation, their size (N) and the number of people with autism where applicable. Light blue shows the school data which is used to calculate lower bounds on autism and ADHD prevalence, and subsets of the school data for those residenent in Servicio de Salud Araucanía Sur (SSAS) and those that are not. In the school data, autism indicates students that access SEED for autism. Green shows the clinical data and its subsets of validated and unvalidated clinical data. Here autism indicates clinical diagnoses. Red shows the validated clinical data for patients resident in SSAS that is used for multiple component analysis. Yellow shows the subsets of school and clinical data used for data linkage. The patient data is the combination of validated and unvalidated clinical datasets and some patients are represented in both datasets. Grey shows the matches resulting from three linkage approaches. Dark blue shows the result of data linkage and is used to calculated updated estimates of autism prevalence.", echo=FALSE, out.width = '80%'}
+```{r sampleSize, fig.cap="The datasets used in this investigation, their size (N) and the number of people with autism and ADHD where applicable. Light blue shows the school data which is used to calculate lower bounds on autism and ADHD prevalence, and subsets of the school data for students resident in Servicio de Salud Araucanía Sur (SSAS) and those that are not. In the school data, autism and ADHD indicate students that access SEED for autism and for ADHD respectively. Green shows the clinical data and its subsets of validated and unvalidated clinical data and autism here indicates clinical diagnoses. Validation involved confirming autism diagnosis against central clinical record, adding 2nd and 3rd diagnoses, and adding demographics data. Red shows the validated clinical data for patients resident in SSAS that is used for multiple component analysis. Yellow shows the subsets of school and clinical data used for data linkage; the patient data is the combination of validated and unvalidated clinical datasets and some patients are represented in both these datasets. Grey shows the matches resulting from three linkage approaches. Dark blue shows the result of data linkage and is used to calculated updated estimates of autism prevalence.", echo=FALSE, out.width = '100%'}
 knitr::include_graphics("sample_sizes.jpg", error = FALSE)
 ```
 
@@ -2281,7 +2281,7 @@ mca_noimp_ses_plot <- fviz_mca_ind(res_mca_patients_noimp,
              habillage = "Health insurance",
              palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by SES status, no imputation",
+             title = "Patients by proxy SES, no imputation",
              ggtheme = theme_minimal()) 
 mca_noimp_rural_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none",
@@ -2435,7 +2435,7 @@ mca_imp_ses_plot <- fviz_mca_ind(res_mca_patients_imp,
              habillage = "Health insurance",
              palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by SES status, with imputation",
+             title = "Patients by proxy SES, with imputation",
              ggtheme = theme_minimal()) 
 mca_imp_rural_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none",
@@ -2621,7 +2621,11 @@ school_ssas_aut <- school_ssas %>%
   rowid_to_column("id")
   
 # Add a fake row so that pairing works later
-school <- rbind(school_ssas_aut, c("2023-06-01", NA, NA, NA, NA))
+# school <- rbind.data.frame(select(school_ssas_aut, -age_cat_name), 
+#                            data.frame(id = nrow(school_ssas_aut)+1, dob = "2023-06-01", sex_desc = NA, student_commune_name = NA, ses_status = NA),
+#                            stringsAsFactors = FALSE)
+# school <- select(school_ssas_aut, -age_cat_name)
+school <- rbind(select(school_ssas_aut, -age_cat_name), c(nrow(school_ssas_aut)+1, "2023-06-01", NA, NA, NA))
 ```
 
 ```{r schoolChisq}
@@ -2829,7 +2833,7 @@ patients_age <- clinical %>%
          #, student_region_name
          ) 
 
-patients <- patients_age %>% select(-age_june30)
+patients <- patients_age %>% select(-age_june30) %>% mutate(ses_status = as.character(ses_status))
 
 # patients_out <- clinical %>%
 #   filter(commune_code %in% araucsur_communes$commune_code) %>%
@@ -3997,7 +4001,7 @@ ggplot(data = aut_prev_econA.age_sex) +
   scale_fill_viridis_c(option = "plasma") +
   #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
   facet_wrap(~school_fee) +
-  labs(title = "Autism prevalence by SES status",
+  labs(title = "Autism prevalence by SES",
        x = "Sex",
        y = "Sample prevalence",
        fill = "Age")
@@ -4016,7 +4020,7 @@ ggplot(data = adhd_prev_econA.age_sex) +
   scale_fill_viridis_c(option = "plasma") +
   #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
   facet_wrap(~school_fee) +
-  labs(title = "ADHD prevalence by SES status",
+  labs(title = "ADHD prevalence by SES",
        x = "Sex",
        y = "Sample prevalence",
        fill = "Age")
@@ -4248,7 +4252,7 @@ ggplot(data = aut_prev_econA_adj.long) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
   facet_wrap(~school_fee) +
-  labs(title = "Autism prevalence by SES status",
+  labs(title = "Autism prevalence by SES",
        x = "Sex",
        y = "Aggregate prevalence",
        fill = "Prevalence")
@@ -4269,7 +4273,7 @@ ggplot(data = adhd_prev_econA_adj.long) +
   theme(axis.title.x = element_blank(),
         axis.title.y = element_blank()) +
   facet_wrap(~school_fee) +
-  labs(title = "ADHD prevalence by SES status",
+  labs(title = "ADHD prevalence by SES",
        x = "Sex",
        y = "Aggregate prevalence",
        fill = "Prevalence")
@@ -4659,7 +4663,76 @@ grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
 
 # References
 
-TODO
+3	References
+1.	Organisation for Economic Co-operation and Development (OECD). Chile. [cited 2023 Jul 14]. Chile - OECD Data. Available from: http://data.oecd.org/chile.htm
+2.	World Bank. GDP per capita (current US$) - Chile. [cited 2023 Jul 17]. GDP per capita (current US$) - Chile. Available from: https://data.worldbank.org
+3.	Cerda AA, García LY, Rivera-Arroyo J, Riquelme A, Teixeira JP, Jakovljevic M. Comparison of the healthcare system of Chile and Brazil: strengths, inefficiencies, and expenditures. Cost Eff Resour Alloc. 2022 Dec 16;20(1):71. 
+4.	Ministerio de Salud. Ministerio de Salud – Gobierno de Chile. [cited 2023 Jul 14]. Ubicación Servicios de Salud. Available from: https://www.minsal.cl/conozcanos_servicios_salud/
+5.	Núñez A, Manzano CA. Identifying local barriers to access to healthcare services in Chile using a communitarian approach. Health Expect Int J Public Particip Health Care Health Policy. 2022 Feb;25(1):254–63. 
+6.	Koch KJ, Cid Pedraza C, Schmid A. Out-of-pocket expenditure and financial protection in the Chilean health care system—A systematic review. Health Policy. 2017 May 1;121(5):481–94. 
+7.	Castillo-Laborde C, Aguilera-Sanhueza X, Hirmas-Adauy M, Matute I, Delgado-Becerra I, Ferrari MND, et al. Health Insurance Scheme Performance and Effects on Health and Health Inequalities in Chile. MEDICC Rev. 2017 Jul;19:57–64. 
+8.	World Bank. Gini Index - Chile. [cited 2023 Jul 17]. Gini Index - Chile. Available from: https://data.worldbank.org
+9.	Paredes D, Iturra V, Lufin M. A Spatial Decomposition of Income Inequality in Chile. Reg Stud. 2016 May 3;50(5):771–89. 
+10.	Instituto Nacional de Estadisticas. Default. [cited 2023 Jul 5]. Encuesta suplementaria de ingresos. Available from: http://www.ine.gob.cl/estadisticas/sociales/seguridad-publica-y-justicia/estadisticas-policiales-y-judiciales/encuesta-suplementaria-de-ingresos
+11.	Sandoval MH, Portaccio MEA. Death certificate: The urgent consideration of ethnic and racial origin in Chile. Lancet Reg Health – Am [Internet]. 2022 Dec 1 [cited 2023 Jul 14];16. Available from: https://www.thelancet.com/journals/lanam/article/PIIS2667-193X(22)00219-8/fulltext
+12.	Sandoval MH, Alvear Portaccio ME, Albala C. Life expectancy by ethnic origin in Chile. Front Public Health [Internet]. 2023 [cited 2023 Jul 14];11. Available from: https://www.frontiersin.org/articles/10.3389/fpubh.2023.1147542
+13.	Instituto Nacional de Estadisticas. Default. [cited 2023 Jul 14]. Censo de Población y Vivienda. Available from: http://www.ine.gob.cl/estadisticas/sociales/censos-de-poblacion-y-vivienda/censo-de-poblacion-y-vivienda
+14.	Istuany OE, Wood R. Perspectives on Educational Inclusion from a Small Sample of Autistic Pupils in Santiago, Chile. 2020 Jul 6;22(1):210–20. 
+15.	Breinbauer C, Vidal V, Molina P, Trabucco C, Gutierrez L, Cordero M. Early Childhood Development policy in Chile: Progress and pitfalls supporting children with developmental disabilities toward school readiness. Front Public Health [Internet]. 2022 [cited 2023 Jul 18];10. Available from: https://www.frontiersin.org/articles/10.3389/fpubh.2022.983513
+16.	Ministerio de Educación. Educación Especial. [cited 2023 Jun 28]. Incremento de la Subvención Especial Diferencial. Available from: https://especial.mineduc.cl/incremento-subvencion-educacion-especial/incremento-la-subvencion-especial-diferencial/
+17.	American Psychiatric Association. Diagnostic and Statistical Manual of Mental Disorders [Internet]. 5th ed. Arlington, VA; 2013 [cited 2023 Jul 15]. Available from: https://dsm.psychiatryonline.org/doi/book/10.1176/appi.books.9780890425596
+18.	World Health Organisation. International Statistical Classification of Diseases and Related Health Problems (10th Revision) [Internet]. 2019. Available from: https://icd.who.int/browse10/2019/en#/F84
+19.	Lai MC, Lombardo MV, Baron-Cohen S. Autism. The Lancet. 2014 Mar 8;383(9920):896–910. 
+20.	Paula CS, Cukier S, Cunha GR, Irarrázaval M, Montiel-Nava C, Garcia R, et al. Challenges, priorities, barriers to care, and stigma in families of people with autism: Similarities and differences among six Latin American countries. Autism. 2020 Nov 1;24(8):2228–42. 
+21.	Roman-Urrestarazu A, Yáñez C, López-Garí C, Elgueta C, Allison C, Brayne C, et al. Autism screening and conditional cash transfers in Chile: Using the Quantitative Checklist (Q-CHAT) for early autism detection in a low resource setting. Autism. 2021 May 1;25(4):932–45. 
+22.	Brett D, Warnell F, McConachie H, Parr JR. Factors Affecting Age at ASD Diagnosis in UK: No Evidence that Diagnosis Age has Decreased Between 2004 and 2014. J Autism Dev Disord. 2016;46:1974–84. 
+23.	Yáñez C, Maira P, Elgueta C, Brito M, Crockett MA, Troncoso L, et al. [Prevalence estimation of Autism Spectrum disorders in chilean urban population]. Andes Pediatr Rev Chil Pediatr. 2021 Aug;92(4):519–25. 
+24.	Catherine Rice. Centers for Disease Control and Prevention. 2006 [cited 2023 Jul 18]. Prevalence of Autism Spectrum Disorders. Available from: https://www.cdc.gov/mmwr/preview/mmwrhtml/ss5810a1.htm
+25.	Elsabbagh M, Divan G, Koh YJ, Kim YS, Kauchali S, Marcín C, et al. Global Prevalence of Autism and Other Pervasive Developmental Disorders. Autism Res. 2012;5(3):160–79. 
+26.	Puga C, Pagotto V, Giunta D, Vicens J, Leist M, Vaucheret Paz E, et al. [Prevalence and incidence of disability based on the Unique Certificate of Disability at a teaching hospital in the Metropolitan Area of Buenos Aires]. Arch Argent Pediatr. 2019 Jun 1;117(3):183–7. 
+27.	Dekkers LMS, Groot NA, Díaz Mosquera EN, Andrade Zúñiga IP, Delfos MF. Prevalence of Autism Spectrum Disorders in Ecuador: A Pilot Study in Quito. J Autism Dev Disord. 2015 Dec 1;45(12):4165–73. 
+28.	Russell G, Stapley S, Newlove-Delgado T, Salmon A, White R, Warren F, et al. Time trends in autism diagnosis over 20 years: a UK population-based cohort study. J Child Psychol Psychiatry. 2022;63(6):674–82. 
+29.	Roman-Urrestarazu A, van Kessel R, Allison C, Matthews FE, Brayne C, Baron-Cohen S. Association of Race/Ethnicity and Social Disadvantage With Autism Prevalence in 7 Million School Children in England. JAMA Pediatr. 2021 Jun 7;175(6):e210054–e210054. 
+30.	Loomes R, Hull L, Mandy WPL. What Is the Male-to-Female Ratio in Autism Spectrum Disorder? A Systematic Review and Meta-Analysis. J Am Acad Child Adolesc Psychiatry. 2017 Jun;56(6):466–74. 
+31.	Giarelli E, Wiggins LD, Rice CE, Levy SE, Kirby RS, Pinto-Martin J, et al. Sex differences in the evaluation and diagnosis of autism spectrum disorders among children. Disabil Health J. 2010 Apr;3(2):107–16. 
+32.	Shenouda J, Barrett E, Davidow AL, Halperin W, Silenzio VMB, Zahorodny W. Prevalence of autism spectrum disorder in a large, diverse metropolitan area: Variation by sociodemographic factors. Autism Res. 2022;15(1):146–55. 
+33.	Thomas P, Zahorodny W, Peng B, Kim S, Jani N, Halperin W, et al. The association of autism diagnosis with socioeconomic status. Autism. 2012 Mar 1;16(2):201–13. 
+34.	Delobel-Ayoub M, Ehlinger V, Klapouszczak D, Maffre T, Raynaud JP, Delpierre C, et al. Socioeconomic Disparities and Prevalence of Autism Spectrum Disorders and Intellectual Disability. PLOS ONE. 2015 Nov 5;10(11):e0141964. 
+35.	Bailey B, Arciuli J. Indigenous Australians with autism: A scoping review. Autism. 2020 Jul 1;24(5):1031–46. 
+36.	Zeidan J, Fombonne E, Scorah J, Ibrahim A, Durkin MS, Saxena S, et al. Global prevalence of autism: A systematic review update. Autism Res. 2022;15(5):778–90. 
+37.	Antshel KM, Russo N. Autism Spectrum Disorders and ADHD: Overlapping Phenomenology, Diagnostic Issues, and Treatment Considerations. Curr Psychiatry Rep. 2019 Mar 22;21(5):34. 
+38.	Fioravante I, Lozano-Lozano JA, Martella D. Attention deficit hyperactivity disorder: A pilot study for symptom assessment and diagnosis in children in Chile. Front Psychol [Internet]. 2022 [cited 2023 Jul 15];13. Available from: https://www.frontiersin.org/articles/10.3389/fpsyg.2022.946273
+39.	Salazar F, Baird G, Chandler S, Tseng E, O’sullivan T, Howlin P, et al. Co-occurring Psychiatric Disorders in Preschool and Elementary School-Aged Children with Autism Spectrum Disorder. J Autism Dev Disord. 2015 Aug 1;45(8):2283–94. 
+40.	de la Barra FE, Vicente B, Saldivia S, Melipillan R. Epidemiology of ADHD in Chilean children and adolescents. ADHD Atten Deficit Hyperact Disord. 2013 Mar 1;5(1):1–8. 
+41.	Vicente B, de la Barra F, Saldivia S, Kohn R, Rioseco P, Melipillan R. Prevalence of child and adolescent psychiatric disorders in Santiago, Chile: a community epidemiological study. Soc Psychiatry Psychiatr Epidemiol. 2012 Jul 1;47(7):1099–109. 
+42.	Rowland AS, Skipper BJ, Rabiner DL, Qeadan F, Campbell RA, Naftel AJ, et al. Attention-Deficit/Hyperactivity Disorder (ADHD): Interaction between socioeconomic status and parental history of ADHD determines prevalence. J Child Psychol Psychiatry. 2018;59(3):213–22. 
+43.	Borges e Azevêdo PV, Caixeta LF, Rabelo Taveira DL, Peixoto Giglio MR, Rosário MC do, Rohde LA. Suggestive diagnosis of attention-deficit/hyperactivity disorder in indigenous children and adolescents from the Brazilian Amazon. Eur Child Adolesc Psychiatry. 2020 Mar 1;29(3):373–84. 
+44.	Pham HD, Nguyen HBH, Tran DT. Prevalence of ADHD in primary school children in Vinh Long, Vietnam. Pediatr Int. 2015;57(5):856–9. 
+45.	Ince RA, Paton AT, Kay JW, Schyns PG. Bayesian inference of population prevalence. Serences JT, Behrens TE, Huth A, Ling S, editors. eLife. 2021 Oct 6;10:e62461. 
+46.	Downing BC, Hickman M, Jones NR, Larney S, Sweeting MJ, Xu Y, et al. Prevalence of opioid dependence in New South Wales, Australia, 2014–16: Indirect estimation from multiple data sources using a Bayesian approach. Addiction [Internet]. [cited 2023 Jul 16];n/a(n/a). Available from: https://onlinelibrary.wiley.com/doi/abs/10.1111/add.16268
+47.	Depaoli S, Winter SD, Visser M. The Importance of Prior Sensitivity Analysis in Bayesian Statistics: Demonstrations Using an Interactive Shiny App. Front Psychol. 2020 Nov 24;11:608045. 
+48.	Sourial N, Wolfson C, Zhu B, Quail J, Fletcher J, Karunananthan S, et al. Correspondence analysis is a useful tool to uncover the relationships among categorical variables. J Clin Epidemiol. 2010 Jun 1;63(6):638–46. 
+49.	Costa PS, Santos NC, Cunha P, Cotter J, Sousa N. The Use of Multiple Correspondence Analysis to Explore Associations between Categories of Qualitative Variables in Healthy Ageing. J Aging Res. 2013;2013:302163. 
+50.	Enamorado T, Fifield B, Imai K. Using a Probabilistic Model to Assist Merging of Large-Scale Administrative Records. Am Polit Sci Rev. 2019 May;113(2):353–71. 
+51.	Fellegi IP, Sunter AB. A Theory for Record Linkage. J Am Stat Assoc. 1969 Dec;64(328):1183–210. 
+52.	Jaro MA. Advances in Record-Linkage Methodology as Applied to Matching the 1985 Census of Tampa, Florida. J Am Stat Assoc. 1989;84(406):414–20. 
+53.	Sariyar M, Borg A. The RecordLinkage Package: Detecting Errors in Data. R J. 2010;2(2):61. 
+54.	Contiero P, Tittarelli A, Tagliabue G, Maghini A, Fabiano S, Crosignani P, et al. The EpiLink record linkage software: presentation and results of linkage test on cancer registry files. Methods Inf Med. 2005;44(1):66–71. 
+55.	Hejblum BP, Weber GM, Liao KP, Palmer NP, Churchill S, Shadick NA, et al. Probabilistic record linkage of de-identified research datasets with discrepancies using diagnosis codes. Sci Data. 2019 Jan 8;6(1):180298. 
+56.	Roman-Urrestarazu A, Yang JC, van Kessel R, Warrier V, Dumas G, Jongsma H, et al. Autism incidence and spatial analysis in more than 7 million pupils in English schools: a retrospective, longitudinal, school registry study. Lancet Child Adolesc Health. 2022 Dec 1;6(12):857–68. 
+57.	Biblioteca del Congreso Nacional de Chile. www.bcn.cl/leychile. 2023 [cited 2023 Jul 12]. LEY 21545 Establece la promoción de la inclusión, la atención integral, y la protección de los derechos de las persons con trastorno del espectro autista en el ámbito social, de salud y educatión. Available from: https://www.bcn.cl/leychile
+58.	Instituto Nacional de Estadisticas. Default. [cited 2023 Jul 5]. Proyecciones de Población. Available from: http://www.ine.gob.cl/estadisticas/sociales/seguridad-publica-y-justicia/estadisticas-policiales-y-judiciales/proyecciones-de-población
+59.	Humanitarian Data Exchange. Chile - Subnational Administrative Boundaries [Internet]. [cited 2023 Jul 5]. Available from: https://data.humdata.org/dataset/cod-ab-chl
+60.	Fay MP, Feuer EJ. Confidence intervals for directly standardised rates: a method based on the gamma distribution. Stat Med. 1997 Apr 15;16(7):791–801. 
+61.	Sadinle M. Bayesian Estimation of Bipartite Matchings for Record Linkage. 2016 [cited 2023 Jun 28]; Available from: https://arxiv.org/abs/1601.06630
+62.	Stringham T. Fast Bayesian Record Linkage With Record-Specific Disagreement Parameters. J Bus Econ Stat. 2022 Oct 2;40(4):1509–22. 
+63.	Pita R, Mendonça E, Reis S, Barreto M, Denaxas S. A Machine Learning Trainable Model to Assess the Accuracy of Probabilistic Record Linkage. In: Bellatreche L, Chakravarthy S, editors. Big Data Analytics and Knowledge Discovery [Internet]. Cham: Springer International Publishing; 2017 [cited 2023 Jun 28]. p. 214–27. (Lecture Notes in Computer Science; vol. 10440). Available from: http://link.springer.com/10.1007/978-3-319-64283-3_16
+64.	Yeargin-Allsopp M, Rice C, Karapurkar T, Doernberg N, Boyle C, Murphy C. Prevalence of Autism in a US Metropolitan Area. JAMA. 2003 Jan 1;289(1):49–55. 
+65.	Sainsbury WJ, Carrasco K, Whitehouse AJO, Waddington H. Parent-reported Early Atypical Development and Age of Diagnosis for Children with Co-occurring Autism and ADHD. J Autism Dev Disord. 2023 Jun 1;53(6):2173–84. 
+66.	Lindblom A. Under-detection of autism among First Nations children in British Columbia, Canada. Disabil Soc. 2014 Sep 14;29(8):1248–59. 
+67.	Rojas F. Poverty determinants of acute respiratory infections among Mapuche indigenous peoples in Chile’s Ninth Region of Araucania, using GIS and spatial statistics to identify health disparities. Int J Health Geogr. 2007 Jul 2;6(1):26. 
+
+
 
 \newpage
 
