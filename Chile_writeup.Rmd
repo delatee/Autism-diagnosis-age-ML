@@ -3793,30 +3793,7 @@ This investigation has furthered the understanding of autism and ADHD prevalence
 
 # Supplementary materials
 
-```{r schooldata, include = FALSE}
-school_vars <- data.frame(type = c("Student", "", "", "", "", "", "", "",
-                                   "School", "", ""),
-                          vars = c("Sex",
-                                   "Date of birth",
-                                   "Ethnicity, nationality and immigration status",
-                                   "SEED special needs status",
-                                   "Special need eligible for SEED, e.g. autism, ADHD, blindness",
-                                   "Residential commune and region", 
-                                   "Monthly school fees paid",
-                                   "Academic grade for 2021 school year",
-                                   "Name",
-                                   "Region and commune", 
-                                   "Rurality"))
-kbl(school_vars,
-    col.names = c("Feature type", "Features"),
-    align = "l",
-    booktabs = TRUE,
-    format = "latex",
-    linesep = c("", "", "", "", "", "", "", "\\addlinespace", "", "", ""),
-    caption = "Features available in the school data")
-```
-
-```{r prevAgecatAutTable}
+```{r prevAgecatAutTable, fig.pos='H'}
 # Autism
 aut_prev.agecat <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                           grouping_vars = c("age_cat_name", "autism"),
@@ -3831,10 +3808,12 @@ kbl(aut_prev.agecat.table,
     align = "rrr",
     booktabs = TRUE,
     format = "latex",
-    caption = "Count and prevalence of autism cases by age band in Chile school data with normal confidence intervals.")
+    caption = "Count and prevalence of autism cases by age band in Chile school data with normal confidence intervals.") %>%
+  kable_styling(latex_options = "HOLD_position")
+
 ```
 
-```{r prevAgecatAdhdTable}
+```{r prevAgecatAdhdTable, fig.pos='H'}
 # ADHD
 adhd_prev.agecat <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("age_cat_name", "adhd"),
@@ -3849,46 +3828,12 @@ kbl(adhd_prev.agecat.table,
     align = "rrr",
     booktabs = TRUE,
     format = "latex",
-    caption = "Count and prevalence of ADHD cases by age band in Chile school data with normal confidence intervals.")
+    caption = "Count and prevalence of ADHD cases by age band in Chile school data with normal confidence intervals.") %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgeAutPlot, include = FALSE, fig.cap = "Crude prevalence of autism in school data by age band. Bars show 95% normal confidence intervals.", fig.height=3, fig.pos='H'}
-aut_prev.age <- get_grouped_prev_plot(x = chile_bayes_aut, 
-                                          grouping_vars = c("age_june30", "autism"),
-                                          disease = "autism") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower)) 
 
-ggplot(data = aut_prev.age) +
-  geom_col(aes(x = age_june30, y = sample_prevalence*100, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = age_june30, ymin = ci_lower*100, ymax = ci_upper*100, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  labs(title = "Autism prevalence",
-       x = "Age band",
-       y = "Crude prevalence % (95% CI)",
-       fill = "Age band")
-```
-
-```{r prevAgeAdhdPlot, include = FALSE, fig.cap = "Crude prevalence of ADHD in school data by age band. Bars show 95% normal confidence intervals.", fig.height=3}
-adhd_prev.age <- get_grouped_prev_plot(x = chile_bayes_adhd, 
-                                          grouping_vars = c("age_june30", "adhd"),
-                                          disease = "adhd") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower)) 
-
-ggplot(data = adhd_prev.age) +
-  geom_col(aes(x = age_june30, y = sample_prevalence*100, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = age_june30, ymin = ci_lower*100, ymax = ci_upper*100, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  theme(axis.text.x = element_blank(),
-        axis.ticks.x = element_blank()) +
-  labs(title = "ADHD prevalence",
-       x = "Age band",
-       y = "Crude prevalence % (95% CI)",
-       fill = "Age band")
-```
-
-```{r prevAgecatSexAutTable}
+```{r prevAgecatSexAutTable, fig.pos='H'}
 # Autism
 aut_prev.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                           grouping_vars = c("age_cat_name", "sex_desc", "autism"),
@@ -3905,10 +3850,11 @@ kbl(aut_prev.agecat_sex.table,
     booktabs = TRUE,
     format = "latex",
     caption = "Count and prevalence of autism cases by age band in Chile school data for females and males with normal confidence intervals.") %>%
-  add_header_above(header = c(" " = 1, "Female" = 2, "Male" = 2))
+  add_header_above(header = c(" " = 1, "Female" = 2, "Male" = 2)) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgecatSexAdhdTable}
+```{r prevAgecatSexAdhdTable, fig.pos='H'}
 # ADHD
 adhd_prev.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("age_cat_name", "sex_desc", "adhd"),
@@ -3925,48 +3871,11 @@ kbl(adhd_prev.agecat_sex.table,
     booktabs = TRUE,
     format = "latex",
     caption = "Count and prevalence of ADHD cases by age band in Chile school data for females and males with normal confidence intervals.") %>%
-  add_header_above(c(" " = 1, "Female" = 2, "Male" = 2))
+  add_header_above(c(" " = 1, "Female" = 2, "Male" = 2)) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgeSexAutPlot, include = FALSE, fig.cap = "Crude prevalence of autism in school data by age and sex. Bars show 95% normal confidence intervals.", fig.height=3}
-# Autism
-aut_prev.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
-                                          grouping_vars = c("age_june30", "sex_desc", "autism"),
-                                          disease = "autism") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-# By age and sex
-ggplot(data = aut_prev.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  labs(title = "Autism prevalence",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-
-```
-
-```{r prevAgeSexAdhdPlot, include = FALSE, fig.cap = "Crude prevalence of ADHD in school data by age and sex. Bars show 95% normal confidence intervals.", fig.height=3}
-# ADHD
-adhd_prev.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
-                                          grouping_vars = c("age_june30", "sex_desc", "adhd"),
-                                          disease = "adhd") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-# By age and sex
-ggplot(data = adhd_prev.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  labs(title = "ADHD prevalence",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-
-```
-
-```{r prevAgecatHealthAutTable}
+```{r prevAgecatHealthAutTable, fig.pos='H'}
 # Autism
 aut_prev_health.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "autism"),
@@ -3996,10 +3905,11 @@ kbl(aut_prev_health.agecat_sex.table,
               "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of autism cases by health service and age band in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(latex_options = c("repeat_header"), font_size = 8)
+  kable_styling(latex_options = c("repeat_header"), font_size = 8) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgecatHealthAdhdTable}
+```{r prevAgecatHealthAdhdTable, fig.pos='H'}
 # ADHD
 adhd_prev_health.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "adhd"),
@@ -4029,11 +3939,12 @@ kbl(adhd_prev_health.agecat_sex.table,
               "", "", "", "\\addlinespace"), # Extra white space after every 29th line
   caption = "Count and prevalence of ADHD cases by health service and age band in Chile school data for females and males with normal confidence intervals.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(latex_options = c("repeat_header"), font_size = 8)
+  kable_styling(latex_options = c("repeat_header"), font_size = 8) %>%
+  kable_styling(latex_options = "HOLD_position")
 
 ```
 
-```{r prevAgecatHealthAutPlot, fig.cap = "Crude prevalence of autism in school data by health service, age band and sex. Bars show 95% normal confidence intervals.", fig.height = 10, fig.width = 8.5}
+```{r prevAgecatHealthAutPlot, fig.cap = "Crude prevalence of autism in school data by health service, age band and sex. Bars show 95% normal confidence intervals.", fig.height = 10, fig.width = 8.5, fig.pos='H'}
 # Autism
 aut_prev_health.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
                                           grouping_vars = c("health_service_name" ,"age_cat_name", "sex_desc", "autism"),
@@ -4051,7 +3962,7 @@ ggplot(data = aut_prev_health.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prevAgecatHealthAdhdPlot, fig.cap = "Crude prevalence of ADHD in school data by health service, age band and sex. Bars show 95% normal confidence intervals.", fig.height = 10, fig.width = 8.5}
+```{r prevAgecatHealthAdhdPlot, fig.cap = "Crude prevalence of ADHD in school data by health service, age band and sex. Bars show 95% normal confidence intervals.", fig.height = 10, fig.width = 8.5, fig.pos='H'}
 # ADHD
 adhd_prev_health.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
                                           grouping_vars = c("health_service_name", "age_cat_name", "sex_desc", "adhd"),
@@ -4070,45 +3981,7 @@ ggplot(data = adhd_prev_health.agecat_sex) +
 
 ```
 
-```{r prevAgeHealthAutPlot, include = FALSE, fig.cap = "Crude prevalence of autism in school data by health service, age and sex. Bars show 95% normal confidence intervals.", fig.height=10, fig.width=8.5}
-# Single ages
-aut_prev_health.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
-                                                 grouping_vars = c("health_service_name", "age_june30", "sex_desc", "autism"),
-                                                 disease = "autism") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = aut_prev_health.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~health_service_name) +
-  labs(title = "Autism prevalence by health service",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-```
-
-```{r prevAgeHealthAdhdPlot, include = FALSE, fig.cap = "Crude prevalence of ADHD in school data by health service, age and sex. Bars show 95% normal confidence intervals.", fig.height=10, fig.width=8.5}
-# Single ages
-adhd_prev_health.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
-                                                 grouping_vars = c("health_service_name", "age_june30", "sex_desc", "adhd"),
-                                                 disease = "adhd") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = adhd_prev_health.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~health_service_name) +
-  labs(title = "ADHD prevalence by health service",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-```
-
-```{r prevAgecatEconAAutTable}
+```{r prevAgecatEconAAutTable, fig.pos='H'}
 # Autism
 aut_prev_econA.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "autism"),
@@ -4132,10 +4005,11 @@ kbl(aut_prev_econA.agecat_sex.table,
   #longtable = TRUE,
   linesep = c("", "", "", "", "", "", "\\addlinespace"), # Extra white space after every 7th line
   caption = "Count and prevalence of Autism cases by school fee and age band in Chile school data for females and males with normal confidence intervals.") %>%
-  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) 
+  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgecatEconAAdhdTable}
+```{r prevAgecatEconAAdhdTable, fig.pos='H'}
 # Autism
 adhd_prev_econA.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
                                                     grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "adhd"),
@@ -4159,10 +4033,11 @@ kbl(adhd_prev_econA.agecat_sex.table,
   #longtable = TRUE,
   linesep = c("", "", "", "", "", "", "\\addlinespace"), # Extra white space after every 7th line
   caption = "Count and prevalence of ADHD cases by school fee and age band in Chile school data for females and males with normal confidence intervals.") %>%
-add_header_above(c(" " = 2, "Female" = 2, "Male" = 2))
+add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgecatEconAAutPlot, fig.cap = "Crude prevalence of autism in school data by student's monthly school fee (Peso), age band and sex. Bars show 95% normal confidence intervals.", fig.height=6}
+```{r prevAgecatEconAAutPlot, fig.cap = "Crude prevalence of autism in school data by student's monthly school fee (Peso), age band and sex. Bars show 95% normal confidence intervals.", fig.height=6, fig.pos='H'}
 # Autism
 aut_prev_econA.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "autism"),
@@ -4180,7 +4055,7 @@ ggplot(data = aut_prev_econA.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prevAgecatEconAAdhdPlot, fig.cap = "Crude prevalence of ADHD in school data by student's monthly school fee (Peso), age band and sex. Bars show 95% normal confidence intervals.", fig.height=6}
+```{r prevAgecatEconAAdhdPlot, fig.cap = "Crude prevalence of ADHD in school data by student's monthly school fee (Peso), age band and sex. Bars show 95% normal confidence intervals.", fig.height=6, fig.pos='H'}
 # ADHD
 adhd_prev_econA.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
                                                     grouping_vars = c("school_fee", "age_cat_name", "sex_desc", "adhd"),
@@ -4198,45 +4073,7 @@ ggplot(data = adhd_prev_econA.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prevAgeEconAAutPlot, include = FALSE, fig.cap = "Crude prevalence of autism in school data by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals.", fig.height=6}
-# Single ages
-aut_prev_econA.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
-                                                 grouping_vars = c("school_fee", "age_june30", "sex_desc", "autism"),
-                                                 disease = "autism") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = aut_prev_econA.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~school_fee) +
-  labs(title = "Autism prevalence by SES",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-```
-
-```{r prevAgeEconAAdhdPlot, include = FALSE, fig.cap = "Crude prevalence of ADHD in school data by socio-economic (SES) status of student's family, age and sex. Bars show 95% normal confidence intervals.", fig.height=6}
-# Single ages
-adhd_prev_econA.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
-                                                 grouping_vars = c("school_fee", "age_june30", "sex_desc", "adhd"),
-                                                 disease = "adhd") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = adhd_prev_econA.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~school_fee) +
-  labs(title = "ADHD prevalence by SES",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-```
-
-```{r prevAgecatEthnicAutTable}
+```{r prevAgecatEthnicAutTable, fig.pos='H'}
 # Autism
 aut_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "autism"),
@@ -4261,10 +4098,11 @@ kbl(aut_prev_ethnic.agecat_sex.table,
   linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of Autism cases by ethnicity and age band in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
   add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(font_size = 8)
+  kable_styling(font_size = 8) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgecatEthnicAdhdTable}
+```{r prevAgecatEthnicAdhdTable, fig.pos='H'}
 # Autism
 adhd_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "adhd"),
@@ -4289,10 +4127,11 @@ kbl(adhd_prev_ethnic.agecat_sex.table,
   linesep = c("", "", "\\addlinespace"), # Extra white space after every 3rd line
   caption = "Count and prevalence of ADHD cases by ethnicity and age band in Chile school data for females and males with normal confidence intervals. Regions with high Mapuche populations only.") %>%
 add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>% 
-  kable_styling(font_size = 8)
+  kable_styling(font_size = 8) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgecatEthnicAutPlot, fig.cap = "Crude prevalence of autism in school data by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only.", fig.height=3}
+```{r prevAgecatEthnicAutPlot, fig.cap = "Crude prevalence of autism in school data by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only.", fig.height=3, fig.pos='H'}
 # Autism
 aut_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "autism"),
@@ -4310,7 +4149,7 @@ ggplot(data = aut_prev_ethnic.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prevAgecatEthnicAdhdPlot, fig.cap = "Crude prevalence of ADHD in school data by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only.", fig.height=3}
+```{r prevAgecatEthnicAdhdPlot, fig.cap = "Crude prevalence of ADHD in school data by ethnicity, age band and sex. Bars show 95% normal confidence intervals. Regions with high Mapuche populations only.", fig.height=3, fig.pos='H'}
 # ADHD
 adhd_prev_ethnic.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd_ethnic,
                                                     grouping_vars = c("ethnic_2_group", "age_cat_name", "sex_desc", "adhd"),
@@ -4328,45 +4167,7 @@ ggplot(data = adhd_prev_ethnic.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prevAgeEthnicAutPlot, include = FALSE, fig.cap = "Crude prevalence of autism in school data by ethnicity, age and sex. Bars show 95% normal confidence intervals.", fig.height=3}
-# Single ages
-aut_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
-                                                 grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "autism"),
-                                                 disease = "autism") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = aut_prev_ethnic.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~ethnic_2_group) +
-  labs(title = "Autism prevalence by ethnicity",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-```
-
-```{r prevAgeEthnicAdhdPlot, include = FALSE, fig.cap = "Crude prevalence of ADHD in school data by ethnicity, age and sex. Bars show 95% normal confidence intervals.", fig.height=3}
-# Single ages
-adhd_prev_ethnic.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
-                                                 grouping_vars = c("ethnic_2_group", "age_june30", "sex_desc", "adhd"),
-                                                 disease = "adhd") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = adhd_prev_ethnic.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~ethnic_2_group) +
-  labs(title = "ADHD prevalence by ethnicity",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-```
-
-```{r prevAgecatRuralAutTable}
+```{r prevAgecatRuralAutTable, fig.pos='H'}
 # Autism
 aut_prev_rural.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_rurality", "age_cat_name", "sex_desc", "autism"),
@@ -4390,10 +4191,11 @@ kbl(aut_prev_rural.agecat_sex.table,
   #longtable = TRUE,
   linesep = c("", "\\addlinespace"), # Extra white space after every 2nd line
   caption = "Count and prevalence of Autism cases by school's rurality and age band in Chile school data for females and males with normal confidence intervals.") %>%
-  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2))
+  add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgecatRuralAdhdTable}
+```{r prevAgecatRuralAdhdTable, fig.pos='H'}
 # Autism
 adhd_prev_rural.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
                                                     grouping_vars = c("school_rurality", "age_cat_name", "sex_desc", "adhd"),
@@ -4417,10 +4219,11 @@ kbl(adhd_prev_rural.agecat_sex.table,
   #longtable = TRUE,
   linesep = c("", "\\addlinespace"), # Extra white space after every 2nd line
   caption = "Count and prevalence of ADHD cases by school's rurality and age band in Chile school data for females and males with normal confidence intervals.") %>%
-add_header_above(c(" " = 2, "Female" = 2, "Male" = 2))
+add_header_above(c(" " = 2, "Female" = 2, "Male" = 2)) %>%
+  kable_styling(latex_options = "HOLD_position")
 ```
 
-```{r prevAgecatRuralAutPlot, fig.cap = "Crude prevalence of autism in school data by school's rurality, age band and sex. Bars show 95% normal confidence intervals.", fig.height=3}
+```{r prevAgecatRuralAutPlot, fig.cap = "Crude prevalence of autism in school data by school's rurality, age band and sex. Bars show 95% normal confidence intervals.", fig.height=3, fig.pos='H'}
 # Autism
 aut_prev_rural.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut,
                                                     grouping_vars = c("school_rurality", "age_cat_name", "sex_desc", "autism"),
@@ -4438,7 +4241,7 @@ ggplot(data = aut_prev_rural.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prevAgecatRuralAdhdPlot, fig.cap="Crude prevalence of ADHD in school data by school's rurality, age band and sex. Bars show 95% normal confidence intervals.", fig.height=3}
+```{r prevAgecatRuralAdhdPlot, fig.cap="Crude prevalence of ADHD in school data by school's rurality, age band and sex. Bars show 95% normal confidence intervals.", fig.height=3, fig.pos='H'}
 # By age and sex
 # Age categories
 adhd_prev_rural.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd,
@@ -4457,304 +4260,7 @@ ggplot(data = adhd_prev_rural.agecat_sex) +
        fill = "Age category")
 ```
 
-```{r prevAgeRuralAutPlot, include = FALSE, fig.cap = "Crude prevalence of autism in school data by school's rurality, age and sex. Bars show 95% normal confidence intervals.", fig.height=3}
-# Single ages
-aut_prev_rural.age_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
-                                                 grouping_vars = c("school_rurality", "age_june30", "sex_desc", "autism"),
-                                                 disease = "autism") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = aut_prev_rural.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~school_rurality) +
-  labs(title = "Autism prevalence by school's rurality",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-```
-
-```{r prevAgeRuralAdhdPlot, include = FALSE, fig.cap = "Crude prevalence of ADHD in school data by school's rurality, age and sex. Bars show 95% normal confidence intervals.", fig.height=3}
-# Single ages
-adhd_prev_rural.age_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
-                                                 grouping_vars = c("school_rurality", "age_june30", "sex_desc", "adhd"),
-                                                 disease = "adhd") %>%
-  mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
-
-ggplot(data = adhd_prev_rural.age_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence, group = age_june30, fill = age_june30), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower, ymax = ci_upper, group = age_june30), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_viridis_c(option = "plasma") +
-  #theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.2)) +
-  facet_wrap(~school_rurality) +
-  labs(title = "ADHD prevalence by school's rurality",
-       x = "Sex",
-       y = "Crude prevalence",
-       fill = "Age")
-```
-
-```{r adjPrevPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of autism and ADHD in school data. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
-
-# Autism
-aut_prev_adj.long <- aut_prev_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-aut_prev_adj.long_plot <- ggplot(data = aut_prev_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  labs(title = "Autism prevalence",
-       y = "Aggregate prevalence",
-       fill = "Prevalence")
-
-# ADHD
-adhd_prev_adj.long <- adhd_prev_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-adhd_prev_adj.long_plot <- ggplot(data = adhd_prev_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  labs(title = "ADHD prevalence",
-       y = "Aggregate prevalence",
-       fill = "Prevalence")
-
-grid.arrange(aut_prev_adj.long_plot, adhd_prev_adj.long_plot, ncol = 2)
-```
-
-```{r adjPrevSexPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of autism and ADHD in school data by sex. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals.", fig.height=5}
-# Females
-# aut_prev_adj_f.long <- aut_prev_adj_f %>%
-#   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-#   pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-#                names_to = c("type", ".value"),
-#                names_pattern = "(crude|adjusted)_(.*)") %>%
-#   mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-# 
-# # Males
-# aut_prev_adj_m.long <- aut_prev_adj_m %>%
-#   select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-#   pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-#                names_to = c("type", ".value"),
-#                names_pattern = "(crude|adjusted)_(.*)") %>%
-#   mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-# Autism
-aut_prev_sex_adj.long <- #rbind(aut_prev_adj_m.long, aut_prev_adj_f.long)
-  aut_prev_sex_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-aut_prev_sex_adj.long_plot <- ggplot(data = aut_prev_sex_adj.long) +
-  geom_col(aes(x = sex_desc, y = rate*100, fill = type), position = position_dodge(), show.legend = FALSE) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower*100, ymax = ci_upper*100, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  #theme(axis.title.x = element_blank()) +
-  labs(title = "Autism prevalence",
-       x = "Sex",
-       y = "Aggregate prevalence")
-
-# ADHD
-adhd_prev_sex_adj.long <- #rbind(aut_prev_adj_m.long, aut_prev_adj_f.long)
-  adhd_prev_sex_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-adhd_prev_sex_adj.long_plot <- ggplot(data = adhd_prev_sex_adj.long) +
-  geom_col(aes(x = sex_desc, y = rate*100, fill = type), position = position_dodge(), show.legend = FALSE) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower*100, ymax = ci_upper*100, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  #theme(axis.title.x = element_blank()) +
-  labs(title = "ADHD prevalence",
-       x = "Sex",
-       y = "Aggregate prevalence")
-
-grid.arrange(aut_prev_sex_adj.long_plot, adhd_prev_sex_adj.long_plot, ncol = 2)
-```
-
-```{r adjPrevHealthAutPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of autism in school data by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
-# Autism
-aut_prev_health_adj.long <- aut_prev_health_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = aut_prev_health_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~health_service_name) +
-  labs(title = "Autism prevalence by health service",
-       x = "Sex",
-       y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
-```{r adjPrevHealthAdhdPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of ADHD in school data by health service. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
-# ADHD
-adhd_prev_health_adj.long <- adhd_prev_health_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = adhd_prev_health_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~health_service_name) +
-  labs(title = "ADHD prevalence by health service",
-       x = "Sex",
-       y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
-```{r adjPrevEconAAutPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of autism in school data by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
-# Autism
-aut_prev_econA_adj.long <- aut_prev_econA_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = aut_prev_econA_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~school_fee) +
-  labs(title = "Autism prevalence by SES",
-       x = "Sex",
-       y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
-```{r adjPrevEconAAdhdPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of ADHD in school data by socio-economic (SES) status of student's family. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
-# ADHD
-adhd_prev_econA_adj.long <- adhd_prev_econA_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = adhd_prev_econA_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~school_fee) +
-  labs(title = "ADHD prevalence by SES",
-       x = "Sex",
-       y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
-```{r adjPrevEthnicAutPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of autism in school data by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
-
-# Autism
-aut_prev_ethnic_adj.long <- aut_prev_ethnic_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = aut_prev_ethnic_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~ethnic_2_group) +
-  labs(title = "Autism prevalence by ethnicity",
-       #y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
-```{r adjPrevEthnicAdhdPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of ADHD in school data by ethnicity. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
-# ADHD
-adhd_prev_ethnic_adj.long <- adhd_prev_ethnic_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = adhd_prev_ethnic_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~ethnic_2_group) +
-  labs(title = "ADHD prevalence by ethnicity",
-       x = "Sex",
-       y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
-```{r adjPrevRuralAutPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of autism in school data by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
-# Autism
-aut_prev_rural_adj.long <- aut_prev_rural_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = aut_prev_rural_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~school_rurality) +
-  labs(title = "Autism prevalence by school's rurality",
-       #y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
-```{r adjPrevRuralAdhdPlot, include = FALSE, fig.cap = "Crude and age- and sex-adjusted sample prevalence of ADHD in school data by school's rurality. Bars for crude prevalence show 95% normal confidence intervals and bars for adjusted prevalence show 95% gamma confidence intervals."}
-# ADHD
-adhd_prev_rural_adj.long <- adhd_prev_rural_adj %>%
-  select(-sum_sample_pop_size, -crude_count, -adjusted_count, -var, -w_M) %>%
-  pivot_longer(cols = c(crude_rate, adjusted_rate, crude_ci_lower, crude_ci_upper, adjusted_ci_lower, adjusted_ci_upper),
-               names_to = c("type", ".value"),
-               names_pattern = "(crude|adjusted)_(.*)") %>%
-  mutate(type = factor(type, levels = c("crude", "adjusted"), labels = c("Crude", "Adjusted")))
-
-ggplot(data = adhd_prev_rural_adj.long) +
-  geom_col(aes(x = type, y = rate, fill = type), position = position_dodge(), show.legend = TRUE) +
-  geom_errorbar(aes(x = type, ymin = ci_lower, ymax = ci_upper, group = type), width = 0.2, position = position_dodge(width = 0.9)) +
-  theme(axis.title.x = element_blank(),
-        axis.title.y = element_blank()) +
-  facet_wrap(~school_rurality) +
-  labs(title = "ADHD prevalence by rurality",
-       #y = "Aggregate prevalence",
-       fill = "Prevalence")
-```
-
-```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=8}
+```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=8, fig.pos='H'}
 kolmog_school_sex.bar <- ggplot(school_match.sex) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
@@ -4776,7 +4282,7 @@ kolmog_school_sex.density <- ggplot(ks_perm.school.pvals, aes(x = sex, y = after
 grid.arrange(kolmog_school_sex.bar, kolmog_school_sex.density, nrow = 2)
 ```
 
-```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=8}
+```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=8, fig.pos='H'}
 kolmog_patient_sex.bar <- ggplot(patients_match.sex) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
@@ -4798,7 +4304,7 @@ kolmog_patient_sex.density <- ggplot(ks_perm.patients.pvals, aes(x = sex, y = af
 grid.arrange(kolmog_patient_sex.bar, kolmog_patient_sex.density, nrow = 2)
 ```
 
-```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=8}
+```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=8, fig.pos='H'}
 kolmog_school_commune.bar <- ggplot(school_match.student_commune_name) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
@@ -4821,7 +4327,7 @@ kolmog_school_commune.density <- ggplot(ks_perm.school.pvals, aes(x = commune_co
 grid.arrange(kolmog_school_commune.bar, kolmog_school_commune.density, nrow = 2)
 ```
 
-```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=8}
+```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=8, fig.pos='H'}
 kolmog_patient_commune.bar <- ggplot(patients_match.student_commune_name) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
@@ -4843,7 +4349,7 @@ kolmog_patient_commune.density <- ggplot(ks_perm.patients.pvals, aes(x = commune
 grid.arrange(kolmog_patient_commune.bar, kolmog_patient_commune.density, nrow = 2)
 ```
 
-```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=8}
+```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=8, fig.pos='H'}
 kolmog_school_ses.bar <- ggplot(school_match.ses_status) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
@@ -4865,7 +4371,7 @@ kolmog_school_ses.density <- ggplot(ks_perm.school.pvals, aes(x = ses_status, y 
 grid.arrange(kolmog_school_ses.bar, kolmog_school_ses.density, nrow = 2)
 ```
 
-```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=8}
+```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=8, fig.pos='H'}
 kolmog_patient_ses.bar <- ggplot(patients_match.ses_status) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
@@ -5035,7 +4541,7 @@ grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
 # Appendix A | R code
 
 
-```{r libraries, echo = TRUE, eval = FALSE}
+```{r setupAim1, echo = TRUE, eval = FALSE}
 library(janitor)
 library(gridExtra)
 library(readxl)
@@ -5097,19 +4603,21 @@ rename("health_service_name" = "servicio_de_salud") %>%
 health_service_lookup <- chile_communes %>%
   group_by(health_service_name) %>%
   summarise() %>% 
-  mutate(health_service_name_shortish = ifelse(grepl(" Del ", health_service_name), 
-                                      str_sub(health_service_name, start = 23, end = -1), 
-                                      str_sub(health_service_name, start = 19, end = -1)),
-         health_service_name_short = ifelse(health_service_name_shortish == "Libertador B.O'Higgins", "O'Higgins",
-                                     ifelse(health_service_name_shortish == "Metropolitano Central", "Metro. Central",
-                                     ifelse(health_service_name_shortish == "Metropolitano Norte", "Metro. Norte",
-                                     ifelse(health_service_name_shortish == "Metropolitano Occidente", "Metro. Occidente",
-                                     ifelse(health_service_name_shortish == "Metropolitano Oriente", "Metro. Oriente",
-                                     ifelse(health_service_name_shortish == "Metropolitano Sur", "Metro. Sur",
-                                     ifelse(health_service_name_shortish == "Metropolitano Sur Oriente", "Metro. Sur Oriente",
-                                     ifelse(health_service_name_shortish == "Valparaíso San Antonio", "Valparaíso",
-                                     ifelse(health_service_name_shortish == "Viña del Mar Quillota", "Viña del Mar",
-                                            health_service_name_shortish)))))))))) %>%
+  mutate(health_service_name_shortish = 
+           ifelse(grepl(" Del ", health_service_name), 
+                  str_sub(health_service_name, start = 23, end = -1), 
+                  str_sub(health_service_name, start = 19, end = -1)),
+         health_service_name_short = 
+           ifelse(health_service_name_shortish == "Libertador B.O'Higgins", "O'Higgins",
+           ifelse(health_service_name_shortish == "Metropolitano Central", "Metro. Central",
+           ifelse(health_service_name_shortish == "Metropolitano Norte", "Metro. Norte",
+           ifelse(health_service_name_shortish == "Metropolitano Occidente", "Metro. Occidente",
+           ifelse(health_service_name_shortish == "Metropolitano Oriente", "Metro. Oriente",
+           ifelse(health_service_name_shortish == "Metropolitano Sur", "Metro. Sur",
+           ifelse(health_service_name_shortish == "Metropolitano Sur Oriente", "Metro. Sur Oriente",
+           ifelse(health_service_name_shortish == "Valparaíso San Antonio", "Valparaíso",
+           ifelse(health_service_name_shortish == "Viña del Mar Quillota", "Viña del Mar",
+           health_service_name_shortish)))))))))) %>%
   arrange(health_service_name_short) %>%
   rowid_to_column("health_service_code")
 
@@ -5124,25 +4632,28 @@ region_service_commune_lookup <- chile.adm3 %>%
   merge(chile_communes, by = "commune_name", all = TRUE) %>%
   mutate(commune_code = ifelse(commune_name == "Antártica", "12202", commune_code),
          ADM3_PCODE = ifelse(commune_name == "Antártica", "CL12202", ADM3_PCODE),
-         ADM1_ES = ifelse(commune_name == "Antártica", "Región de Magallanes y Antártica Chilena", ADM1_ES),
+         ADM1_ES = ifelse(commune_name == "Antártica", 
+                          "Región de Magallanes y Antártica Chilena", ADM1_ES),
          ADM1_PCODE = ifelse(commune_name == "Antártica", "CL12", ADM1_PCODE),
          commune_name = ifelse(ADM3_PCODE == "CL01401", "Pozo Almonte", commune_name),
-                        # For the Tocopilla in Tarapaca, use it's old name to avoid duplication issues
+           # For the Tocopilla in Tarapaca, use it's old name to avoid duplication issues
          health_service_name = 
            ifelse(ADM3_PCODE == "CL01401", "Servicio de Salud Iquique", 
            ifelse(ADM3_PCODE == "CL11201", "Servicio de Salud Aisén",
            ifelse(ADM3_PCODE == "CL05201", "Servicio de Salud Valparaíso San Antonio", 
-                    # Isla del Pascua is actually served by Metro Oriente but maps to Valparaiso
+            # Isla del Pascua is actually served by Metro Oriente but maps to Valparaiso
            ifelse(ADM3_PCODE == "CL08206", "Servicio de Salud Arauco",
            ifelse(ADM3_PCODE == "CL08301", "Servicio de Salud Biobío",
            ifelse(ADM3_PCODE == "CL06204", "Servicio de Salud Del Libertador B.O'Higgins",
            ifelse(ADM3_PCODE == "CL13121", "Servicio de Salud Metropolitano Sur",
-           ifelse(ADM3_PCODE == "CL16206", "Servicio de Salud Ñuble", health_service_name)))))))),
+           ifelse(ADM3_PCODE == "CL16206", "Servicio de Salud Ñuble",
+                  health_service_name)))))))),
          region_code = str_sub(ADM1_PCODE, start = 3, end = -1),
          commune_name_upper = toupper(commune_name)) %>%
   rename(region_name = ADM1_ES) %>%
   filter(!is.na(ADM3_PCODE)) %>% 
-    # Get rid of the communes that didn't match properly with health service lookup and were corrected above
+    # Get rid of the communes that didn't match properly with health service
+    #lookup and were corrected above
   merge(region_abr_lookup, by = "ADM1_PCODE")
   
 region_service_commune_lookup <- merge(region_service_commune_lookup, 
