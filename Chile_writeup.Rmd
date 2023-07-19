@@ -2318,12 +2318,8 @@ mca_aut_commune_plot
 ```{r school}
 school_ssas <- chile_bayes %>%
   select(-student_commune_name) %>%
-  #left_join(region_service_commune_lookup %>% as.tibble %>% select(-geometry), by = "commune_code") %>%
   filter(commune_code %in% araucsur_communes$commune_code) %>%
-  #filter(age_june30 >= 6 & age_june30 <= 18, sex != 0) %>% 
-  mutate(#autism = ifelse(special_needs_code == 105, 1, 0),
-  #       aut_rank = 1,
-         dob = ymd(dob),
+  mutate(dob = ymd(dob),
          ses_status = ifelse(school_fee == "Free", 1,
                       ifelse(school_fee == "$1,000-$10,000" |
                                school_fee == "$10,001-$50,000" |
@@ -2341,62 +2337,76 @@ school_ssas <- chile_bayes %>%
 
 school_ssas_aut <- school_ssas %>% 
   filter(autism == 1) %>%
-  # We only want to find additional autism cases in the clinical records, we don't care if a student has autism and isn't in the clinical records
+  # We only want to find additional autism cases in the clinical records
   select(-age_june30, -autism) %>%
   rowid_to_column("id")
   
 # Add a fake row so that pairing works later
-# school <- rbind.data.frame(select(school_ssas_aut, -age_cat_name), 
-#                            data.frame(id = nrow(school_ssas_aut)+1, dob = "2023-06-01", sex_desc = NA, student_commune_name = NA, ses_status = NA),
-#                            stringsAsFactors = FALSE)
-# school <- select(school_ssas_aut, -age_cat_name)
-school <- rbind(select(school_ssas_aut, -age_cat_name), c(nrow(school_ssas_aut)+1, "2023-06-01", NA, NA, NA))
+school <- rbind(select(school_ssas_aut, -age_cat_name), 
+                c(nrow(school_ssas_aut)+1, "2023-06-01", NA, NA, NA))
 ```
 
 ```{r schoolChisq}
 # Check if students in SSAS are different to other students
-
 chile_bayes_ssas_grouped <- chile_bayes %>% 
   filter(ssas == 1) %>%
   group_by(sex_desc) %>%
   summarise(variable = "Sex",
             count = n(), 
-            ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+            ssas_perc = paste0(sprintf("%.2f", 
+                                       round(count / chile_bayes %>%
+                                               filter(ssas == 1) %>%
+                                               nrow() * 100, 2)), "%")) %>%
   rename(values = sex_desc) %>%
   rbind(chile_bayes %>%
           filter(ssas == 1) %>%
           group_by(age_cat_name) %>% 
           summarise(variable = "Age band",
                     count = n(), 
-                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+                    ssas_perc = paste0(sprintf("%.2f",
+                                               round(count / chile_bayes %>%
+                                                       filter(ssas == 1) %>%
+                                                       nrow() * 100, 2)), "%")) %>%
           rename(values = age_cat_name),
         chile_bayes %>%
           filter(ssas == 1) %>%
           group_by(school_fee) %>% 
           summarise(variable = "School fee",
                     count = n(), 
-                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+                    ssas_perc = paste0(sprintf("%.2f", 
+                                               round(count / chile_bayes %>%
+                                                       filter(ssas == 1) %>%
+                                                       nrow() * 100, 2)), "%")) %>%
           rename(values = school_fee),
         chile_bayes %>%
           filter(ssas == 1) %>%
           group_by(ethnic_2_group) %>% 
           summarise(variable = "Ethnicity",
                     count = n(), 
-                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+                    ssas_perc = paste0(sprintf("%.2f", 
+                                               round(count / chile_bayes %>%
+                                                       filter(ssas == 1) %>%
+                                                       nrow() * 100, 2)), "%")) %>%
           rename(values = ethnic_2_group),
         chile_bayes %>%
           filter(ssas == 1) %>%
           group_by(school_rurality) %>% 
           summarise(variable = "Rurality",
                     count = n(), 
-                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+                    ssas_perc = paste0(sprintf("%.2f", 
+                                               round(count / chile_bayes %>%
+                                                       filter(ssas == 1) %>% 
+                                                       nrow() * 100, 2)), "%")) %>%
           rename(values = school_rurality),
         chile_bayes %>%
           filter(ssas == 1) %>%
           group_by(special_needs_status) %>% 
           summarise(variable = "Accesses SEED",
                     count = n(), 
-                    ssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 1) %>% nrow() * 100, 2)), "%")) %>%
+                    ssas_perc = paste0(sprintf("%.2f", 
+                                               round(count / chile_bayes %>%
+                                                       filter(ssas == 1) %>%
+                                                       nrow() * 100, 2)), "%")) %>%
           rename(values = special_needs_status) %>%
           mutate(values = ifelse(values == 0, "No", "Yes"))) %>%
   select(variable, values, ssas_perc)
@@ -2411,58 +2421,87 @@ chile_bayes_nonssas_grouped <- chile_bayes %>%
   group_by(sex_desc) %>%
   summarise(variable = "Sex",
             count = n(), 
-            nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+            nonssas_perc = paste0(sprintf("%.2f", 
+                                          round(count / chile_bayes %>%
+                                                  filter(ssas == 0) %>%
+                                                  nrow() * 100, 2)), "%")) %>%
   rename(values = sex_desc) %>%
   rbind(chile_bayes %>%
           filter(ssas == 0) %>%
           group_by(age_cat_name) %>% 
           summarise(variable = "Age band",
                     count = n(), 
-                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+                    nonssas_perc = paste0(sprintf("%.2f", 
+                                                  round(count / chile_bayes %>%
+                                                          filter(ssas == 0) %>%
+                                                          nrow() * 100, 2)), "%")) %>%
           rename(values = age_cat_name),
         chile_bayes %>%
           filter(ssas == 0) %>%
           group_by(school_fee) %>% 
           summarise(variable = "School fee",
                     count = n(), 
-                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+                    nonssas_perc = paste0(sprintf("%.2f", 
+                                                  round(count / chile_bayes %>%
+                                                          filter(ssas == 0) %>%
+                                                          nrow() * 100, 2)), "%")) %>%
           rename(values = school_fee),
         chile_bayes %>%
           filter(ssas == 0) %>%
           group_by(ethnic_2_group) %>% 
           summarise(variable = "Ethnicity",
                     count = n(), 
-                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+                    nonssas_perc = paste0(sprintf("%.2f", 
+                                                  round(count / chile_bayes %>%
+                                                          filter(ssas == 0) %>%
+                                                          nrow() * 100, 2)), "%")) %>%
           rename(values = ethnic_2_group),
         chile_bayes %>%
           filter(ssas == 0) %>%
           group_by(school_rurality) %>% 
           summarise(variable = "Rurality",
                     count = n(), 
-                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+                    nonssas_perc = paste0(sprintf("%.2f", 
+                                                  round(count / chile_bayes %>%
+                                                          filter(ssas == 0) %>%
+                                                          nrow() * 100, 2)), "%")) %>%
           rename(values = school_rurality),
         chile_bayes %>%
           filter(ssas == 0) %>%
           group_by(special_needs_status) %>% 
           summarise(variable = "Accesses SEED",
                     count = n(), 
-                    nonssas_perc = paste0(sprintf("%.2f", round(count / chile_bayes %>% filter(ssas == 0) %>% nrow() * 100, 2)), "%")) %>%
+                    nonssas_perc = paste0(sprintf("%.2f", 
+                                                  round(count / chile_bayes %>%
+                                                          filter(ssas == 0) %>%
+                                                          nrow() * 100, 2)), "%")) %>%
           rename(values = special_needs_status) %>%
           mutate(values = ifelse(values == 0, "No", "Yes"))) %>%
   select(variable, values, nonssas_perc)
 
 chisq_pvals <- c(ifelse(chisq.test(chile_bayes$sex_desc, chile_bayes$ssas)$p.value < 0.0001,
-                        "<<0.001", signif(chisq.test(chile_bayes$sex_desc, chile_bayes$ssas)$p.value, 3)), "",
-                 ifelse(chisq.test(chile_bayes$age_cat_name, chile_bayes$ssas)$p.value < 0.0001,
-                        "<<0.001", signif(chisq.test(chile_bayes$age_cat_name, chile_bayes$ssas)$p.value, 3)), "", "", "",
-                 ifelse(chisq.test(chile_bayes$school_fee, chile_bayes$ssas)$p.value < 0.0001, 
-                        "<<0.001", signif(chisq.test(chile_bayes$school_fee, chile_bayes$ssas)$p.value, 3)), "", "", "", "", "", "",
-                 ifelse(chisq.test(chile_bayes$ethnic_2_group, chile_bayes$ssas)$p.value < 0.0001,
-                        "<<0.001", signif(chisq.test(chile_bayes$ethnic_2_group, chile_bayes$ssas)$p.value, 3)), "", "",
-                 ifelse(chisq.test(chile_bayes$school_rurality, chile_bayes$ssas)$p.value < 0.0001,
-                        "<<0.001", signif(chisq.test(chile_bayes$school_rurality, chile_bayes$ssas)$p.value, 3)), "",
-                 ifelse(chisq.test(chile_bayes$special_needs_status, chile_bayes$ssas)$p.value < 0.0001,
-                        "<<0.001", signif(chisq.test(chile_bayes$special_needs_status, chile_bayes$ssas)$p.value, 3)), "")
+                        "<<0.001", signif(chisq.test(chile_bayes$sex_desc, 
+                                                     chile_bayes$ssas)$p.value, 3)), "",
+                 ifelse(chisq.test(chile_bayes$age_cat_name, 
+                                   chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$age_cat_name,
+                                                     chile_bayes$ssas)$p.value, 3)), "", "", "",
+                 ifelse(chisq.test(chile_bayes$school_fee, 
+                                   chile_bayes$ssas)$p.value < 0.0001, 
+                        "<<0.001", signif(chisq.test(chile_bayes$school_fee,
+                                                     chile_bayes$ssas)$p.value, 3)), "", "", "", "", "", "",
+                 ifelse(chisq.test(chile_bayes$ethnic_2_group, 
+                                   chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$ethnic_2_group,
+                                                     chile_bayes$ssas)$p.value, 3)), "", "",
+                 ifelse(chisq.test(chile_bayes$school_rurality,
+                                   chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$school_rurality, 
+                                                     chile_bayes$ssas)$p.value, 3)), "",
+                 ifelse(chisq.test(chile_bayes$special_needs_status,
+                                   chile_bayes$ssas)$p.value < 0.0001,
+                        "<<0.001", signif(chisq.test(chile_bayes$special_needs_status,
+                                                     chile_bayes$ssas)$p.value, 3)), "")
 
 chile_bayes_grouped <- cbind(chile_bayes_ssas_grouped, 
                              chile_bayes_nonssas_grouped[, 3],
@@ -2491,7 +2530,7 @@ kbl(chile_bayes_grouped,
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-Table \@ref(tab:schoolChisq) shows that students living in SSAS were significantly different to students living in the other health services with regard to age band, SES, ethnicity, rurality and whether they access SEED at all, but do not differ by sex. 
+Table \@ref(tab:schoolChisq) shows that students living in SSAS were significantly different to students living in the other health services with regard to age band, SES, ethnicity, rurality and whether they accessed SEED at all, but did not differ by sex. 
 
 ```{r ssasSchoolTable}
 school_sass_aut.table <- school_ssas_aut %>%
@@ -2519,10 +2558,12 @@ school_sass_aut.table <- school_ssas_aut %>%
                     perc = sprintf("%.2f", round(count/nrow(school_ssas_aut)*100, 2))) %>%
           rename(values = ses_status)) %>%
   mutate(count_suppress = ifelse(count < 20, "<20", count),
-         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)")),
+         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress,
+                                                                " (", perc, "%)")),
          variables_short = c("Sex", "",
                              "Age band", "", "", "",
-                             "Commune", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                             "Commune", "", "", "", "", "", "", "", "", "", "",
+                             "", "", "", "", "", "", "", "", "", "",
                              "Proxy SES", "", "", "")) %>%
   select(variables_short, values, count_perc)
 
@@ -2542,8 +2583,7 @@ kbl(school_sass_aut.table,
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-In the school records, `r format(school_ssas %>% nrow(), big.mark = ",", trim = TRUE)` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_ssas) * 100, 2)`%) have autism. Among the students with autism, shown in Table  \@ref(tab:ssasSchoolTable), there were many more males than females, Temuco is the most common commune of residence and most students have a proxy SES of 1. 
-
+In the school records, `r format(school_ssas %>% nrow(), big.mark = ",", trim = TRUE)` students lived in the SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_ssas) * 100, 2)`%) had autism. Among the students with autism, shown in Table  \@ref(tab:ssasSchoolTable), there were many more males than females, Temuco was the most common commune of residence and most students had a proxy SES of 1. 
 ```{r patients}
 patients_age <- clinical %>%
   filter(commune_code %in% araucsur_communes$commune_code,
@@ -2564,28 +2604,15 @@ patients_age <- clinical %>%
          age_june30,
          sex_desc,
          student_commune_name,
-         #autism,
-         ses_status#,
-         #intdisab,
-         #aut_rank
-         #, student_region_name
-         ) 
+         ses_status) 
 
-patients <- patients_age %>% select(-age_june30) %>% mutate(ses_status = as.character(ses_status))
+patients <- patients_age %>%
+  select(-age_june30) %>%
+  mutate(ses_status = as.character(ses_status))
 
-# patients_out <- clinical %>%
-#   filter(commune_code %in% araucsur_communes$commune_code) %>%
-#   group_by(id, gender, dob) %>%
-#   summarise(ses_status = get.min.na(socio_economic_level),
-#             autism = get.max.na(autism),
-#             intdisab = get.max.na(intdisab),
-#             commune_name = commune_name[which.max(apt_date)],
-#             commune_code = commune_code[which.max(apt_date)]) %>%
-#   ungroup() %>%
-#   rowid_to_column("row_id")
-# write_csv(patients_out, file = "04_Data/Outputs/patients.csv")
-
-patients_distinct <- patients %>% group_by(id) %>% summarise(commune_count = n(), communes = list(student_commune_name))
+patients_distinct <- patients %>% 
+  group_by(id) %>% 
+  summarise(commune_count = n(), communes = list(student_commune_name))
 ```
 
 ```{r ssasPatientsTable}
@@ -2618,10 +2645,12 @@ ssas_patients.table <- patients_age %>%
                     perc = sprintf("%.2f", round(count/nrow(patients_age)*100, 2))) %>%
           rename(values = ses_status)) %>%
   mutate(count_suppress = ifelse(count < 20, "<20", count),
-         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)")),
+         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress,
+                                                                " (", perc, "%)")),
          variables_short = c("Sex", "",
                              "Age band", "", "", "",
-                             "Commune", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                             "Commune", "", "", "", "", "", "", "", "", "", "",
+                             "", "", "", "", "", "", "", "", "", "",
                              "Proxy SES", "", "")) %>%
   select(variables_short, values, count_perc)
 
@@ -2641,7 +2670,7 @@ kbl(ssas_patients.table,
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-Aggregating the combined clinical data to patient-level data for linkage resulted in the patient dataset with `r format(nrow(patients), big.mark = ",", trim = TRUE)` records for `r format(length(unique(patients$id)), big.mark = ",", trim = TRUE)` unique patients as `r patients_distinct %>% filter(commune_count == 2) %>% nrow()` patients lived in 2 communes and `r patients_distinct %>% filter(commune_count == 3) %>% nrow()` lived in 3 during the period covered by the data see Figure \@ref(fig:sampleSize). Table \@ref(tab:ssasPatientsTable) shows a similar pattern of category frequencies in the patient data as in the SSAS school data; males were more prevalent, Temuco is the most common commune of residence, however most patients have a proxy SES of 2 rather than 1.
+Aggregating the combined clinical data to patient-level data for linkage resulted in the patient dataset with `r format(nrow(patients), big.mark = ",", trim = TRUE)` records for `r format(length(unique(patients$id)), big.mark = ",", trim = TRUE)` unique patients as `r patients_distinct %>% filter(commune_count == 2) %>% nrow()` patients lived in 2 communes and `r patients_distinct %>% filter(commune_count == 3) %>% nrow()` lived in 3 communes during the period covered by the data see Figure \@ref(fig:sampleSize). Table \@ref(tab:ssasPatientsTable) shows a similar pattern of category frequencies in the patient data as in the SSAS school data: males were more prevalent and Temuco was the most common commune of residence, however most patients had a proxy SES of 2 rather than 1.
 
 ### Manual record linkage
 
@@ -2664,8 +2693,10 @@ school_grouped_ses <- school %>%
             ids = list(rowid)) %>%
   ungroup()
 
-merged_ses <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name", "ses_status"), all = FALSE)
-# 79 matches
+merged_ses <- merge(school, patients, by = c("sex_desc", 
+                                             "dob",
+                                             "student_commune_name",
+                                             "ses_status"), all = FALSE)
 
 patients_grouped <- patients %>%
   group_by(sex_desc, 
@@ -2679,14 +2710,14 @@ school_grouped <- school %>%
            dob, 
            student_commune_name) %>%
   summarise(count = n(),
-            #ids = list(rowid)
             ses = list(ses_status))
 
-merged <- merge(school, patients, by = c("sex_desc", "dob", "student_commune_name"), all = FALSE)
-# 197 matches
+merged <- merge(school, patients, by = c("sex_desc", 
+                                         "dob",
+                                         "student_commune_name"), all = FALSE)
 ```
 
-Using perfect match on sex, date of birth, commune of residence and the proxies for SES, `r nrow(merged_ses)` matches can be found between the SSAS school and patient records. Of these, `r length(unique(merged_ses$id.x))` unique SSAS school records can be perfectly matched to SSAS patient records, and all perfect matches were for unique patients. When mismatch on SES proxy is allowed, `r nrow(merged)` matches can be manually found between the SSAS school and patient records. Of these, `r length(unique(merged$id.x))` unique school records can be perfectly matched to SSAS patient records and `r length(unique(merged$id.y))` SSAS patients can be perfectly matched to SSAS school records.
+Using perfect match on sex, date of birth, commune of residence and the proxies for SES, `r nrow(merged_ses)` perfect matches were manually found between the SSAS school and patient records. Of these, `r length(unique(merged_ses$id.x))` unique SSAS school records were perfectly matched to SSAS patient records, and all perfect matches were for unique patients. When mismatch on SES proxy was allowed, `r nrow(merged)` perfect matches were manually found between the SSAS school and patient records. Of these, `r length(unique(merged$id.x))` unique school records were perfectly matched to SSAS patient records and `r length(unique(merged$id.y))` SSAS patients were perfectly matched to SSAS school records.
 
 ### Probabilistic record linkage
 
@@ -2695,17 +2726,15 @@ Using perfect match on sex, date of birth, commune of residence and the proxies 
 pairs_blocked <- compare.linkage(school,
                      select(patients, -row_id),
                      blockfld = c("sex_desc", "dob"), 
-                      # Block on sex and dob because we really want them to be the same and helps computation time
-                     #phonetic = FALSE,
-                     #strcmp = c(2), # Do string comparison on DOB
+                      # Block on sex and dob because we really want them to be
+                     # the same and helps computation time
                      exclude = c(1) # Exclude the id column in both datasets
                      )
 
 pairs_weighted <- epiWeights(pairs_blocked, e = c(0.01, # Default for DOB
                            0.01, # Default for sex
                            0.01, # Default for commune because we want a good match
-                           #0.01, # Keep small so autism in clinical (not intellectual disability) is prioritised over ses match
-                           0.1   # Have more error for ses_status because it is loosely defined 
+                           0.1   # Have more error for SES because it is loosely defined 
                            ))
 
 pairs_classified <- emClassify(pairs_weighted, threshold.upper = 1, threshold.lower = 0.8)
@@ -2718,12 +2747,14 @@ pairs_blocked.df <- pairs_blocked$pairs %>%
 
 # Turn into a 'pairs' type object so it can be fed to select_n_to_m()
 pairs_blocked.pairs <- pair_blocking(school, patients, on = c("sex_desc", "dob")) %>%
-         mutate(student_commune_name = (school$student_commune_name[.x] == patients$student_commune_name[.y])) %>%
+         mutate(student_commune_name = (school$student_commune_name[.x] == 
+                                          patients$student_commune_name[.y])) %>%
   left_join(pairs_blocked.df, by = c(".x", ".y")) %>%
   select(c(-student_commune_name.x)) %>%
   rename("student_commune_name" = "student_commune_name.y")
 
-matches <- select_n_to_m(pairs_blocked.pairs, threshold = 0.5, score = "weight", n = 1, m = 1, var = "match") %>%
+matches <- select_n_to_m(pairs_blocked.pairs, threshold = 0.5, score = "weight",
+                         n = 1, m = 1, var = "match") %>%
   filter(match == TRUE) %>%
   rename("id" = ".x",
          "row_id" = ".y") %>%
@@ -2756,7 +2787,8 @@ school_matched <- school %>%
   select(id.school, id.patient, patient_id,
          dob.school, dob.patient, dob.matched,
          sex_desc.school, sex_desc.patient, sex_desc.matched,
-         student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
+         student_commune_name.school, student_commune_name.patient, 
+         student_commune_name.matched,
          ses_status.school, ses_status.patient, ses_status.matched,
          weight) %>%
   arrange(desc(weight))
@@ -2766,13 +2798,14 @@ school_matched_small <- school_matched %>%
          sex.school = ifelse(sex_desc.school == "Male", 1,
                       ifelse(sex_desc.school == "Female", 2, NA))) %>%
   merge(region_service_commune_lookup %>% as.tibble() %>% select(-geometry),
-        by.x = "student_commune_name.school", by.y = "commune_name") %>% # doesn't include all.x = TRUE because that would keep the fake record.
+        by.x = "student_commune_name.school", by.y = "commune_name") %>% 
   select(id.school, 
          dob.school, 
          sex_desc.school, sex.school,
          student_commune_name.school, commune_code,
          ses_status.school, 
          matched)
+# Fake record has now been excluded
 ```
 
 ```{r matchPatient}
@@ -2786,7 +2819,6 @@ patients_matched <- patients %>%
          student_commune_name.patient = student_commune_name.x,
          id = id.y,
          ses_status.patient = ses_status.x,
-         #autism.patient = autism.x,
          dob.matched = dob.y,
          sex_desc.matched = sex_desc.y,
          student_commune_name.matched = student_commune_name.y,
@@ -2801,10 +2833,10 @@ patients_matched <- patients %>%
   select(id.school, id.patient, patient_id,
          dob.school, dob.patient, dob.matched,
          sex_desc.school, sex_desc.patient, sex_desc.matched,
-         student_commune_name.school, student_commune_name.patient, student_commune_name.matched,
+         student_commune_name.school, student_commune_name.patient, 
+         student_commune_name.matched,
          ses_status.school, ses_status.patient, ses_status.matched,
-         weight) %>% #,
-         #autism.patient) %>%
+         weight) %>% 
   arrange(desc(weight))
 
 patients_matched_small <- patients_matched %>%
@@ -2818,34 +2850,23 @@ patients_matched_small <- patients_matched %>%
          sex_desc.patient, sex.patient,
          student_commune_name.patient, commune_code,
          ses_status.patient,
-         matched) #,
-         #autism.patient)
+         matched) 
 ```
 
 ```{r patientsUnique}
-# Check if any of the patients that lived in multiple communes matched to multiple school records
+# Check if any of the patients that lived in multiple communes matched to 
+# multiple school records
 patients_matched_unique <- patients_matched_small %>%
   group_by(matched, patient_id) %>%
   summarise(count = n())
 
-patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% select(patient_id)
+patients_dup <- patients_matched_unique %>% 
+  filter(matched == 1, count > 1) %>% 
+  select(patient_id)
 # No patient is inadvertently matched to two school records
 ```
 
-```{r patientsAut, include = FALSE}
-# # Check if any matches are to patients that only have intellectual disability
-# patients_intdisab <- patients_matched_small %>% filter(matched == 1, autism.patient == 0)
-# 
-# # There are some so check if any other patient records were available for those DOB and sex values.
-# for(j in 1:nrow(patients_intdisab)) {
-#   patients %>% 
-#     filter(sex_desc == patients_intdisab$sex_desc.patient[j],
-#            dob == patients_intdisab$dob.patient[j]) #%>% print()
-# }
-```
-
 Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blocked pairs. Probabilistic matching on sex, date of birth, commune of residence and the proxies for SES with selection of possible matches to create a bijective set of matches resulted in `r nrow(matches)` matches of unique SSAS school and patient records. This corresponds to `r round(nrow(matches) / nrow(school) * 100, 2)`% of the school records for students with autism in SSAS having a match in the SSAS patient records, `r round(nrow(matches) / nrow(patients) * 100, 2)`% of the patient records having a match in the SSAS school records and `r round(nrow(matches) / length(unique(patients$id)) * 100, 2)`% of the unique patients having a match in the SSAS school records. For each patient that had lived in more than one commune and therefore appeared more than once in the patient data, only one match to an SSAS school record was made, meaning the matching was bijective for SSAS school records and unique patients. 
-
 
 ```{r kolmogorovSchool, warning = FALSE}
 school_yes <- school_matched_small %>% filter(matched == 1)
@@ -2874,7 +2895,8 @@ ks_perm.school.pvals <- data.frame(sex = numeric(nPerm),
 school_matched_small_perm <- school_matched_small
 
 for (i in 1:nPerm) {
-  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
+  # permute matched status
+  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] 
   school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
   school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
   
@@ -2924,7 +2946,8 @@ ks_perm.patients.pvals <- data.frame(sex = numeric(nPerm),
 patients_matched_small_perm <- patients_matched_small
 
 for (i in 1:nPerm) {
-  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] # permute matched status
+  # permute matched status
+  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] 
   patients_perm_yes <- patients_matched_small_perm %>% filter(matched == 1)
   patients_perm_no <- patients_matched_small_perm %>% filter(matched == 0)
   
@@ -2955,7 +2978,8 @@ school_match_no.sex <- school_no %>%
   summarise(count = n()) %>%
   mutate(freq = count/sum(count), matched = 0)
 school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
+  mutate(sex_desc = ifelse(sex.school == 1, "Male", 
+                           ifelse(sex.school == 2, "Female", NA))) %>% 
   arrange(sex_desc, matched)
 
 # Results for patients by sex
@@ -2968,7 +2992,8 @@ patients_match_no.sex <- patients_no %>%
   summarise(count = n()) %>% 
   mutate(freq = count/sum(count), matched = 0)
 patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.patient == 1, "Male", ifelse(sex.patient == 2, "Female", NA))) %>% 
+  mutate(sex_desc = ifelse(sex.patient == 1, "Male", 
+                           ifelse(sex.patient == 2, "Female", NA))) %>% 
   arrange(sex_desc, matched)
 
 # Results for school by commune
@@ -3025,13 +3050,14 @@ patients_match.ses_status <- rbind(patients_match_yes.ses_status,
   arrange(ses_status.patient, matched)
 ```
 
-Analysis of differences between matched and unmatched records in the SSAS school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no significant difference in frequency of sexes between matched (`r round(school_match.sex$freq[2] * 100, 2)`% female) and unmatched SSAS school records (`r round(school_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovSchoolSex). They found a strongly significant difference in the frequency of sexes between matched (`r round(patients_match.sex$freq[2] * 100, 2)`% female) and unmatched patient records (`r round(patients_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the male to female ratios differing across the datasets: the SSAS school data of students with autsim is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches were `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow() / school_matched_small %>% nrow() * 100, 2))`% females. Kolmogovo-Smirnov permutation testing found that for the SSAS school data, matched (`r round(school_match.student_commune_name$freq[31] * 100, 2)`% resident in Temuco) and unmatched records (`r round(school_match.student_commune_name$freq[30] * 100, 2)`% resident in Temuco) differed significantly by commune, see Figure \@ref(fig:kolmogorovSchoolCommune), and that there was no significant difference between matched (`r round(patients_match.student_commune_name$freq[33] * 100, 2)`% resident in Temuco) and unmatched records (`r round(patients_match.student_commune_name$freq[32] * 100, 2)`% resident in Temuco) by commune for the patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. For the SSAS school data by proxy SES, there was a strongly significant difference between matched (`r round(school_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[4] * 100, 2)`% status of 2, 0.00% status of 3 and `r round(school_match.ses_status$freq[7] * 100, 2)`% with unknown status) and unmatched (`r round(school_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[3] * 100, 2)`% status of 2, `r round(school_match.ses_status$freq[5] * 100, 2)`% status of 3 and `r sprintf("%.2f", round(school_match.ses_status$freq[6] * 100, 2))`% with unknown status) records, see Figure \@ref(fig:kolmogorovSchoolSes). For the patient data there was a somewhat significant difference between matched (`r round(patients_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[4] * 100, 2)`% status of 2, and `r round(patients_match.ses_status$freq[6] * 100, 2)`% status of 3) and unmatched (`r round(patients_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[3] * 100, 2)`% status of 2 and `r round(patients_match.ses_status$freq[5] * 100, 2)`% status of 3) records, see Figure \@ref(fig:kolmogorovPatientSes). Again this likely reflects different frequencies of the SES values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
+Analysis of differences between matched and unmatched records in the SSAS school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no significant difference in frequency of sexes between matched (`r round(school_match.sex$freq[2] * 100, 2)`% female) and unmatched SSAS school records (`r round(school_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovSchoolSex). They found a strongly significant difference in the frequency of sexes between matched (`r round(patients_match.sex$freq[2] * 100, 2)`% female) and unmatched patient records (`r round(patients_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovPatientSex). This difference was likely due to the male to female ratios differing across the datasets: the SSAS school data of students with autsim was `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data was `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches were `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow() / school_matched_small %>% nrow() * 100, 2))`% females. Permutation testing found that for the SSAS school data, matched (`r round(school_match.student_commune_name$freq[31] * 100, 2)`% resident in Temuco) and unmatched records (`r round(school_match.student_commune_name$freq[30] * 100, 2)`% resident in Temuco) differed significantly by commune, see Figure \@ref(fig:kolmogorovSchoolCommune), and that there was no significant difference in the patient data by commune between matched (`r round(patients_match.student_commune_name$freq[33] * 100, 2)`% resident in Temuco) and unmatched records (`r round(patients_match.student_commune_name$freq[32] * 100, 2)`% resident in Temuco), see Figure \@ref(fig:kolmogorovSchoolCommune). This appeared to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. For the SSAS school data by proxy SES there was a strongly significant difference between matched (`r round(school_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[4] * 100, 2)`% status of 2, 0.00% status of 3 and `r round(school_match.ses_status$freq[7] * 100, 2)`% with unknown status) and unmatched (`r round(school_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[3] * 100, 2)`% status of 2, `r round(school_match.ses_status$freq[5] * 100, 2)`% status of 3 and `r sprintf("%.2f", round(school_match.ses_status$freq[6] * 100, 2))`% with unknown status) records, see Figure \@ref(fig:kolmogorovSchoolSes). For the patient data there was a somewhat significant difference between matched (`r round(patients_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[4] * 100, 2)`% status of 2, and `r round(patients_match.ses_status$freq[6] * 100, 2)`% status of 3) and unmatched (`r round(patients_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[3] * 100, 2)`% status of 2 and `r round(patients_match.ses_status$freq[5] * 100, 2)`% status of 3) records, see Figure \@ref(fig:kolmogorovPatientSes). Again this likely reflected different frequencies of the SES values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contained too many categories for results to be meaningful.
 
 
 ## Updated autism prevalence estimates and delta
 
 ```{r newPrev}
-# Aggregate patients to single row per patient by choosing the commune that has a match where available.
+# Aggregate patients to single row per patient by choosing the commune 
+# that has a match where available.
 patients_matched_small_dedup <- patients_matched_small %>%
   group_by(patient_id, dob.patient, sex_desc.patient) %>%
   summarise(commune_list = list(student_commune_name.patient),
@@ -3043,10 +3069,12 @@ patients_matched_small_dedup <- patients_matched_small %>%
 
 
 
-n_aut_araucS <- nrow(school_matched) + length(unique(patients_matched$patient_id)) - nrow(matches) 
+n_aut_araucS <- nrow(school_matched) + 
+  length(unique(patients_matched$patient_id)) - nrow(matches) 
 # OR 
 n_aut_araucS <- school_matched_small %>% filter(matched == 0) %>% nrow() +
-  dim(patients_matched_small_dedup %>% filter(matched == 0) %>% select(patient_id) %>% unique())[1] + nrow(matches)
+  dim(patients_matched_small_dedup %>% filter(matched == 0) %>% select(patient_id)
+      %>% unique())[1] + nrow(matches)
 ```
 
 ```{r schoolpatient}
@@ -3057,16 +3085,18 @@ school_ssas_grouped <- school_ssas %>%
   pivot_wider(names_from = "autism", values_from = "count") %>%
   rename(no_autism_school = "0", yes_autism_school = "1")
 
-# Remove matched patients because they are already counted as yes autism in the school data
-# Then get count of autism patients
+# Remove matched patients because they are already counted as yes autism in 
+# the school data. Then get count of autism patients
 patients_nomatch_grouped <- patients_matched_small_dedup %>%
   filter(matched == 0) %>%
-  mutate(age_june30 = trunc(time_length(interval(ymd(dob.patient), ymd("2021-06-30")), unit = "year"))) %>%
+  mutate(age_june30 = trunc(time_length(interval(ymd(dob.patient),
+                                                 ymd("2021-06-30")), unit = "year"))) %>%
   rename(sex_desc = sex_desc.patient) %>%
   group_by(age_june30, sex_desc) %>%
   summarise(yes_autism_patients = n())
 
-# Combine the counts. Move the number of autism patients from the no autism in school data to yes autism in school data
+# Combine the counts. Move the number of autism patients from the no autism in
+# school data to yes autism in school data
 school_patients_grouped <- merge(school_ssas_grouped, patients_nomatch_grouped,
                                  by = c("age_june30", "sex_desc")) %>%
   mutate(no_autism_linked = no_autism_school - yes_autism_patients,
@@ -3076,45 +3106,24 @@ school_patients_grouped <- merge(school_ssas_grouped, patients_nomatch_grouped,
                                ifelse(age_june30 <= 14, "12-14", "15-18"))),
                                levels = c("6-8", "9-11", "12-14", "15-18")),
          sex = ifelse(sex_desc == "Female", 2, 1))
-
-# school_patients <- patients_matched_small_dedup %>% 
-#   rename(id = patient_id,
-#          dob = dob.patient,
-#          sex_desc = sex_desc.patient,
-#          student_commune_name = student_commune_name.patient,
-#          autism = autism.patient,
-#          ses_status = ses_status.patient
-#          ) %>%
-#   mutate(age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
-#          age_cat_name = factor(ifelse(age_june30 <= 2, "0-2",
-#                                ifelse(age_june30 <= 5, "3-5",
-#                                ifelse(age_june30 <= 8, "6-8", 
-#                                ifelse(age_june30 <= 11, "9-11", 
-#                                ifelse(age_june30 <= 14, "12-14", "15-18"))))), 
-#                                levels = c("0-2", "3-5", "6-8", "9-11", "12-14", "15-18"))) %>%
-#   filter(matched == 0) %>% # remove matches so they're not double counted
-#   select(id, dob, sex_desc, student_commune_name, autism, ses_status, age_june30, age_cat_name) %>%
-#   mutate(dataset = "patients") %>%
-#   rbind(school_ssas %>% rowid_to_column("id") %>% mutate(dataset = "school", id = as.character(id))) %>%
-#   mutate(sex = ifelse(sex_desc == "Female", 2, 1))
 ```
 
 ```{r adjNewprevAraucS}
-#aut_newprev_araucS <- get_grouped_prev(x = school_patients, stdpop = chile_stdpop, 
-#                                    grouping_vars = c("age_june30", "age_cat_name", "sex", "autism"),
-#                                    disease = "autism")
-
 n_stdpop <- sum(chile_stdpop$std_pop)
 
 aut_newprev_araucS <- school_patients_grouped %>%
-  #select(age_june30, age_cat_name, sex, no_autism_linked, yes_autism_linked) %>%
   rename(age = age_june30) %>%
-  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
-         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
-         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), 
+            # If there are no cases of autism in the group, input 0
+         sample_pop_size = no_autism_linked + yes_autism_linked, 
+            # Total sample population is autism cases + not cases
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% 
+            # Prevalence of autism in the group
   left_join(chile_stdpop, by = c("age", "sex")) %>%
-  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
-         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, 
+            # Prevalence of autism in the group, standardised to standard population
+         w = std_pop / (sample_pop_size * n_stdpop), 
+            # Weight of the group using standard population
          w2 = pop_prop / sample_pop_size,
            #sum_std_pop = sum(std_pop)
            ) %>%
@@ -3125,15 +3134,17 @@ aut_newprev_araucS_adj <- aut_newprev_araucS %>%
             crude_rate = sum(yes_autism_linked) / sum(sample_pop_size),
             crude_count = sum(yes_autism_linked),
             adjusted_rate = sum(yes_autism_linked / sample_pop_size * pop_prop),
-            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
-            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), 
             var = sum(pop_prop^2 * yes_autism_linked / sample_pop_size^2),
-            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
-            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
-            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
-            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
-            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * 
+              (1 - crude_rate) / sum_sample_pop_size)),
+            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate *
+              (1 - crude_rate) / sum_sample_pop_size)),
+            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * 
+              qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) *
+              qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
@@ -3143,18 +3154,19 @@ aut_newprev_araucS_adj <- aut_newprev_araucS %>%
 aut_newprev_araucS_f <- school_patients_grouped %>%
   filter(sex == 2) %>%
   rename(age = age_june30) %>%
-  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
-         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
-         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), 
+         sample_pop_size = no_autism_linked + yes_autism_linked, 
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% 
   left_join(chile_stdpop_f, by = c("age", "sex")) %>%
-  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
-         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, 
+         w = std_pop / (sample_pop_size * n_stdpop), 
          w2 = pop_prop / sample_pop_size,
            #sum_std_pop = sum(std_pop)
            ) %>%
   ungroup()
 
-aut_newprev_araucS_adj_f <- get_adjusted_prev(rename(aut_newprev_araucS_f, "n_disease" = "yes_autism_linked"),
+aut_newprev_araucS_adj_f <- get_adjusted_prev(rename(aut_newprev_araucS_f,
+                                                     "n_disease" = "yes_autism_linked"),
                                               grouping_vars = c()) %>%
   mutate(sex_desc = "Female") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
@@ -3163,43 +3175,25 @@ aut_newprev_araucS_adj_f <- get_adjusted_prev(rename(aut_newprev_araucS_f, "n_di
 aut_newprev_araucS_m <- school_patients_grouped %>%
   filter(sex == 1) %>%
   rename(age = age_june30) %>%
-  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
-         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
-         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), 
+         sample_pop_size = no_autism_linked + yes_autism_linked, 
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% 
   left_join(chile_stdpop_m, by = c("age", "sex")) %>%
-  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
-         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, 
+         w = std_pop / (sample_pop_size * n_stdpop), 
          w2 = pop_prop / sample_pop_size,
            #sum_std_pop = sum(std_pop)
            ) %>%
   ungroup()
 
-aut_newprev_araucS_adj_m <- get_adjusted_prev(rename(aut_newprev_araucS_m, "n_disease" = "yes_autism_linked"),
+aut_newprev_araucS_adj_m <- get_adjusted_prev(rename(aut_newprev_araucS_m,
+                                                     "n_disease" = "yes_autism_linked"),
                                               grouping_vars = c()) %>%
   mutate(sex_desc = "Male") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 aut_newprev_araucS_sex_adj <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS_adj_f) 
-```
-
-```{r adjNewprevAraucSSexOld}
-# # Adjusted prevalence by sex
-# aut_newprev_araucS_f <- school_patients %>%
-#   filter(sex == 2) %>%
-#   get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-# aut_newprev_araucS_adj_f <- get_adjusted_prev(aut_newprev_araucS_f, grouping_vars = c()) %>% mutate(sex_desc = "Female") %>%
-#   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
-#          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
-# 
-# aut_newprev_araucS_m <- school_patients %>%
-#   filter(sex == 1) %>%
-#   get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-# aut_newprev_araucS_adj_m <- get_adjusted_prev(aut_newprev_araucS_m, grouping_vars = c()) %>% mutate(sex_desc = "Male") %>%
-#   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
-#          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
-# 
-# aut_newprev_araucS_sex_adj <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS_adj_f) 
 ```
 
 ```{r adjNewprevAraucSAgecat}
@@ -3221,16 +3215,17 @@ chile_stdpop_15 <- chile_stdpop %>%
 aut_newprev_araucS_6 <- school_patients_grouped %>%
   filter(age_cat_name == "6-8") %>%
   rename(age = age_june30) %>%
-  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
-         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
-         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), 
+         sample_pop_size = no_autism_linked + yes_autism_linked, 
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% 
   left_join(chile_stdpop_6, by = c("age", "sex")) %>%
-  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
-         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop,
+         w = std_pop / (sample_pop_size * n_stdpop),
          w2 = pop_prop / sample_pop_size) %>%
   ungroup()
 
-aut_newprev_araucS_adj_6 <- get_adjusted_prev(rename(aut_newprev_araucS_6, "n_disease" = "yes_autism_linked"),
+aut_newprev_araucS_adj_6 <- get_adjusted_prev(rename(aut_newprev_araucS_6, 
+                                                     "n_disease" = "yes_autism_linked"),
                                               grouping_vars = c()) %>%
   mutate(sex_desc = "Male",
          age_cat_name = "6-8") %>%
@@ -3241,16 +3236,17 @@ aut_newprev_araucS_adj_6 <- get_adjusted_prev(rename(aut_newprev_araucS_6, "n_di
 aut_newprev_araucS_9 <- school_patients_grouped %>%
   filter(age_cat_name == "9-11") %>%
   rename(age = age_june30) %>%
-  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
-         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
-         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), 
+         sample_pop_size = no_autism_linked + yes_autism_linked, 
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% 
   left_join(chile_stdpop_9, by = c("age", "sex")) %>%
-  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
-         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop,
+         w = std_pop / (sample_pop_size * n_stdpop), 
          w2 = pop_prop / sample_pop_size) %>%
   ungroup()
 
-aut_newprev_araucS_adj_9 <- get_adjusted_prev(rename(aut_newprev_araucS_9, "n_disease" = "yes_autism_linked"),
+aut_newprev_araucS_adj_9 <- get_adjusted_prev(rename(aut_newprev_araucS_9,
+                                                     "n_disease" = "yes_autism_linked"),
                                               grouping_vars = c()) %>%
   mutate(sex_desc = "Male",
          age_cat_name = "9-11") %>%
@@ -3261,16 +3257,17 @@ aut_newprev_araucS_adj_9 <- get_adjusted_prev(rename(aut_newprev_araucS_9, "n_di
 aut_newprev_araucS_12 <- school_patients_grouped %>%
   filter(age_cat_name == "12-14") %>%
   rename(age = age_june30) %>%
-  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
-         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
-         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), 
+         sample_pop_size = no_autism_linked + yes_autism_linked, 
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% 
   left_join(chile_stdpop_12, by = c("age", "sex")) %>%
-  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
-         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, 
+         w = std_pop / (sample_pop_size * n_stdpop), 
          w2 = pop_prop / sample_pop_size) %>%
   ungroup()
 
-aut_newprev_araucS_adj_12 <- get_adjusted_prev(rename(aut_newprev_araucS_12, "n_disease" = "yes_autism_linked"),
+aut_newprev_araucS_adj_12 <- get_adjusted_prev(rename(aut_newprev_araucS_12,
+                                                      "n_disease" = "yes_autism_linked"),
                                               grouping_vars = c()) %>%
   mutate(sex_desc = "Male",
          age_cat_name = "12-14") %>%
@@ -3281,16 +3278,17 @@ aut_newprev_araucS_adj_12 <- get_adjusted_prev(rename(aut_newprev_araucS_12, "n_
 aut_newprev_araucS_15 <- school_patients_grouped %>%
   filter(age_cat_name == "15-18") %>%
   rename(age = age_june30) %>%
-  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), # If there are no cases of autism in the group, input 0
-         sample_pop_size = no_autism_linked + yes_autism_linked, # Total sample population is autism cases + not cases
-         sample_prevalence = yes_autism_linked / sample_pop_size) %>% # Prevalence of autism in the group
+  mutate(yes_autism_linked = ifelse(is.na(yes_autism_linked), 0, yes_autism_linked), 
+         sample_pop_size = no_autism_linked + yes_autism_linked, 
+         sample_prevalence = yes_autism_linked / sample_pop_size) %>% 
   left_join(chile_stdpop_15, by = c("age", "sex")) %>%
-  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
-         w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+  mutate(disease_prev_std = yes_autism_linked / sample_pop_size * pop_prop,
+         w = std_pop / (sample_pop_size * n_stdpop), 
          w2 = pop_prop / sample_pop_size) %>%
   ungroup()
 
-aut_newprev_araucS_adj_15 <- get_adjusted_prev(rename(aut_newprev_araucS_15, "n_disease" = "yes_autism_linked"),
+aut_newprev_araucS_adj_15 <- get_adjusted_prev(rename(aut_newprev_araucS_15,
+                                                      "n_disease" = "yes_autism_linked"),
                                               grouping_vars = c()) %>%
   mutate(sex_desc = "Male",
          age_cat_name = "15-18") %>%
@@ -3310,11 +3308,11 @@ kbl(aut_newprev_araucS_agecat_adj.table,
   align = "lrr",
   booktabs = TRUE,
   format = "pandoc",
-  linesep = c(""), # No white space
+  linesep = c(""), 
   caption = "Age- and sex-adjusted updated autism prevalence from data linkage in SSAS by age band with 95% gamma confidence intervals.") 
 ```
 
-After linking the school and patient data for SSAS, `r format(patients_matched_small_dedup %>% filter(matched == 0) %>% nrow(), big.mark = ",", trim = TRUE)` patients with autism could not be matched to students which represents the unmet need of SSAS students with autism that did not access school-based support for it. Combining these additional cases with the `r school_ssas %>% filter(autism == 1) %>% nrow()` students that did access SEED for autism gave `r aut_newprev_araucS_adj$crude_count` people with autism in SSAS. Thus the crude updated prevalence of autism in SSAS was `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 2)`%) and the age- and sex-adjusted updated prevalence of autism was `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 2)`%). The sample size here was `r format(aut_newprev_araucS_adj$sum_sample_pop_size, big.mark = ",", trim = TRUE)`, the same as the number of students resident in SSAS as no individuals were added, only non-cases in the school data reallocated as cases based on the patient data linkage findings. For females, the adjusted updated prevalence was `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 2)`%) and for males it was `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 2)`%). This gave an updated male to female ratio of `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)` after data linkage, smaller than the ratio in the SSAS school data before linkage which was `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Male") %>% nrow() / school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow(), 2))`:1. Updated autism prevalence was highest among individuals aged 6-8 at `r round(aut_newprev_araucS_adj_6$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$adjusted_ci_upper * 100, 2)`%) and decreased with age, see Table \@ref(tab:adjNewprevAraucSAgecat). 
+After linking the school and patient data for SSAS, `r format(patients_matched_small_dedup %>% filter(matched == 0) %>% nrow(), big.mark = ",", trim = TRUE)` patients with autism could not be matched to students. This represents the unmet need of SSAS students with autism that did not access school-based support for it. Combining these additional cases with the `r school_ssas %>% filter(autism == 1) %>% nrow()` students that did access SEED for autism gave `r format(aut_newprev_araucS_adj$crude_count, big.mark = ",", trim = TRUE)` people with autism in SSAS. Thus the crude updated prevalence of autism in SSAS was `r round(aut_newprev_araucS_adj$crude_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj$crude_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$crude_ci_upper * 100, 2)`%) and the age- and sex-adjusted updated prevalence of autism was `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% (`r round(aut_newprev_araucS_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj$adjusted_ci_upper * 100, 2)`%). The sample size here was `r format(aut_newprev_araucS_adj$sum_sample_pop_size, big.mark = ",", trim = TRUE)`, the same as the number of students resident in SSAS, because no individuals were added, only non-cases in the school data reallocated as cases based on the patient data linkage findings. For females, the adjusted updated prevalence was `r round(aut_newprev_araucS_adj_f$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_f$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_f$adjusted_ci_upper * 100, 2)`%) and for males it was `r round(aut_newprev_araucS_adj_m$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_m$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_m$adjusted_ci_upper * 100, 2)`%). This gave an updated male to female ratio of `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)` after data linkage, smaller than the ratio of `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Male") %>% nrow() / school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow(), 2))`:1 in the SSAS school data before linkage. Updated autism prevalence was highest among individuals aged 6-8 at `r round(aut_newprev_araucS_adj_6$adjusted_rate * 100, 2)`% (`r round(aut_newprev_araucS_adj_6$adjusted_ci_lower * 100, 2)`-`r round(aut_newprev_araucS_adj_6$adjusted_ci_upper * 100, 2)`%) and decreased with age, see Table \@ref(tab:adjNewprevAraucSAgecat). 
 
 ```{r newPrevAraucS}
 araucS_lower_prev <- aut_prev_health_adj %>%
@@ -3378,11 +3376,11 @@ kbl(aut_newprev_health_adj.table,
     booktabs = TRUE,
     format = "pandoc",
     linesep = c(""), # No extra white space
-    caption = "Adjusted prevalence and adjusted updated prevalence of autism by health service in Chile. Adjusted prevalence is from school data only. Adjusted updated prevalence is from linkage of school data and patient data. Prevalence for Servicio de Salud Araucanía Sur was calculated directly from linkage results. Prevalence for other health services was calcuated by adding the adjusted prevalence delta to each health service's adjusted prevalence from the school data only. Adjusted prevalence has 95% gamma confidence intervals and the width of the adjusted updated prevalence confidence intervals  is the maximum of the school data adjusted prevalence intervals and the adjusted prevalence delta interval for each health service, except for SSAS which has the 95% gamma confidence intervals found earlier.") %>%
+    caption = "Adjusted prevalence and adjusted updated prevalence of autism by health service in Chile. Adjusted prevalence is from school data only. Adjusted updated prevalence is from linkage of school data and patient data. Prevalence for Servicio de Salud Araucanía Sur (SSAS) was calculated directly from linkage results. Prevalence for other health services was calcuated by adding the adjusted prevalence delta to each health service's adjusted prevalence from the school data only. Adjusted prevalence has 95% gamma confidence intervals. The width of the adjusted updated prevalence confidence intervals is the maximum of the school data adjusted prevalence confidence intervals for each health serce, and the adjusted prevalence delta confidence interval, except for SSAS which has the 95% gamma confidence intervals found earlier.") %>%
   add_header_above(c(" " = 1, "Adjusted prevalence" = 2))
 ```
 
-The adjusted prevalence delta for SSAS was `r round(prev_delta * 100, 2)`% (`r round((prev_delta - 0.5*prev_delta_ci_width) * 100, 2)`, `r round((prev_delta + 0.5*prev_delta_ci_width) * 100, 2)`%) and represents the unmet need of children with autism in SSAS that did not access SEED for it. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted updated prevalence from the data linkage for SSAS onto the other health services. The patterns of prevalence across health services were retained and Ñuble has the highest adjusted updated prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%). Adding the adjusted prevalence delta to the national adjusted autism prevalence found from the school data alone gave national adjusted updated autism prevalence of `r round((aut_prev_adj$adjusted_rate + prev_delta) * 100, 2)`%. This in tern gave a posited `r format(round((aut_prev_adj$adjusted_rate + prev_delta) * nrow(chile_bayes), 0), big.mark = ",", trim = TRUE)` children aged 6-18 with autism in Chile and corresponds to an estimated unmet need of `r format(round((prev_delta) * nrow(chile_bayes), 0) , big.mark = ",", trim = TRUE)` children that did not access SEED for autism (both age- and sex-adjusted).
+The adjusted prevalence delta for SSAS was `r round(prev_delta * 100, 2)`% (`r round((prev_delta - 0.5*prev_delta_ci_width) * 100, 2)`, `r round((prev_delta + 0.5*prev_delta_ci_width) * 100, 2)`%) and represents the unmet need of children with autism in SSAS that did not access SEED for it. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted updated prevalence from the data linkage for SSAS onto the other health services. The patterns of prevalence across health services were retained and Ñuble has the highest adjusted updated prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%). Adding the adjusted prevalence delta to the national adjusted autism prevalence found from the school data alone gave national adjusted updated autism prevalence of `r round((aut_prev_adj$adjusted_rate + prev_delta) * 100, 2)`%. This in turn gave a posited `r format(round((aut_prev_adj$adjusted_rate + prev_delta) * nrow(chile_bayes), 0), big.mark = ",", trim = TRUE)` children aged 6-18 with autism in Chile and corresponds to an estimated unmet need of `r format(round((prev_delta) * nrow(chile_bayes), 0) , big.mark = ",", trim = TRUE)` children that did not access SEED for autism (posited count and unmet need are age- and sex-adjusted).
 
 ## Bayesian prevalence projection
 
