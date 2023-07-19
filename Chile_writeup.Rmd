@@ -1747,8 +1747,16 @@ patients_mca_small.table <- patients_mca_small %>%
                     perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
           rename(values = foster_care)) %>%
   mutate(count_suppress = ifelse(count < 20, "<20", count),
-         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)"))) %>%
-  select(variable, values, count_perc)
+         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)")),
+         variables_short = c("Sex", "", 
+                             "Age band", "", "", "", "", "",
+                             "Commune", "", "", "", "", "", "", "", "", "", "", 
+                             "Private health level", "", "", "", "", 
+                             "Ethnicity", "", "", "", 
+                             "Rurality", "",
+                             "Disability", "", "",
+                             "Foster care", "", "")) %>%
+  select(variables_short, values, count_perc)
 
 kbl(patients_mca_small.table,
     col.names = c("Feature", "Available values", "Count (%)"),
@@ -2321,7 +2329,15 @@ chisq_pvals <- c(ifelse(chisq.test(chile_bayes$sex_desc, chile_bayes$ssas)$p.val
 
 chile_bayes_grouped <- cbind(chile_bayes_ssas_grouped, 
                              chile_bayes_nonssas_grouped[, 3],
-                             chisq_pvals)
+                             chisq_pvals) %>%
+  mutate(variables_short = c("Sex", "",
+                             "Age band", "", "", "",
+                             "School fee", "", "", "", "", "", "",
+                             "Ethnicity", "", "", 
+                             "Rurality", "",
+                             "Accesses SEED", ""
+                             )) %>%
+  select(variables_short, values, ssas_perc, nonssas_perc, chisq_pvals)
 
 kbl(chile_bayes_grouped,
     col.names = c("Feature", "Available values", "% for SSAS", "% for non-SSAS", "p-value"),
@@ -2366,8 +2382,12 @@ school_sass_aut.table <- school_ssas_aut %>%
                     perc = sprintf("%.2f", round(count/nrow(school_ssas_aut)*100, 2))) %>%
           rename(values = ses_status)) %>%
   mutate(count_suppress = ifelse(count < 20, "<20", count),
-         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)"))) %>%
-  select(variable, values, count_perc)
+         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)")),
+         variables_short = c("Sex", "",
+                             "Age band", "", "", "",
+                             "Commune", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                             "Proxy SES", "", "", "")) %>%
+  select(variables_short, values, count_perc)
 
 kbl(school_sass_aut.table,
     col.names = c("Feature", "Available values", "Count (%)"),
@@ -2461,8 +2481,12 @@ ssas_patients.table <- patients_age %>%
                     perc = sprintf("%.2f", round(count/nrow(patients_age)*100, 2))) %>%
           rename(values = ses_status)) %>%
   mutate(count_suppress = ifelse(count < 20, "<20", count),
-         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)"))) %>%
-  select(variable, values, count_perc)
+         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)")),
+         variables_short = c("Sex", "",
+                             "Age band", "", "", "",
+                             "Commune", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                             "Proxy SES", "", "")) %>%
+  select(variables_short, values, count_perc)
 
 kbl(ssas_patients.table,
     col.names = c("Feature", "Available values", "Count (%)"),
