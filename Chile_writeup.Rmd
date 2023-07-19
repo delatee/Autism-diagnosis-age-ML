@@ -3392,19 +3392,12 @@ nFeat <- length(unique(aut_prev_health_adj$health_service_code))
 FeatNames <- sort(unique(aut_prev_health_adj$health_service_code))
 ```
 
-```{r bayesConstantPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of age- and sex-adjusted national autism prevalence from school data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
-# Same prior for all health services - specifically the national prevalence in school data
-# Could change these to health service specific priors - specifically the adjusted prevalences by health service
+```{r bayesConstantPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Modeling used a beta conjugate prior of age- and sex-adjusted national autism prevalence from school data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+# Same prior for all health services - specifically the national prevalence
+# in school data
 aut_theta_mu_prior <- aut_prev_adj$adjusted_rate
-#aut_theta_mu_prior_rep <- data.frame(mu = rep(aut_prev_adj$adjusted_rate, times = nFeat), 
-#                                     health_service_name = aut_prev_health_adj$health_service_name)
-aut_theta_sigma_prior <- (aut_prev_adj$adjusted_ci_upper - aut_prev_adj$adjusted_ci_lower) / (2*1.96)
-# # Females
-# aut_theta_mu_prior_f <- aut_prev_adj_f$adjusted_rate
-# aut_theta_sigma_prior_f <- sqrt(aut_prev_adj_f$var)
-# # Males
-# theta_mu_prior_m <- aut_prev_adj_m$adjusted_rate
-# theta_sigma_prior_m <- sqrt(aut_prev_adj_m$var)
+aut_theta_sigma_prior <- (aut_prev_adj$adjusted_ci_upper -
+                            aut_prev_adj$adjusted_ci_lower) / (2*1.96)
 
 rand_model_constant <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
@@ -3425,8 +3418,7 @@ health_low_post <- do_jags_rand_model(x = aut_prev_health_adj,
                               convergence_checks = FALSE) %>%
   rename("health_service_name" = "Feat_names")
 
-
-
+# Plot posterior densities
 health_const_post_ci <- health_low_post %>%
   group_by("health_service_name") %>%
   summarise(post_lower = quantile(predicted_prev, 0.025),
@@ -3434,11 +3426,14 @@ health_const_post_ci <- health_low_post %>%
   
 ggplot() +
   geom_density(data = health_low_post, aes(x = predicted_prev*100)) +
-  geom_vline(data = health_const_post_ci, aes(xintercept = post_lower*100), color = "blue", linetype = "dotted") +
-  geom_vline(data = health_const_post_ci, aes(xintercept = post_upper*100), color = "blue", linetype = "dotted") +
-  #geom_vline(data = aut_theta_mu_prior_rep, aes(xintercept = mu), color = "green", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100), color = "red", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100), color = "red", linetype = "dashed") +
+  geom_vline(data = health_const_post_ci, aes(xintercept = post_lower*100), 
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = health_const_post_ci, aes(xintercept = post_upper*100), 
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100),
+             color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100),
+             color = "red", linetype = "dashed") +
   facet_wrap(~health_service_name) +
   labs(title = "Posterior predictive distributions for common lower bound",
        x = "Prevalence %",
@@ -3447,10 +3442,11 @@ ggplot() +
 
 ```
 
-Bayesian prevalence projections by health service with common national autism prevalence prior is shown in Figure \@ref(fig:bayesConstantPrior). The differences in adjusted sample prevalence across health services were evident in the red bands and the posterior predictive distributions have been pulled towards the common prior. For regions like Ñuble which have adjusted sample prevalence in the school data higher than the national adjusted prevalence, these posterior densities were not plausible.
+Bayesian prevalence projections by health service with common national autism prevalence prior are shown in Figure \@ref(fig:bayesConstantPrior). The differences in adjusted sample prevalence across health services are evident in the red bands and the posterior predictive distributions have been pulled towards the common prior. For regions like Ñuble which have adjusted sample prevalence in the school data higher than the national adjusted prevalence, these posterior densities are not plausible.
 
-```{r bayesLowPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted autism prevalence from school data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
-# Now have health service specific priors so need to provide them as vectors and index each as needed
+```{r bayesLowPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Modelling used beta conjugate priors of health service specific age- and sex-adjusted autism prevalence from school data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+# Now have health service specific priors so need to provide them as vectors 
+# and index each as needed
 rand_model_low <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
     theta[i] ~ dbeta(theta_a[i], theta_b[i])
@@ -3463,11 +3459,8 @@ pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
 
 # Define beta prior
 theta_mu <- aut_prev_health_adj$adjusted_rate
-#theta_mu.df <- data.frame(theta_mu = theta_mu, 
-#                          health_service_codee = FeatNames)
-#theta_mu <- (aut_prev_health_adj$new_rate + aut_prev_health_adj$adjusted_rate) / 2
-theta_sigma <- (aut_prev_health_adj$adjusted_ci_upper - aut_prev_health_adj$adjusted_ci_lower) / (2*1.96)
-#theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
+theta_sigma <- (aut_prev_health_adj$adjusted_ci_upper - 
+                  aut_prev_health_adj$adjusted_ci_lower) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
@@ -3492,8 +3485,8 @@ rand_sam <- coda.samples(model = rand_jag,
 
 convergence_check <- FALSE
 if(convergence_check) {
-  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]")))
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) 
   rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
                            ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
                            ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
@@ -3502,19 +3495,22 @@ if(convergence_check) {
   print(rand_summ)
 }
 
-aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam),
+                                      rownames = "Iteration") %>%
     select(c("Iteration", contains("theta["))) %>%
     pivot_longer(cols = contains("theta["),
                  names_to = "health_service_code",
                  values_to = "predicted_prev") %>%
-    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
+    mutate(Feat_names = factor(health_service_code, 
+                               levels = c(paste0("theta[",1:nFeat,"]")),
+                               labels = FeatNames)) %>%
     select(Iteration, Feat_names, predicted_prev) %>%
   rename(health_service_code = Feat_names) %>%
   merge(health_service_lookup, by = "health_service_code") %>%
   rename(health_service_name_long = health_service_name,
          health_service_name = health_service_name_short)
   
-# Plot manually because we need different CI's now
+# Plot posterior densities
 aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
   group_by(health_service_name) %>%
   summarise(post_lower = quantile(predicted_prev, 0.025),
@@ -3522,22 +3518,25 @@ aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
   
 ggplot() +
   geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev*100)) +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower*100), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper*100), color = "blue", linetype = "dotted") +
-  #geom_vline(data = theta_mu.df, aes(xintercept = theta_mu), color = "green", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100), color = "red", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower*100), 
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper*100),
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100),
+             color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100),
+             color = "red", linetype = "dashed") +
   facet_wrap(~health_service_name) +
   labs(title = "Posterior predictive distribution for health service specific lower bound priors",
        x = "Prevalence %",
        y = "Density")
-
 ```
 
-Figure \@ref(fig:bayesLowPrior) shows Bayesian prevalence projections by health service with health service specific priors. As expected, the posterior 95% credible intervals were coincident with the adjusted sample prevalence 95% confidence intervals. The posterior prevalence peaks can be considered lower bounds for the true autism prevalence in each health service.
+Bayesian prevalence projections by health service with health service specific priors are shown in Figure \@ref(fig:bayesLowPrior). As expected, the posterior 95% credible intervals were coincident with the adjusted sample prevalence 95% confidence intervals. The posterior prevalence peaks can be considered lower bounds for the true autism prevalence in each health service.
 
-```{r bayesHighPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted updated autism prevalence from data linkage. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
-# Now have health service specific priors so need to provide them as vectors and index each as needed
+```{r bayesHighPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Modelling used beta conjugate priors of health service specific age- and sex-adjusted updated autism prevalence from data linkage. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+# Now have health service specific priors so need to provide them as 
+# vectors and index each as needed
 rand_model_high <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
     theta[i] ~ dbeta(theta_a[i], theta_b[i])
@@ -3550,9 +3549,7 @@ pars <- c("theta_a", "theta_b", "theta", "disease_sample", "disease_pred")
 
 # Define beta prior
 theta_mu <- aut_prev_health_adj$new_rate
-#theta_mu <- (aut_prev_health_adj$new_rate + aut_prev_health_adj$adjusted_rate) / 2
 theta_sigma <- (aut_prev_health_adj$new_ci_upper - aut_prev_health_adj$new_ci_lower) / (2*1.96)
-#theta_sigma <- (aut_prev_health_adj$new_rate - aut_prev_health_adj$adjusted_rate) / (2*1.96)
 theta_a <- theta_mu * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
 
@@ -3577,8 +3574,8 @@ rand_sam <- coda.samples(model = rand_jag,
 
 convergence_check <- FALSE
 if(convergence_check) {
-  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]")))
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]")))
   rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
                            ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
                            ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
@@ -3587,19 +3584,22 @@ if(convergence_check) {
   print(rand_summ)
 }
 
-aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam),
+                                      rownames = "Iteration") %>%
     select(c("Iteration", contains("theta["))) %>%
     pivot_longer(cols = contains("theta["),
                  names_to = "health_service_code",
                  values_to = "predicted_prev") %>%
-    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
+    mutate(Feat_names = factor(health_service_code, 
+                               levels = c(paste0("theta[",1:nFeat,"]")), 
+                               labels = FeatNames)) %>%
     select(Iteration, Feat_names, predicted_prev) %>%
   rename(health_service_code = Feat_names) %>%
   merge(health_service_lookup, by = "health_service_code") %>%
   rename(health_service_name_long = health_service_name,
          health_service_name = health_service_name_short)
   
-# Plot manually because we need different CI's now
+# Plot posterior densities
 aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
   group_by(health_service_name) %>%
   summarise(post_lower = quantile(predicted_prev, 0.025),
@@ -3607,10 +3607,14 @@ aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
   
 ggplot() +
   geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev*100)) +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower*100), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper*100), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100), color = "red", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower*100),
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper*100),
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100),
+             color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100),
+             color = "red", linetype = "dashed") +
   facet_wrap(~health_service_name) +
   labs(title = "Posterior predictive distribution for health service specific upper bound priors",
        x = "Prevalence %",
@@ -3618,14 +3622,12 @@ ggplot() +
 
 ```
 
-With projected prevalence priors, the Bayesian prevalence projections shown in Figure \@ref(fig:bayesHighPrior) were pulled upward toward their priors by approximately delta. For regions with high sample prevalence such as Ñuble, this addition of delta results in a posterior prevalence projects up to 1.5 percentage points higher than the national adjusted prevalence for the school data only which may not be plausible.
+With projected prevalence priors, the Bayesian prevalence projections shown in Figure \@ref(fig:bayesHighPrior) were pulled upward toward their priors by approximately delta. For regions with high sample prevalence such as Ñuble, this addition of delta resulted in posterior prevalence projections up to 1.5 percentage points higher than the national adjusted prevalence for the school data only which may not be plausible.
 
-```{r bayesUniformPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Uniform prior bounded by health service specific age- and sex-adjusted autism prevalence from school data, and health service specific age- and sex-adjusted updated autism prevalence from data linkage. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
+```{r bayesUniformPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Modelling used uniform priors bounded below by health service specific age- and sex-adjusted autism prevalence from school data, and bounded above by health service specific age- and sex-adjusted updated autism prevalence from data linkage. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 
-####### Need to do all by health service code not name because name sorts in different orders.
-
-# Now have health service specific priors so need to provide them as vectors and index each as needed
-# OR Uniform prior https://stats.stackexchange.com/questions/555260/how-to-set-prior-for-bayesian-analysis 
+# Now have health service specific uniform priors so need to provide them as 
+# vectors and index each as needed
 rand_model_uniform <- "model {
   for(i in 1:nFeat) { # For each category in the feature grouping
     theta[i] ~ dunif(theta_lower[i], theta_upper[i])     #dbeta(theta_a[i], theta_b[i])
@@ -3665,8 +3667,8 @@ rand_sam <- coda.samples(model = rand_jag,
 
 convergence_check <- FALSE
 if(convergence_check) {
-  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]")))
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]")))
   rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
                            ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
                            ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
@@ -3675,12 +3677,15 @@ if(convergence_check) {
   print(rand_summ)
 }
 
-aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Iteration") %>%
+aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), 
+                                      rownames = "Iteration") %>%
     select(c("Iteration", contains("theta["))) %>%
     pivot_longer(cols = contains("theta["),
                  names_to = "health_service_code",
                  values_to = "predicted_prev") %>%
-    mutate(Feat_names = factor(health_service_code, levels = c(paste0("theta[",1:nFeat,"]")), labels = FeatNames)) %>%
+    mutate(Feat_names = factor(health_service_code,
+                               levels = c(paste0("theta[",1:nFeat,"]")),
+                               labels = FeatNames)) %>%
     select(Iteration, Feat_names, predicted_prev) %>%
   rename(health_service_code = Feat_names) %>%
   merge(health_service_lookup, by = "health_service_code") %>%
@@ -3688,7 +3693,7 @@ aut_prev_health_post_new <- as_tibble(as_draws_matrix(rand_sam), rownames = "Ite
          health_service_name = health_service_name_short)
   
 
-# Plot manually because we need different CI's now
+# Plot posterior densities
 aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
   group_by(health_service_name) %>%
   summarise(post_lower = quantile(predicted_prev, 0.025),
@@ -3696,12 +3701,14 @@ aut_prev_health_post_new_ci <- aut_prev_health_post_new %>%
   
 ggplot() +
   geom_density(data = aut_prev_health_post_new, aes(x = predicted_prev*100)) +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower*100), color = "blue", linetype = "dotted") +
-  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper*100), color = "blue", linetype = "dotted") +
-  #geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_rate), color = "green", linetype = "dashed") +
-  #geom_vline(data = aut_prev_health_adj, aes(xintercept = new_rate), color = "green", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100), color = "red", linetype = "dashed") +
-  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100), color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_lower*100), 
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_post_new_ci, aes(xintercept = post_upper*100),
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_lower*100),
+             color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_health_adj, aes(xintercept = adjusted_ci_upper*100),
+             color = "red", linetype = "dashed") +
   facet_wrap(~health_service_name) +
   labs(title = "Posterior predicitve distribution for health service specific uniform priors",
        x = "Prevalence %",
