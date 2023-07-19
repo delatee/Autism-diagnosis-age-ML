@@ -812,7 +812,7 @@ turbo_colours <- viridis(17, option = "H")
 
 # Abstract
 
-The prevalence of autism and ADHD in Chile has not been well characterised and therefore the unmet need of affected children without school-based support is unknown. This investigation aims to quantify the prevalence of autism and ADHD in Chilean children and understand the characteristics of children with autism through analysis of 3 million school records and linkage to 1,300 supplementary clinical records. Found using frequentist age- and sex-adjustment, a lower bound on the prevalence of autism is 0.46% with male to female ratio of 6.00:1 and a lower bound on the prevalence of ADHD 1.50% with male to female ratio of 1.94:1. Autism prevalence peaks in 6-8 year-olds and ADHD in 9-11 year-olds. For both autism and ADHD, prevalence is lower among Mapuche students than non-Indigenous students and is lower among students at urban schools than rural schools. Multiple correspondence analysis of categories in clinical autism diagnosis data for Servicio de Salud Araucanía Sur showed ethnicity, age and commune of residence are important in distinguishing between patients with autism. Probabilistic linkage of school records and clinical autism diagnoses identified an unmet need of 1,132 students with autism in Servicio de Salud Araucanía Sur that were not accessing school-based supports. This equated to an updated autism prevalence of 1.22% with male to female ratio of 4.15 for Servicio de Salud Araucanía Sur. Projecting this finding across Chile, the national prevalence of autism is estimated to be 1.31%, there is an unmet need of up to 25,903 students not accessing school support with females disproportionately affected. Bayesian prevalence projection found credible intervals of autism prevalence for each Chilean health service. Collectively, these findings are a first step to creating a rich, national picture of autism and ADHD support in Chile.
+The prevalence of autism and ADHD in Chile has not been well characterised and therefore the unmet need of affected children without school-based support is unknown. This investigation aims to quantify the prevalence of autism and ADHD in Chilean children and understand the characteristics of children with autism through analysis of 3 million school records and linkage to 1,300 supplementary clinical records. Found using frequentist age- and sex-adjustment, a lower bound on the prevalence of autism is 0.46% with male to female ratio of 6.00:1 and a lower bound on the prevalence of ADHD 1.50% with male to female ratio of 1.94:1. Autism prevalence peaks in 6-8 year-olds and ADHD in 9-11 year-olds. For both autism and ADHD, prevalence is lower among Mapuche students than non-Indigenous students and is lower among students at urban schools than rural schools. Multiple correspondence analysis of categories in clinical autism diagnosis data for Servicio de Salud Araucanía Sur showed ethnicity, age and commune of residence were important in distinguishing between patients with autism. Probabilistic linkage of school records and clinical autism diagnoses identified an unmet need of 1,132 students with autism in Servicio de Salud Araucanía Sur that were not accessing school-based supports. This equated to an updated autism prevalence of 1.22% with male to female ratio of 4.15 for Servicio de Salud Araucanía Sur. Projecting this finding across Chile, the national prevalence of autism is estimated to be 1.31%, there is an unmet need of up to 25,903 students not accessing school support with females disproportionately affected. Bayesian prevalence projection found credible intervals of autism prevalence for each Chilean health service. Collectively, these findings are a first step to creating a rich, national picture of autism and ADHD support in Chile.
 
 # Introduction
 
@@ -841,7 +841,7 @@ demog_geom <- chile.adm1 %>%
   left_join(select(chile_regionrural, -region), by = "region_code")
 ```
 
-```{r mapPop, include = FALSE, fig.cap = "Population of 0-14 year olds in Chile in 2021 by region, from 2017 census projections.", fig.height=8}
+```{r mapPop, include = FALSE, fig.cap = "Population of 0-14 year-olds in Chile in 2021 by region, from 2017 census projections.", fig.height=8}
 # Population
 ggplot(demog_geom) + 
   geom_sf(mapping = aes(geometry = geometry, fill = youth_pop_2021), 
@@ -891,7 +891,7 @@ Chile has a large Indigenous population with nearly 10% of Chileans self-identif
 
 Approximately 12% of Chile’s population lives in rural areas; the regions of Ñuble, La Araucanía and Los Ríos have particularly high prevalence of rural dwelling, see Figure \@ref(fig:mapRural), and approximately 7 million people live in Santiago, Chile’s largest city (13). Núñez and Manzano identified a lack of availability of rural health clinics as a barrier to accessing healthcare in Chile (6). 
 
-Chilean policy encourages children with special education needs and disabilities, including autism and ADHD, to be educated in mainstream schools and the Government provides funding to enable this (14). For each child with a registered disability that is integrated into a regular public school, the Ministerio de Educación (Ministry of Education) provides funding through the Subvención de Educación Especial Diferencial (Differential Special Education Grant, SEED) (15). SEED is provided for students with severe physical or mental disabilities, including autism and ADHD, that require education adjustments such as specialist classes or small class sizes (16). Specialists in the SEED network of providers conduct external assessments of students that apply for SEED funding to determine whether they have a special educational need. Chile’s schooling system comprises 44% state-funded schools, 51% state-subsidised private schools and 5% non-subsidised private schools (14). Students in unsubsidised school are not eligible for SEED (15). Approximately 5% of Chilean students are registered as having special needs and there is evidence that they have not been completely successfully integrated into public schools as they experience higher rates of bullying and violence, and teachers report not feeling equipped to meet their needs (14). This may prompt some students with less severe needs to choose not to access support as it would single them out as different from their peers. The Programas de Integración Escolar (School Integration Programme, PIE) was established in 2013 to improve integration of students with special needs into public schooling (17).
+Chilean policy encourages children with special education needs and disabilities, including autism and ADHD, to be educated in mainstream schools and the Government provides funding to enable this (14). For each child with a registered disability that is integrated into a regular public school, the Ministerio de Educación (Ministry of Education) provides funding through the Subvención de Educación Especial Diferencial (Differential Special Education Grant, SEED) (15). SEED is provided for students with severe physical or mental disabilities, including autism and ADHD, that require education adjustments such as specialist classes or small class sizes (16). Specialists in the SEED network of providers conduct external assessments of students that apply for SEED funding to determine whether they have a special educational need. Chile’s schooling system comprises 44% state-funded schools, 51% state-subsidised private schools and 5% non-subsidised private schools (14). Students in non-subsidised school are not eligible for SEED (15). Approximately 5% of Chilean students are registered as having special needs and there is evidence that they have not been completely successfully integrated into public schools as they experience higher rates of bullying and violence, and teachers report not feeling equipped to meet their needs (14). This may prompt some students with less severe needs to choose not to access support as it would single them out as different from their peers. The Programas de Integración Escolar (School Integration Programme, PIE) was established in 2013 to improve integration of students with special needs into public schooling (17).
 
 ## Autism
 
@@ -967,7 +967,7 @@ See Figure \@ref(fig:sampleSize) for an illustration of the data sources and how
 
 This research used data from the Chilean Government’s Ministerio de Educación that was provided under a freedom of information request and Chile’s Law 21545 (58). This dataset contained anonymised records of 3.6 million students in all Chilean schools in 2021. It was collected and curated by the Chilean Unidad de Estadísticas (Statistics Unit), Centro de Estudios (Study Centre) and Ministerio de Educación and is housed in the Sistema de Información General de Estudiantes (General Student Information System, SIGE). It included data on school type and location, student characteristics, academic performance, special needs and monthly school fee contributions. This dataset will be referred to as the school data.
 
-The school data showed whether students access SEED funding, and if they did it provided the disability under which they qualified for funding. The school data included four groups of students who had autism but were recorded in this dataset as not having autism: students with autism who attended private schools which are not eligible for SEED; students with autism who chose not to apply for SEED; students with autism who applied for SEED but were found to not be sufficiently severely affected to receive SEED; and students with autism who received SEED but for a different disability as only one can be recorded, perhaps one that more severely affects them. The number of students in each of these groups was unknown and these groups were analogous for students with ADHD. Thus all estimates of autism and ADHD prevalence from this dataset alone are likely to be underestimates of the true population prevalence. 
+The school data showed whether students access SEED funding, and if they did it provided the disability under which they qualified for funding. The school data included four groups of students who had autism but were recorded in this dataset as not having autism: students with autism who attended private schools which are not eligible for SEED; students with autism who chose not to apply for SEED; students with autism who applied for SEED but were found to not be sufficiently severely affected to receive SEED; and students with autism who received SEED but for a different disability as only one can be recorded, perhaps one that more severely affects them. The number of students in each of these groups was unknown and these groups were analogous for students with ADHD. Thus all estimates of autism and ADHD prevalence from this dataset alone were likely to be underestimates of the true population prevalence. 
 
 
 ### Clinical data
@@ -1008,11 +1008,11 @@ Using the school data, the crude prevalence of autism and ADHD were found. Frequ
 
 ###	School data preparation
 
-The school dataset was restricted to students aged 6-18 as of 30th June 2021 to capture children of school age in Chile. No restriction on sex was necessary as it contained only females and males. Students’ commune of residence was mapped to their respective health service catchment areas. Two issues due to boundary changes were corrected. Firstly, the commune now called Tocopilla which falls across the Antofagasta and Tarapacá regions was formerly two communes, Tocopilla in Antofagasta and Pozo Almonte in Tarapacá. The old names have been retained to ensure appropriate region mapping and they are mapped to Antofagasta and Iquique health services respectively. Secondly, the communes recorded as belonging to the former Ñuble sub-region of the Bío-Bío region were mapped to their corresponding communes in the recently formed Ñuble region.
+The school dataset was restricted to students aged 6-18 as of 30th June 2021 to capture children of school age in Chile. No restriction on sex was necessary as it contained only females and males. Students’ commune of residence was mapped to their respective health service catchment areas. Two issues due to boundary changes were corrected. Firstly, the commune now called Tocopilla which falls across the Antofagasta and Tarapacá regions was formerly two communes, Tocopilla in Antofagasta and Pozo Almonte in Tarapacá. The old names have been retained to ensure appropriate region mapping and they were mapped to Antofagasta and Iquique health services respectively. Secondly, the communes recorded as belonging to the former Ñuble sub-region of the Bío-Bío region were mapped to their corresponding communes in the recently formed Ñuble region.
 
-Commune of residence was missing for 4078 students (0.13%). The commune of their school was imputed as most students are likely to go to school near their place of residence.
+Commune of residence was missing for 4078 students (0.13%). The commune of their school was imputed as most students were likely to go to school near their place of residence.
 
-Students’ age as of 30th June 2021 was mapped to age-bands of 6-8, 9-11, 12-14 and 15-18, preserving the divide between primary and secondary school as secondary school starts at age 12 in Chile, and with a larger final band as fewer students are expected to be diagnosed older and the 18 years old group may be small due to students leaving schooling. Students’ ethnicity was mapped to being a member of the Mapuche Indigenous group, being a member of another Chilean Indigenous group, or not being a member of an Indigenous group based on their recorded ethnicity which can take at most one value. The 6859 students (0.22%) with ethnicity recorded as ‘no registry’ were mapped to not being a member of an Indigenous group.
+Students’ age as of 30th June 2021 was mapped to age-bands of 6-8, 9-11, 12-14 and 15-18, preserving the divide between primary and secondary school as secondary school starts at age 12 in Chile, and with a larger final band as fewer students were expected to be diagnosed older and the 18 years old group may be small due to students leaving schooling. Students’ ethnicity was mapped to being a member of the Mapuche Indigenous group, being a member of another Chilean Indigenous group, or not being a member of an Indigenous group based on their recorded ethnicity which can take at most one value. The 6859 students (0.22%) with ethnicity recorded as ‘no registry’ were mapped to not being a member of an Indigenous group.
 
 Students’ school fee status was mapped to a proxy socio-economic status feature. Students with free schooling were given SES of 1 indicating low status as families with low SES are entitled to schooling rebates. Students paying Chilean Peso \$1,000-\$100,000 monthly were given SES of 2, indicating medium status, and students paying more than \$100,000 monthly were given 3 to indicate high status. For school fee status, 49973 students (1.64%) were coded as ‘No information’ and 29 students (0.00095%) were missing school fee values and these were re-categorised as ‘No information’ to reflect their unknown school fee status. No other features of interest for this analysis had missingness.
 
@@ -1024,7 +1024,7 @@ The crude prevalence of autism and of ADHD were calculated as the count of cases
 
 Nationally and for each grouping feature, prevalence was standardised by age and sex using direct standardisation following the method presented by Fay and Feuer (61). The 2017 Chile census projections of the distribution of people by age and sex in 2021 was used as the standard population. Gamma confidence limits were calculated at the 95% level using chi-squared distributions. The adjusted prevalence rates were multiplied by their respective population sizes to give adjusted prevalence counts which were rounded to integers, therefore losing a small amount of precision.
 
-Ethnicity analysis compared individuals from the Mapuche Indigenous group to those from other Indigenous groups or with no Indigenous group and used data from the La Araucanía, Aysén, Biobío, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions only as these regions are collectively the five regions with the largest Mapuche populations and the five regions with the highest proportion of Mapuche people in their population. 
+Ethnicity analysis compared individuals from the Mapuche Indigenous group to those from other Indigenous groups or with no Indigenous group and used data from the La Araucanía, Aysén, Biobío, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions only as these regions were collectively the five regions with the largest Mapuche populations and the five regions with the highest proportion of Mapuche people in their population. 
 
 
 ## Aim 2: Use clinical data and machine learning to identify autism diagnosis characteristics 
@@ -1043,7 +1043,7 @@ The validated clinical data was aggregated to patient level. First, only appoint
 
 The machine learning technique of multiple correspondence analysis (MCA) was conducted using R’s FactoMineR package with the number of output dimensions equal to the number of input features. MCA was an appropriate technique to use here because the small clinical dataset contains primarily categorical features which MCA is designed to handle. 
 
-Data-led analysis was used to identify features in the small clinical dataset that explained the variance in this patient-level data. Initially, all available features with suspected association with autism were included in MCA, specifically: sex, age band, commune of residence, health insurance contribution level as a proxy for SES, ethnicity, rurality of residence, other disability status and foster care status. The data grouped well into having information about other disabilities and about foster care and not having information about each, therefore the MCA was rerun with the disability and foster care features exchanged for their respective imputed versions. This identified age, commune and ethnicity as important for explaining the variance, so the MCA was rerun using only these three features.
+Data-led analysis was used to identify features in the small clinical dataset that explained the variance in this patient-level data. Initially, all available features with suspected association with autism were included in MCA, specifically: sex, age band, commune of residence, health insurance contribution level as a proxy for SES, ethnicity, rurality of residence, other disability status and foster care status. Hospital and medical specialty of appointment were not included as they were not thought likely to be associated with autism diagnosis. The data grouped well into having information about other disabilities and about foster care and not having information about each, therefore the MCA was rerun with the disability and foster care features exchanged for their respective imputed versions. This identified age, commune and ethnicity as important for explaining the variance, so the MCA was rerun using only these three features.
 
 ### Alternative machine learning approaches
 
@@ -1087,7 +1087,7 @@ No specific weight value was set as a cut-off to define matches. Instead, pairs 
 
 Record linkage using Bayesian methods in which matched status is modelled, as developed by Sadinle (62) and refined by Stringham (63), was considered for record linkage here. This technique is typically more complex and has longer runtimes than probabilistic matching but can more easily enforce one-to-one matching and is particularly well suited to matching names. As the datasets in this investigation did not include names, there was limited benefit from using Bayesian linkage methods.
 
-Record linkage using machine learning to classify matched and unmatched pairs, as explored by Pita et al, was also considered as it is generally thought to be more accurate than probabilistic matching alone (64). However this was not pursued because the datasets under investigation had very few common features to match on, meaning machine learning algorithms would have few options to trial, and there are no known true matches with which to assess the accuracy of machine learning models. 
+Record linkage using machine learning to classify matched and unmatched pairs, as explored by Pita et al, was also considered as it is generally thought to be more accurate than probabilistic matching alone (64). However this was not pursued because the datasets under investigation had very few common features to match on, meaning machine learning algorithms would have few options to trial, and there were no known true matches with which to assess the accuracy of machine learning models. 
 
 ### Comparison of matched and unmatched records
 
@@ -1148,7 +1148,7 @@ Bayesian prevalence modelling used the JAGS (Just Another Gibbs Sampler) R packa
 
 # Results
 
-```{r sampleSize, fig.cap="The datasets used in this investigation, their size (N) and the number of people with autism and ADHD and their crude prevalence where applicable. Light blue shows the school data which is used to calculate lower bounds on autism and ADHD prevalence, and subsets of the school data for students resident in Servicio de Salud Araucanía Sur (SSAS) and those that are not. In the school data, autism and ADHD indicate students that access SEED for autism and for ADHD respectively. Green shows the clinical data and its subsets of validated and unvalidated clinical data and autism here indicates clinical diagnoses. Validation involved confirming autism diagnosis against central clinical records, adding 2nd and 3rd diagnoses, and adding demographic data. Red shows the validated clinical data for patients resident in SSAS that is used for multiple correspondence analysis. Yellow shows the subsets of school and clinical data used for data linkage; the patient data is the combination of validated and unvalidated clinical datasets and some patients are represented in both these datasets, shown by the dotted overlap boxes. Grey shows the matches resulting from three linkage approaches. Dark blue shows the result of data linkage and is used to calculated updated estimates of autism prevalence.", echo=FALSE, out.width = '100%'}
+```{r sampleSize, fig.cap="The datasets used in this investigation, their size (N) and the number of people with autism and ADHD and their crude prevalence where applicable. Light blue shows the school data which was used to calculate lower bounds on autism and ADHD prevalence, and subsets of the school data for students resident in Servicio de Salud Araucanía Sur (SSAS) and those that were not. In the school data, autism and ADHD indicate students that accessed SEED for autism and for ADHD respectively. Green shows the clinical data and its subsets of validated and unvalidated clinical data and autism here indicates clinical diagnoses. Validation involved confirming autism diagnosis against central clinical records, adding 2nd and 3rd diagnoses, and adding demographic data. Red shows the validated clinical data for patients resident in SSAS that was used for multiple correspondence analysis. Yellow shows the subsets of school and clinical data used for data linkage; the patient data was the combination of validated and unvalidated clinical datasets and some patients were represented in both these datasets, shown by the dotted overlap boxes. Grey shows the matches resulting from three linkage approaches. Dark blue shows the result of data linkage and was used to calculated updated estimates of autism prevalence.", echo=FALSE, out.width = '100%'}
 knitr::include_graphics("sample_sizes.jpg", error = FALSE)
 ```
 
@@ -1315,7 +1315,7 @@ adhd_prev_adj <- adhd_prev %>%
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
 
-The national crude prevalence of autism in the school data was `r round(aut_prev_adj$crude_rate * 100, 2)`% (`r round(aut_prev_adj$crude_ci_lower * 100, 2)`-`r round(aut_prev_adj$crude_ci_upper * 100, 2)`%). After using frequentist methods to adjust for the age and sex distribution of the 6-18 year old population of Chile in 2021, the national adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 2)`%). The national crude prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$crude_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$crude_ci_lower * 100, 2))`-`r round(adhd_prev_adj$crude_ci_upper * 100, 2)`%) and the national age- and sex-adjusted prevalence was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). The crude prevalence of autism and ADHD varied with age, as shown in Figures \@ref(fig:prevAgecatAutPlot) and \@ref(fig:prevAgecatAdhdPlot). Autism prevalence was highest in 6-8 year olds and decreased with age while ADHD prevalence peaked around age 11 then decreased. Both conditions showed a small increase in prevalence for age 18. See also Supplementary Tables \@ref(tab:prevAgecatAutTable) and \@ref(tab:prevAgecatAdhdTable).
+The national crude prevalence of autism in the school data was `r round(aut_prev_adj$crude_rate * 100, 2)`% (`r round(aut_prev_adj$crude_ci_lower * 100, 2)`-`r round(aut_prev_adj$crude_ci_upper * 100, 2)`%). After using frequentist methods to adjust for the age and sex distribution of the 6-18 year-old population of Chile in 2021, the national adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 2)`%). The national crude prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$crude_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$crude_ci_lower * 100, 2))`-`r round(adhd_prev_adj$crude_ci_upper * 100, 2)`%) and the national age- and sex-adjusted prevalence was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). The crude prevalence of autism and ADHD varied with age, as shown in Figures \@ref(fig:prevAgecatAutPlot) and \@ref(fig:prevAgecatAdhdPlot). Autism prevalence was highest in 6-8 year-olds and decreased with age while ADHD prevalence peaked in 9-11 year-olds then decreased. Both conditions showed a small increase in prevalence for age 18. See also Supplementary Tables \@ref(tab:prevAgecatAutTable) and \@ref(tab:prevAgecatAdhdTable).
 
 ```{r prevAgecatAutPlot, fig.cap = "Crude prevalence of autism in school data by age band. Bars show 95% normal confidence intervals.", fig.height = 3}
 # Autism
@@ -1325,9 +1325,12 @@ aut_prev.agecat <- get_grouped_prev_plot(x = chile_bayes_aut,
   mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = aut_prev.agecat) +
-  geom_col(aes(x = age_cat_name, y = sample_prevalence*100, group = age_cat_name, fill = age_cat_name), position = position_dodge()) +
-  geom_errorbar(aes(x = age_cat_name, ymin = ci_lower*100, ymax = ci_upper*100, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_manual(values = c(plasma_colours[3], plasma_colours[5], plasma_colours[7], plasma_colours[9])) +
+  geom_col(aes(x = age_cat_name, y = sample_prevalence*100, group = age_cat_name,
+               fill = age_cat_name), position = position_dodge()) +
+  geom_errorbar(aes(x = age_cat_name, ymin = ci_lower*100, ymax = ci_upper*100,
+                    group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c(plasma_colours[3], plasma_colours[5],
+                               plasma_colours[7], plasma_colours[9])) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank()) +
   labs(title = "Autism prevalence",
@@ -1344,9 +1347,12 @@ adhd_prev.agecat <- get_grouped_prev_plot(x = chile_bayes_adhd,
   mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = adhd_prev.agecat) +
-  geom_col(aes(x = age_cat_name, y = sample_prevalence*100, group = age_cat_name, fill = age_cat_name), position = position_dodge()) +
-  geom_errorbar(aes(x = age_cat_name, ymin = ci_lower*100, ymax = ci_upper*100, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_manual(values = c(plasma_colours[3], plasma_colours[5], plasma_colours[7], plasma_colours[9])) +
+  geom_col(aes(x = age_cat_name, y = sample_prevalence*100, group = age_cat_name,
+               fill = age_cat_name), position = position_dodge()) +
+  geom_errorbar(aes(x = age_cat_name, ymin = ci_lower*100, ymax = ci_upper*100,
+                    group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c(plasma_colours[3], plasma_colours[5], 
+                               plasma_colours[7], plasma_colours[9])) +
   theme(axis.text.x = element_blank(),
         axis.ticks.x = element_blank()) +
   labs(title = "ADHD prevalence",
@@ -1367,15 +1373,19 @@ chile_stdpop_m <- chile_stdpop %>%
 # Autism
 aut_prev_f <- chile_bayes_aut %>%
   filter(sex == 2) %>%
-  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_prev_adj_f <- get_adjusted_prev(aut_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female") %>%
+  get_grouped_prev(stdpop = chile_stdpop_f, 
+                   grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+aut_prev_adj_f <- get_adjusted_prev(aut_prev_f, grouping_vars = c()) %>%
+  mutate(sex_desc = "Female") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 aut_prev_m <- chile_bayes_aut %>%
   filter(sex == 1) %>%
-  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
-aut_prev_adj_m <- get_adjusted_prev(aut_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male") %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, 
+                   grouping_vars = c("age_june30", "sex", "autism"), disease = "autism")
+aut_prev_adj_m <- get_adjusted_prev(aut_prev_m, grouping_vars = c()) %>% 
+  mutate(sex_desc = "Male") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
@@ -1384,15 +1394,19 @@ aut_prev_sex_adj <- rbind(aut_prev_adj_m, aut_prev_adj_f)
 # ADHD
 adhd_prev_f <- chile_bayes_adhd %>%
   filter(sex == 2) %>%
-  get_grouped_prev(stdpop = chile_stdpop_f, grouping_vars = c("age_june30", "sex", "adhd"), disease = "adhd")
-adhd_prev_adj_f <- get_adjusted_prev(adhd_prev_f, grouping_vars = c()) %>% mutate(sex_desc = "Female") %>%
+  get_grouped_prev(stdpop = chile_stdpop_f,
+                   grouping_vars = c("age_june30", "sex", "adhd"), disease = "adhd")
+adhd_prev_adj_f <- get_adjusted_prev(adhd_prev_f, grouping_vars = c()) %>%
+  mutate(sex_desc = "Female") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 adhd_prev_m <- chile_bayes_adhd %>%
   filter(sex == 1) %>%
-  get_grouped_prev(stdpop = chile_stdpop_m, grouping_vars = c("age_june30", "sex", "adhd"), disease = "adhd")
-adhd_prev_adj_m <- get_adjusted_prev(adhd_prev_m, grouping_vars = c()) %>% mutate(sex_desc = "Male") %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, 
+                   grouping_vars = c("age_june30", "sex", "adhd"), disease = "adhd")
+adhd_prev_adj_m <- get_adjusted_prev(adhd_prev_m, grouping_vars = c()) %>%
+  mutate(sex_desc = "Male") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
@@ -1402,19 +1416,25 @@ adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f)
 
 Disggregated by sex, autism prevalence in the school data was `r round(aut_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$crude_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(aut_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(aut_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, with male to female ratio of `r round(aut_prev_sex_adj$crude_rate[1] / aut_prev_sex_adj$crude_rate[2], 2)`:1, see Figure \@ref(fig:prevAgecatSexAutPlot) and Supplementary Table \@ref(tab:prevAgecatSexAutTable). Among females, the age- and sex-adjusted autism prevalence was `r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[1] * 100, 2)`-`r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_ci_upper[1] * 100, 2))`%), thus giving an adjusted male to female ratio of `r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_rate[1] / aut_prev_sex_adj$adjusted_rate[2], 2))`:1. ADHD prevalence was `r round(adhd_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$crude_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(adhd_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(adhd_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, with male to female ratio of `r round(adhd_prev_sex_adj$crude_rate[1] / adhd_prev_sex_adj$crude_rate[2], 2)`:1, see Figure \@ref(fig:prevAgecatSexAdhdPlot) and Supplementary Table \@ref(tab:prevAgecatSexAdhdTable). After adjustment, the prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[1] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[1] * 100, 2)`%) for males with adjusted male to female ratio of `r round(adhd_prev_sex_adj$adjusted_rate[1] / adhd_prev_sex_adj$adjusted_rate[2], 2)`:1. 
 
-Given the prevalence of autism and ADHD in these data are likely to be underestimates, the age- and sex-adjusted prevalence values can be considered a lower bound on the true prevalence of autism and of ADHD in Chile. 
+Given the prevalence of autism and ADHD in these data were likely to be underestimates, the age- and sex-adjusted prevalence values can be considered a lower bound on the true prevalence of autism and of ADHD in Chile. 
 
 ```{r prevAgecatSexAutPlot, fig.cap = "Crude prevalence of autism in school data by age band and sex. Bars show 95% normal confidence intervals.", fig.height = 3}
 # Autism
 aut_prev.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_aut, 
-                                          grouping_vars = c("age_cat_name", "sex_desc", "autism"),
-                                          disease = "autism") %>%
+                                             grouping_vars = c("age_cat_name",
+                                                               "sex_desc", 
+                                                               "autism"),
+                                             disease = "autism") %>%
   mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = aut_prev.agecat_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence*100, group = age_cat_name, fill = age_cat_name), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower*100, ymax = ci_upper*100, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_manual(values = c(plasma_colours[3], plasma_colours[5], plasma_colours[7], plasma_colours[9])) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence*100, group = age_cat_name,
+               fill = age_cat_name), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower*100, ymax = ci_upper*100,
+                    group = age_cat_name), width = 0.2, 
+                position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c(plasma_colours[3], plasma_colours[5], 
+                               plasma_colours[7], plasma_colours[9])) +
   labs(title = "Autism prevalence",
        x = "Sex",
        y = "Crude prevalence % (95% CI)",
@@ -1424,14 +1444,20 @@ ggplot(data = aut_prev.agecat_sex) +
 ```{r prevAgecatSexAdhdPlot, fig.cap = "Crude prevalence of ADHD in school data by age band and sex. Bars show 95% normal confidence intervals.", fig.height = 3}
 # ADHD
 adhd_prev.agecat_sex <- get_grouped_prev_plot(x = chile_bayes_adhd, 
-                                          grouping_vars = c("age_cat_name", "sex_desc", "adhd"),
-                                          disease = "adhd") %>%
+                                              grouping_vars = c("age_cat_name",
+                                                                "sex_desc", 
+                                                                "adhd"),
+                                              disease = "adhd") %>%
   mutate(ci_lower = ifelse(ci_lower < 0, 0, ci_lower))
 
 ggplot(data = adhd_prev.agecat_sex) +
-  geom_col(aes(x = sex_desc, y = sample_prevalence*100, group = age_cat_name, fill = age_cat_name), position = position_dodge()) +
-  geom_errorbar(aes(x = sex_desc, ymin = ci_lower*100, ymax = ci_upper*100, group = age_cat_name), width = 0.2, position = position_dodge(width = 0.9)) +
-  scale_fill_manual(values = c(plasma_colours[3], plasma_colours[5], plasma_colours[7], plasma_colours[9])) +
+  geom_col(aes(x = sex_desc, y = sample_prevalence*100, group = age_cat_name, 
+               fill = age_cat_name), position = position_dodge()) +
+  geom_errorbar(aes(x = sex_desc, ymin = ci_lower*100, ymax = ci_upper*100, 
+                    group = age_cat_name), width = 0.2, 
+                position = position_dodge(width = 0.9)) +
+  scale_fill_manual(values = c(plasma_colours[3], plasma_colours[5], 
+                               plasma_colours[7], plasma_colours[9])) +
   labs(title = "ADHD prevalence",
        x = "Sex",
        y = "Crude prevalence % (95% CI)",
@@ -1441,10 +1467,16 @@ ggplot(data = adhd_prev.agecat_sex) +
 ```{r adjPrevHealth}
 # Autism
 aut_prev_health <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("health_service_code", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    grouping_vars = c("health_service_code",
+                                                      "age_june30", 
+                                                      "age_cat_name",
+                                                      "sex",
+                                                      "sex_desc", 
+                                                      "autism"),
                                     disease = "autism")
 
-aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "health_service_code") %>%
+aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, 
+                                         grouping_vars = "health_service_code") %>%
   merge(health_service_lookup, by = "health_service_code") %>%
   rename(health_service_name_long = health_service_name,
          health_service_name = health_service_name_short) %>%
@@ -1453,10 +1485,16 @@ aut_prev_health_adj <- get_adjusted_prev(aut_prev_health, grouping_vars = "healt
 
 # ADHD
 adhd_prev_health <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
-                                    grouping_vars = c("health_service_code", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                                    grouping_vars = c("health_service_code",
+                                                      "age_june30",
+                                                      "age_cat_name",
+                                                      "sex",
+                                                      "sex_desc",
+                                                      "adhd"),
                                     disease = "adhd")
 
-adhd_prev_health_adj <- get_adjusted_prev(adhd_prev_health, grouping_vars = "health_service_code") %>%
+adhd_prev_health_adj <- get_adjusted_prev(adhd_prev_health, 
+                                          grouping_vars = "health_service_code") %>%
   merge(health_service_lookup, by = "health_service_code") %>%
   rename(health_service_name_long = health_service_name,
          health_service_name = health_service_name_short) %>%
@@ -1488,14 +1526,19 @@ kbl(adhd_prev_health_adj.table,
     caption = "Crude and age- and sex-adjusted ADHD prevalence by health service in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-Considering school data by health service, shown in Table \@ref(tab:adjPrevHealthAutTable), the adjusted prevalence of autism was significantly higher in Ñuble at `r round(aut_prev_health_adj$adjusted_rate[29] * 100, 2)`% (`r round(aut_prev_health_adj$adjusted_ci_lower[29] * 100, 2)` - `r round(aut_prev_health_adj$adjusted_ci_upper[29] * 100, 2)`%) than other health services with non-overlapping confidence intervals. Adjusted prevalence was lowest in Metropolitano Norte at `r round(aut_prev_health_adj$crude_rate[19] * 100, 2)`% (`r round(aut_prev_health_adj$crude_ci_lower[19] * 100, 2)` - `r sprintf("%.2f", round(aut_prev_health_adj$crude_ci_upper[19] * 100, 2))`%) and Araucanía Norte at `r sprintf("%.2f", round(aut_prev_health_adj$crude_rate[4] * 100, 2))`% (`r round(aut_prev_health_adj$crude_ci_lower[4] * 100, 2)`- `r round(aut_prev_health_adj$crude_ci_upper[4] * 100, 2)`%). Autism prevalence peaked in the 6-8 age band across all health services except Chiloé and Magallanes where it peaked in the 9-11 band, see Supplementary Table  \@ref(tab:prevAgecatHealthAutTable) and Supplementary Figure \@ref(fig:prevAgecatHealthAutPlot).
+Considering school data by health service, shown in Table \@ref(tab:adjPrevHealthAutTable), the adjusted prevalence of autism was significantly higher in Ñuble at `r round(aut_prev_health_adj$adjusted_rate[29] * 100, 2)`% (`r round(aut_prev_health_adj$adjusted_ci_lower[29] * 100, 2)` - `r round(aut_prev_health_adj$adjusted_ci_upper[29] * 100, 2)`%) than other health services with non-overlapping confidence intervals. Adjusted prevalence was lowest in Metropolitano Norte at `r sprintf("%.2f", round(aut_prev_health_adj$adjusted_rate[17] * 100, 2))`% (`r round(aut_prev_health_adj$adjusted_ci_lower[17] * 100, 2)` - `r sprintf("%.2f", round(aut_prev_health_adj$adjusted_ci_upper[17] * 100, 2))`%) and Araucanía Norte at `r sprintf("%.2f", round(aut_prev_health_adj$adjusted_rate[4] * 100, 2))`% (`r round(aut_prev_health_adj$adjusted_ci_lower[4] * 100, 2)`- `r round(aut_prev_health_adj$adjusted_ci_upper[4] * 100, 2)`%). Autism prevalence peaked in the 6-8 age band across all health services except Chiloé and Magallanes where it peaked in the 9-11 band, see Supplementary Table  \@ref(tab:prevAgecatHealthAutTable) and Supplementary Figure \@ref(fig:prevAgecatHealthAutPlot).
 
-ADHD prevalence also varied across health services, as shown in Table \@ref(tab:prevAgecatHealthAdhdTable). Prevalence was significantly lower in Atacama than other regions at `r round(adhd_prev_health_adj$adjusted_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$adjusted_ci_lower[8] * 100, 2)` - `r round(adhd_prev_health_adj$adjusted_ci_upper[8] * 100, 2)`%). Magallanes, Talcahuano, Concepción, Chiloé, Biobío, Aisén, Ñuble, Aconcagua and Coquimbo all had adjusted prevalence of 2.00% or higher and there was a significant gap between these health services and those with lower prevalence. There was also a significant gap separating Magallanes, Talcahuano, Concepción and Chiloé as the highest prevalence health services. See also Supplementary Table  \@ref(tab:prevAgecatHealthAdhdTable) and Supplementary Figure \@ref(fig:prevAgecatHealthAdhdPlot).
+ADHD prevalence also varied across health services, as shown in Table \@ref(tab:adjPrevHealthAdhdTable). Prevalence was significantly lower in Atacama than other regions at `r round(adhd_prev_health_adj$adjusted_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$adjusted_ci_lower[8] * 100, 2)` - `r round(adhd_prev_health_adj$adjusted_ci_upper[8] * 100, 2)`%). Magallanes, Talcahuano, Concepción, Chiloé, Biobío, Aisén, Ñuble, Aconcagua and Coquimbo all had adjusted prevalence of 2.00% or higher and there was a significant gap between these health services and those with lower prevalence. There was also a significant gap separating Magallanes, Talcahuano, Concepción and Chiloé as the highest prevalence health services. See also Supplementary Table  \@ref(tab:prevAgecatHealthAdhdTable) and Supplementary Figure \@ref(fig:prevAgecatHealthAdhdPlot).
 
 ```{r adjPrevEconA}
 # Autism
 aut_prev_econA <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("school_fee", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    grouping_vars = c("school_fee",
+                                                      "age_june30",
+                                                      "age_cat_name",
+                                                      "sex",
+                                                      "sex_desc",
+                                                      "autism"),
                                     disease = "autism")
 
 aut_prev_econA_adj <- get_adjusted_prev(aut_prev_econA, grouping_vars = "school_fee") %>%
@@ -1504,7 +1547,12 @@ aut_prev_econA_adj <- get_adjusted_prev(aut_prev_econA, grouping_vars = "school_
 
 # ADHD
 adhd_prev_econA <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
-                                    grouping_vars = c("school_fee", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                                    grouping_vars = c("school_fee",
+                                                      "age_june30",
+                                                      "age_cat_name",
+                                                      "sex",
+                                                      "sex_desc",
+                                                      "adhd"),
                                     disease = "adhd")
 
 adhd_prev_econA_adj <- get_adjusted_prev(adhd_prev_econA, grouping_vars = "school_fee")  %>%
@@ -1516,7 +1564,8 @@ adhd_prev_econA_adj <- get_adjusted_prev(adhd_prev_econA, grouping_vars = "schoo
 aut_prev_econA_adj.table <- aut_prev_econA_adj %>% 
   select(school_fee, crude_prev_ci, adjusted_prev_ci)
 kbl(aut_prev_econA_adj.table,
-    col.names = c("School fee", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
+    col.names = c("School fee", "Crude prevalence (95% CI)",
+                  "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
     format = "pandoc",
@@ -1528,7 +1577,8 @@ kbl(aut_prev_econA_adj.table,
 adhd_prev_econA_adj.table <- adhd_prev_econA_adj %>% 
   select(school_fee, crude_prev_ci, adjusted_prev_ci)
 kbl(adhd_prev_econA_adj.table,
-    col.names = c("School fee", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
+    col.names = c("School fee", "Crude prevalence (95% CI)", 
+                  "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
     format = "pandoc",
@@ -1536,24 +1586,36 @@ kbl(adhd_prev_econA_adj.table,
     caption = "Crude and age- and sex-adjusted ADHD prevalence by monthly school fee (Peso) in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-For school fees, which are used here as a proxy for SES, autism prevalence was highest among students that received free or low fee education, though the sample size for students that paid \$1,000-\$10,000 monthly was very small, see Table \@ref(tab:adjPrevEconAAutTable). ADHD prevalence was variable across school fee levels, with the \$1,000-\$10,000 band having low prevalence and very few cases, see Table \@ref(tab:adjPrevEconAAdhdTable). For both autism and ADHD, prevalence is very low among students paying more than \$100,000 monthly, suggesting students from wealthier families may not be accessing SEED or may not be eligible for it due to attending non-subsidised private schools. See also Supplementary Tables \@ref(tab:prevAgecatEconAAutTable) and \@ref(tab:prevAgecatEconAAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatEconAAutPlot), \@ref(fig:prevAgecatEconAAdhdPlot).
+For school fees, which were used here as a proxy for SES, autism prevalence was highest among students that received free or low fee education, though the sample size for students that paid \$1,000-\$10,000 monthly was very small, see Table \@ref(tab:adjPrevEconAAutTable). ADHD prevalence was variable across school fee levels, with the \$1,000-\$10,000 band having low prevalence and very few cases, see Table \@ref(tab:adjPrevEconAAdhdTable). For both autism and ADHD, prevalence was very low among students paying more than \$100,000 monthly, suggesting students from wealthier families may not have accessed SEED or may not have been eligible for it due to attending non-subsidised private schools. See also Supplementary Tables \@ref(tab:prevAgecatEconAAutTable) and \@ref(tab:prevAgecatEconAAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatEconAAutPlot), \@ref(fig:prevAgecatEconAAdhdPlot).
 
 ```{r adjPrevEthnic}
 # Autism
 aut_prev_ethnic <- get_grouped_prev(x = chile_bayes_aut_ethnic, stdpop = chile_stdpop, 
-                                    grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    grouping_vars = c("ethnic_2_group",
+                                                      "age_june30", 
+                                                      "age_cat_name",
+                                                      "sex",
+                                                      "sex_desc",
+                                                      "autism"),
                                     disease = "autism")
 
-aut_prev_ethnic_adj <- get_adjusted_prev(aut_prev_ethnic, grouping_vars = "ethnic_2_group") %>%
+aut_prev_ethnic_adj <- get_adjusted_prev(aut_prev_ethnic, 
+                                         grouping_vars = "ethnic_2_group") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 # ADHD
 adhd_prev_ethnic <- get_grouped_prev(x = chile_bayes_adhd_ethnic, stdpop = chile_stdpop, 
-                                    grouping_vars = c("ethnic_2_group", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                                    grouping_vars = c("ethnic_2_group",
+                                                      "age_june30", 
+                                                      "age_cat_name", 
+                                                      "sex", 
+                                                      "sex_desc",
+                                                      "adhd"),
                                     disease = "adhd")
 
-adhd_prev_ethnic_adj <- get_adjusted_prev(adhd_prev_ethnic, grouping_vars = "ethnic_2_group")  %>%
+adhd_prev_ethnic_adj <- get_adjusted_prev(adhd_prev_ethnic, 
+                                          grouping_vars = "ethnic_2_group")  %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
@@ -1562,7 +1624,8 @@ adhd_prev_ethnic_adj <- get_adjusted_prev(adhd_prev_ethnic, grouping_vars = "eth
 aut_prev_ethnic_adj.table <- aut_prev_ethnic_adj %>% 
   select(ethnic_2_group, crude_prev_ci, adjusted_prev_ci)
 kbl(aut_prev_ethnic_adj.table,
-    col.names = c("Ethnicity", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
+    col.names = c("Ethnicity", "Crude prevalence (95% CI)",
+                  "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
     format = "pandoc",
@@ -1574,7 +1637,8 @@ kbl(aut_prev_ethnic_adj.table,
 adhd_prev_ethnic_adj.table <- adhd_prev_ethnic_adj %>% 
   select(ethnic_2_group, crude_prev_ci, adjusted_prev_ci)
 kbl(adhd_prev_ethnic_adj.table,
-    col.names = c("Ethnicity", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
+    col.names = c("Ethnicity", "Crude prevalence (95% CI)",
+                  "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
     format = "pandoc",
@@ -1582,24 +1646,36 @@ kbl(adhd_prev_ethnic_adj.table,
     caption = "Crude and age- and sex-adjusted ADHD prevalence by ethnicity in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-For both autism and ADHD, adjusted prevalence was significantly lower for Mapuche students than non-Indigenous students in the Aysén, Biobío, La Araucanía, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions, as shown in Tables \@ref(tab:adjPrevEthnicAutTable) and \@ref(tab:adjPrevEthnicAdhdTable). Autism prevalence for students belonging to other Indigenous groups fall in between and was not significantly different, and ADHD prevalence for other Indigenous groups was lower but not significantly. See also Supplementary Tables \@ref(tab:prevAgecatEthnicAutTable) and Table \@ref(tab:prevAgecatEthnicAdhdTable and Supplementary Figures \@ref(fig:prevAgecatEthnicAutPlot),\@ref(fig:prevAgecatEthnicAdhdPlot). 
+For both autism and ADHD, adjusted prevalence was significantly lower for Mapuche students than non-Indigenous students in the Aysén, Biobío, La Araucanía, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions, as shown in Tables \@ref(tab:adjPrevEthnicAutTable) and \@ref(tab:adjPrevEthnicAdhdTable). Autism prevalence for students belonging to other Indigenous groups fall in between and was not significantly different, and ADHD prevalence for other Indigenous groups was lower but not significantly. See also Supplementary Tables \@ref(tab:prevAgecatEthnicAutTable) and  \@ref(tab:prevAgecatEthnicAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatEthnicAutPlot) and \@ref(fig:prevAgecatEthnicAdhdPlot). 
 
 ```{r adjPrevRurality}
 # Autism
 aut_prev_rural <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                                    grouping_vars = c("school_rurality", "age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                                    grouping_vars = c("school_rurality", 
+                                                      "age_june30", 
+                                                      "age_cat_name",
+                                                      "sex", 
+                                                      "sex_desc",
+                                                      "autism"),
                                     disease = "autism")
 
-aut_prev_rural_adj <- get_adjusted_prev(aut_prev_rural, grouping_vars = "school_rurality") %>%
+aut_prev_rural_adj <- get_adjusted_prev(aut_prev_rural, 
+                                        grouping_vars = "school_rurality") %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 # ADHD
 adhd_prev_rural <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
-                                    grouping_vars = c("school_rurality", "age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                                    grouping_vars = c("school_rurality",
+                                                      "age_june30",
+                                                      "age_cat_name",
+                                                      "sex",
+                                                      "sex_desc",
+                                                      "adhd"),
                                     disease = "adhd")
 
-adhd_prev_rural_adj <- get_adjusted_prev(adhd_prev_rural, grouping_vars = "school_rurality")  %>%
+adhd_prev_rural_adj <- get_adjusted_prev(adhd_prev_rural, 
+                                         grouping_vars = "school_rurality")  %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
@@ -1608,7 +1684,8 @@ adhd_prev_rural_adj <- get_adjusted_prev(adhd_prev_rural, grouping_vars = "schoo
 aut_prev_rural_adj.table <- aut_prev_rural_adj %>% 
   select(school_rurality, crude_prev_ci, adjusted_prev_ci)
 kbl(aut_prev_rural_adj.table,
-    col.names = c("School rurality", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
+    col.names = c("School rurality", "Crude prevalence (95% CI)",
+                  "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
     format = "pandoc",
@@ -1620,7 +1697,8 @@ kbl(aut_prev_rural_adj.table,
 adhd_prev_rural_adj.table <- adhd_prev_rural_adj %>% 
   select(school_rurality, crude_prev_ci, adjusted_prev_ci)
 kbl(adhd_prev_rural_adj.table,
-    col.names = c("School rurality", "Crude prevalence (95% CI)", "Adjusted prevalence (95% CI)"),
+    col.names = c("School rurality", "Crude prevalence (95% CI)",
+                  "Adjusted prevalence (95% CI)"),
     align = "lrr",
     booktabs = TRUE,
     format = "pandoc",
@@ -1629,9 +1707,9 @@ kbl(adhd_prev_rural_adj.table,
 
 ```
 
-Autism and ADHD are both significantly more prevalent for students at rural schools than urban schools, as shown in Tables \@ref(tab:adjPrevRuralAutTable) and \@ref(tab:adjPrevRuralAdhdTable). See also Supplementary Tables \@ref(tab:prevAgecatRuralAutTable) and \@ref(tab:prevAgecatRuralAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatRuralAutPlot) and \@ref(fig:prevAgecatRuralAdhdPlot).
+Autism and ADHD were both significantly more prevalent for students at rural schools than urban schools at `r round(aut_prev_rural_adj$adjusted_rate[1] * 100, 2)`% (`r round(aut_prev_rural_adj$adjusted_ci_lower[1] * 100, 2)` - `r round(aut_prev_rural_adj$adjusted_ci_upper[1] * 100, 2)`%) and `r round(aut_prev_rural_adj$adjusted_rate[2] * 100, 2)`% (`r round(aut_prev_rural_adj$adjusted_ci_lower[2] * 100, 2)` - `r round(aut_prev_rural_adj$adjusted_ci_upper[2] * 100, 2)`%) respectively for autism and `r round(adhd_prev_rural_adj$adjusted_rate[1] * 100, 2)`% (`r round(adhd_prev_rural_adj$adjusted_ci_lower[1] * 100, 2)` - `r round(adhd_prev_rural_adj$adjusted_ci_upper[1] * 100, 2)`%) and `r round(adhd_prev_rural_adj$adjusted_rate[2] * 100, 2)`% (`r round(adhd_prev_rural_adj$adjusted_ci_lower[2] * 100, 2)` - `r sprintf("%.2f", round(adhd_prev_rural_adj$adjusted_ci_upper[2] * 100, 2))`%) respectively for ADHD, as shown in Tables \@ref(tab:adjPrevRuralAutTable) and \@ref(tab:adjPrevRuralAdhdTable). See also Supplementary Tables \@ref(tab:prevAgecatRuralAutTable) and \@ref(tab:prevAgecatRuralAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatRuralAutPlot) and \@ref(fig:prevAgecatRuralAdhdPlot).
 
-These results together indicate that for autism and ADHD there are differences in prevalence across location and demographic features.
+These results together indicate that for autism and ADHD there were differences in prevalence across location and demographic features.
 
 ## Clinical data
 
@@ -1650,7 +1728,8 @@ patients_mca_small <- clinical_small_raw %>%
                     ifelse(cod_dg_3 %in% aut_codes, 3, NA))),
          intdisab = ifelse(cod_dg_1 %in% intdisab_codes | 
                            cod_dg_2 %in% intdisab_codes | 
-                           cod_dg_3 %in% intdisab_codes, "Yes intellectual disability", "No intellectual disability"),
+                           cod_dg_3 %in% intdisab_codes, "Yes intellectual disability",
+                           "No intellectual disability"),
          age_june30 = trunc(time_length(interval(ymd(dob), ymd("2021-06-30")), unit = "year")),
          commune_name_upper = ifelse(comuna == "CHOL CHOL", "CHOLCHOL",
                         ifelse(comuna == "CURACAUTIN", "CURACAUTÍN", 
@@ -1661,7 +1740,13 @@ patients_mca_small <- clinical_small_raw %>%
                         ifelse(comuna == "DIEGO DE ALMAGRO  (#)", "DIEGO DE ALMAGRO",
                         ifelse(comuna == "MACHALI", "MACHALÍ",
                         ifelse(comuna == "TEMUCO (##)", "TEMUCO", comuna))))))))),
-         ses_status = ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), "Private Health Insurance", socio_economic_level),
+         ses_status = ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", 
+                                                         "RIO BLANCO", 
+                                                         "CARABINEROS (DIPRECA)",
+                                                         "BANMEDICA S.A.", 
+                                                         "PARTICULAR (SIN PREVISION)", 
+                                                         "VIDA TRES"), 
+                             "Private Health Insurance", socio_economic_level),
          rurality = ifelse(rurality == "URBAN", "Urban", "Rural"),
          ethnicity = ifelse(ethnicity == "CHILENO", "Chilean",
                      ifelse(ethnicity == "MAPUCHE", "Mapuche",
@@ -1672,20 +1757,26 @@ patients_mca_small <- clinical_small_raw %>%
          medical_specialty_english = ifelse(medical_specialty == "Physiatry", "Psychiatry",
                                      ifelse(medical_specialty == "PEDIATRIA", "Paediatrics",
                                      ifelse(medical_specialty == "PSIQUIATRIA", "Psychiatry",
-                                     ifelse(medical_specialty == "NEUROLOGIA", "Neurology", medical_specialty)))),
-         medical_specialty_grouped = ifelse(medical_specialty_english %in% c("Psychiatry", "Child Psychiatry"), "Psychiatry",
-                                     ifelse(medical_specialty_english %in% c("Neurology", "Pediatric Neurology"), "Neurology",
-                                     ifelse(medical_specialty_english == "Paediatrics", "Paediatrics", "Other specialty"))),
+                                     ifelse(medical_specialty == "NEUROLOGIA", "Neurology",
+                                            medical_specialty)))),
+         medical_specialty_grouped = ifelse(medical_specialty_english %in% c("Psychiatry",
+                                                                             "Child Psychiatry"),
+                                            "Psychiatry",
+                                     ifelse(medical_specialty_english %in% c("Neurology", 
+                                                                             "Pediatric Neurology"), 
+                                            "Neurology",
+                                     ifelse(medical_specialty_english == "Paediatrics", 
+                                            "Paediatrics", "Other specialty"))),
          ) %>%
   left_join(region_service_commune_lookup, by = "commune_name_upper") %>%
   filter(commune_name %in% araucsur_communes$commune_name,
          autism == "Yes autism") %>%
   group_by(id, gender, age_june30) %>%
-  summarise(ses_status = get.mode.na(ses_status), # Fortunately the available values are in alphabetical order by status
+  summarise(ses_status = get.mode.na(ses_status), 
             autism = get.max.na(autism),
             intdisab = get.max.na(intdisab),
-            medical_specialty_grouped = get.mode.na(medical_specialty_grouped), # Most common medical specialty across visits
-            hospital = hospital[which.max(apt_date)], # most recent hospital
+            medical_specialty_grouped = get.mode.na(medical_specialty_grouped), 
+            hospital = hospital[which.max(apt_date)], 
             commune_name = commune_name[which.max(apt_date)],
             rurality = rurality[which.max(apt_date)],
             ethnicity = get.mapuche.ethnicity(ethnicity),
@@ -1702,24 +1793,34 @@ patients_mca_small <- clinical_small_raw %>%
                             ifelse(age >=9 & age <=11, "Age 9-11", 
                             ifelse(age >=12 & age <= 14, "Age 12-14", 
                             ifelse(age >= 15 & age <= 18, "Age 15-18", "Adult")))))),
-                            levels = c("Age 0-2", "Age 3-5", "Age 6-8", "Age 9-11", "Age 12-14", "Age 15-18", "Adult")), 
+                            levels = c("Age 0-2", "Age 3-5", "Age 6-8", "Age 9-11", 
+                                       "Age 12-14", "Age 15-18", "Adult")), 
                             # Shouldn't be any adults in this dataset
          age = as.factor(age),
          commune_name = as.factor(commune_name),
          ses_status = as.factor(ses_status),
          rurality = as.factor(rurality),
-         ethnicity = factor(ethnicity, levels = c("Mapuche", "Chilean", "Foreign", "No ethnicity information")),
-         disability_imp = as.factor(ifelse(disability == "No disability information", "No disability", disability)),
-         disability = factor(disability, levels = c("Yes disability", "No disability", "No disability information")),
-         foster_care_imp = as.factor(ifelse(foster_care == "No foster care information", "No foster care", foster_care)),
-         foster_care = factor(foster_care, levels = c("Yes foster care", "No foster care", "No foster care information")),
+         ethnicity = factor(ethnicity, levels = c("Mapuche", "Chilean", 
+                                                  "Foreign", 
+                                                  "No ethnicity information")),
+         disability_imp = as.factor(ifelse(disability == "No disability information",
+                                           "No disability", disability)),
+         disability = factor(disability, levels = c("Yes disability", 
+                                                    "No disability", 
+                                                    "No disability information")),
+         foster_care_imp = as.factor(ifelse(foster_care == "No foster care information",
+                                            "No foster care", foster_care)),
+         foster_care = factor(foster_care, levels = c("Yes foster care", 
+                                                      "No foster care", 
+                                                      "No foster care information")),
          autism = factor(autism, levels = c("Yes autism", "No autism")),
-         intdisab = factor(intdisab, levels = c("Yes intellectual disability", "No intellectual disability")),
+         intdisab = factor(intdisab, levels = c("Yes intellectual disability",
+                                                "No intellectual disability")),
          medical_specialty_grouped = as.factor(medical_specialty_grouped),
          hospital = as.factor(hospital))
 ```
 
-The validated clinical dataset has data on `r format(nrow(clinical_small), big.mark = ",", trim = TRUE)` appointments for `r length(unique(clinical_small$id))` unique patients with autism aged 1-18 in 2021, of which `r patients_mca_small %>% nrow()` patients have lived in a commune in the SSAS catchment area during the period the data covers. Among these, most are male, live in urban areas and have Chilean but not Mapuche ethnicity. The mean age is `r round(mean(as.numeric(patients_mca_small$age)), 1)` years. Many patients live in Villarica commune as the validated clinical data is from Villarica Hospital. FONASA-A, indicative of low SES, is the most common level of health insurance, and few patients have another recorded disability or have experienced foster care. 
+The validated clinical dataset has data on `r format(nrow(clinical_small), big.mark = ",", trim = TRUE)` appointments for `r length(unique(clinical_small$id))` unique patients with autism aged 1-18 in 2021, of which `r patients_mca_small %>% nrow()` patients have lived in a commune in the SSAS catchment area during the period the data covers. Among these, most were male, live in urban areas and have Chilean but not Mapuche ethnicity. The mean age is `r round(mean(as.numeric(patients_mca_small$age)), 1)` years. Many patients live in Villarica commune as the validated clinical data is from Villarica Hospital. FONASA-A, indicative of low SES, is the most common level of health insurance, and few patients have another recorded disability or have experienced foster care. 
 
 ```{r macPatientsSmallTable}
 patients_mca_small.table <- patients_mca_small %>%
@@ -1771,7 +1872,8 @@ patients_mca_small.table <- patients_mca_small %>%
                     perc = sprintf("%.2f", round(count/nrow(patients_mca_small)*100, 2))) %>%
           rename(values = foster_care)) %>%
   mutate(count_suppress = ifelse(count < 20, "<20", count),
-         count_perc = ifelse(count < 20, count_suppress, paste0(count_suppress, " (", perc, "%)")),
+         count_perc = ifelse(count < 20, count_suppress, 
+                             paste0(count_suppress, " (", perc, "%)")),
          variables_short = c("Sex", "", 
                              "Age band", "", "", "", "", "",
                              "Commune", "", "", "", "", "", "", "", "", "", "", 
@@ -1802,12 +1904,10 @@ kbl(patients_mca_small.table,
 
 ## Machine learning with clinical data
 
-Multiple correspondence analysis was first conducted with all features thought to be associated with autism diagnosis with no imputation. Figure \@ref(fig:mcaNoimpFeatures) shows approximately 14.6% of the variance in these data can be captured by the first two dimensions of MCA. Disability and foster care status are well separated by the first dimension but Figures \@ref(fig:mcaNoimpDisab) and\@ref(fig:mcaNoimpFoster) show that this separation is primarily driven by whether information is available for these features. Ethnicity, age band and commune of residence are well separately by the second dimension of MCA, as shown in Figure \@ref(fig:mcaNoimpFeatures), and are somewhat separated by the first dimension. Figures \@ref(fig:mcaNoimpGraph) and \@ref(fig:mcaNoimpCategories) further shows the importance of categories within the foster care, disabilities, ethnicity, age band and commune features for explaining the variance in this data. In particular, categories that explain more of the variance include not having disability or foster care status, or not having information on these, age 0-2 and 3-5, being foreign or Chilean, living in Toltén and having private health insurance. Examining the clustering of individual patients by the first two dimensions of MCA, Figure \@ref(fig:mcaNoimpAge) demonstrates that patients in age bands 0-2 and 3-5 cluster well and those in older age bands do not. There is some clustering by ethnicity in Figure \@ref(fig:mcaNoimpEthnic) but it is obscured by the separation of points into the two larger clustered defined by having or not having information on disability and foster care status. Figure \@ref(fig:mcaNoimpCommune) shows clear separation of Toltén and Nueva Imperial communes, however it is important to know here that these and several other communes are represented by only one patient, see Table \@ref(tab:macPatientsSmallTable). There is decent clustering of patients in Temuco and Pitrufquén communes. Figure \@ref(fig:mcaNoimpSES) shows possible separation for patients with private health insurance and Figures \@ref(fig:mcaNoimpSex) and \@ref(fig:mcaNoimpRural) show little clustering by sex or rurality of residence.
+Multiple correspondence analysis was first conducted with all features thought to be associated with autism diagnosis with no imputation. Figure \@ref(fig:mcaNoimpFeatures) shows approximately 14.6% of the variance in these data were captured by the first two dimensions of MCA. Disability and foster care status were well separated by the first dimension but Figures \@ref(fig:mcaNoimpDisab) and \@ref(fig:mcaNoimpFoster) show that this separation was primarily driven by whether information was available for these features. Ethnicity, age band and commune of residence were well separately by the second dimension of MCA, as shown in Figure \@ref(fig:mcaNoimpFeatures), and were somewhat separated by the first dimension. Figures \@ref(fig:mcaNoimpGraph) and \@ref(fig:mcaNoimpCategories) further show the importance of categories within the foster care, disabilities, ethnicity, age band and commune features for explaining the variance in this data. In particular, categories that explained more of the variance include not having disability or foster care status, or not having information on these, having age of 0-2 or 3-5, being foreign or Chilean, living in Toltén and having private health insurance. Examining the clustering of individual patients by the first two dimensions of MCA, Figure \@ref(fig:mcaNoimpAge) demonstrates that patients in age bands 0-2 and 3-5 clustered well and those in older age bands did not. There was some clustering by ethnicity in Figure \@ref(fig:mcaNoimpEthnic) but it was obscured by the separation of points into the two larger clustered defined by having or not having information on disability and foster care status. Figure \@ref(fig:mcaNoimpCommune) shows clear separation of Toltén and Nueva Imperial communes, however it is important to note here that these and several other communes were represented by only one patient, see Table \@ref(tab:macPatientsSmallTable). There was decent clustering of patients in Temuco and Pitrufquén communes. Figure \@ref(fig:mcaNoimpSES) shows possible separation for patients with private health insurance and Figures \@ref(fig:mcaNoimpSex) and \@ref(fig:mcaNoimpRural) show little clustering by sex or rurality of residence.
 
 ```{r mcaNoimp}
 patients_mca_noimp <- patients_mca_small %>%
-  #filter(autism == "Yes autism") %>%
-  #filter(commune_name %in% araucsur_communes$commune_name) %>%
    select(sex_desc,
           age_group,
           commune_name,
@@ -1843,7 +1943,6 @@ fviz_mca_var(res_mca_patients_noimp,
 ```
 
 ```{r mcaNoimpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features without imputation. The red line shows the expected average if contributions were uniform.", fig.height=3}
-
 # Total contribution to dimension 1 and 2
 fviz_contrib(res_mca_patients_noimp, choice = "var", axes = 1:2, top = 15) +
   labs(title = "Contribution of categories to first two dimensions, no imputation",
@@ -1857,7 +1956,8 @@ fviz_mca_var(res_mca_patients_noimp,
              col.var = "contrib",
              labelsize = 4, 
              pointsize = 3, 
-             gradient.cols = c(turbo_colours[2], turbo_colours[5], turbo_colours[8], turbo_colours[10]),
+             gradient.cols = c(turbo_colours[2], turbo_colours[5],
+                               turbo_colours[8], turbo_colours[10]),
              repel = TRUE,
              ggtheme = theme_minimal()) +
   labs(title = "Categories by first two dimensions, no imputation",
@@ -1875,23 +1975,26 @@ mca_noimp_sex_plot <- fviz_mca_ind(res_mca_patients_noimp,
 mca_noimp_age_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none",
              habillage = "Age band",
-             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
+             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7],
+                         turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by age band, no imputation",
              ggtheme = theme_minimal()) 
 mca_noimp_commune_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none",
              habillage = "Commune",
-             #palette = turbo_colours,
-             palette = c(turbo_colours[2], turbo_colours[3], turbo_colours[5], turbo_colours[7], turbo_colours[9], 
-                         turbo_colours[11], turbo_colours[12], turbo_colours[14], turbo_colours[15], turbo_colours[17], turbo_colours[18]),
+             palette = c(turbo_colours[2], turbo_colours[3], turbo_colours[5],
+                         turbo_colours[7], turbo_colours[9], turbo_colours[11], 
+                         turbo_colours[12], turbo_colours[14], turbo_colours[15],
+                         turbo_colours[17], turbo_colours[18]),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by commune of residence, no imputation",
              ggtheme = theme_minimal())
 mca_noimp_ses_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none",
              habillage = "Health insurance",
-             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11],
+                         turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by proxy SES, no imputation",
              ggtheme = theme_minimal()) 
@@ -1905,7 +2008,8 @@ mca_noimp_rural_plot <- fviz_mca_ind(res_mca_patients_noimp,
 mca_noimp_ethnic_plot <- fviz_mca_ind(res_mca_patients_noimp, 
              label = "none",
              habillage = "Ethnicity",
-             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14]),
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11],
+                         turbo_colours[14]),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by ethnicity, no imputation",
              ggtheme = theme_minimal())
@@ -1957,11 +2061,10 @@ mca_noimp_disab_plot
 grid.arrange(mca_noimp_foster_plot)
 ```
 
-Exchanging disability and foster care status for their imputed versions leads to the MCA capturing approximately 14.1% of the variance in that data with its first two dimensions, as shown in Figure \@ref(fig:mcaImpFeatures). Disability and foster care status are no longer well separated by the first dimension and Figures \@ref(fig:mcaImpDisab) and \@ref(fig:mcaImpFoster) show that the patients who have experienced foster care do cluster well but the patients with a disability do not. In Figure \@ref(fig:mcaImpFeatures), age band and ethnicity are now well separated by both dimensions and commune mostly by the second. With the reduced importance of disability and foster care, age bands 0-2 and 3-5, foreign, no information and Chilean ethnicity and Toltén and Nueva Imperial communes contribute most to the first two dimensions, see Figures \@ref(fig:mcaImpGraph) and \@ref(fig:mcaImpCategories). Again patients with age bands 0-2 and 3-5 cluster well and older age bands do not, as shown in Figure \@ref(fig:mcaImpAge). Figure \@ref(fig:mcaImpEthnic) shows much clearer clustering of ethnicity than before. For communes with more than one patient resident, clustering is less clear than before with only Pitrufquén well separated by these dimensions, see Figure \@ref(fig:mcaImpCommune). In Figures \@ref(fig:mcaImpSES), \@ref(fig:mcaImpSex) and \@ref(fig:mcaImpRural), clustering by feature is weak.
+Exchanging disability and foster care status for their imputed versions led to the MCA capturing approximately 14.1% of the variance in that data with its first two dimensions, as shown in Figure \@ref(fig:mcaImpFeatures). Disability and foster care status were no longer well separated by the first dimension and Figures \@ref(fig:mcaImpDisab) and \@ref(fig:mcaImpFoster) show that the patients who had experienced foster care did cluster well but the patients with a disability did not. In Figure \@ref(fig:mcaImpFeatures), age band and ethnicity were now well separated by both dimensions and commune mostly by the second. With the reduced importance of disability and foster care, age bands 0-2 and 3-5, foreign, no information and Chilean ethnicity and Toltén and Nueva Imperial communes contributed most to the first two dimensions, see Figures \@ref(fig:mcaImpGraph) and \@ref(fig:mcaImpCategories). Again patients with age bands 0-2 and 3-5 clustered well and older age bands did not, as shown in Figure \@ref(fig:mcaImpAge). Figure \@ref(fig:mcaImpEthnic) shows much clearer clustering of ethnicity than before. For communes with more than one patient resident, clustering was less clear than before with only Pitrufquén well separated by these dimensions, see Figure \@ref(fig:mcaImpCommune). Clustering by SES, sex and rurality was weak, see Figures \@ref(fig:mcaImpSES), \@ref(fig:mcaImpSex) and \@ref(fig:mcaImpRural).
 
 ```{r mcaImp}
 patients_mca_imp <- patients_mca_small %>%
-  #filter(autism == "Yes autism") %>%
    select(sex_desc,
           age_group,
           commune_name,
@@ -1997,7 +2100,6 @@ fviz_mca_var(res_mca_patients_imp,
 ```
 
 ```{r mcaImpGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using all features with imputation. The red line shows the expected average if contributions were uniform.", fig.height=3}
-
 # Total contribution to dimension 1 and 2
 fviz_contrib(res_mca_patients_imp, choice = "var", axes = 1:2, top = 15) +
   labs(title = "Contribution of categories to first two dimensions, with imputation",
@@ -2011,7 +2113,8 @@ fviz_mca_var(res_mca_patients_imp,
              col.var = "contrib",
              labelsize = 4, 
              pointsize = 3, 
-             gradient.cols = c(turbo_colours[2], turbo_colours[5], turbo_colours[8], turbo_colours[10]),
+             gradient.cols = c(turbo_colours[2], turbo_colours[5], 
+                               turbo_colours[8], turbo_colours[10]),
              repel = TRUE,
              ggtheme = theme_minimal()) +
   labs(title = "Categories by first two dimensions, with imputation",
@@ -2029,7 +2132,8 @@ mca_imp_sex_plot <- fviz_mca_ind(res_mca_patients_imp,
 mca_imp_age_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none",
              habillage = "Age band",
-             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
+             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7],
+                         turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by age band, with imputation",
              ggtheme = theme_minimal()) 
@@ -2037,15 +2141,18 @@ mca_imp_commune_plot <- fviz_mca_ind(res_mca_patients_imp,
              label = "none",
              habillage = "Commune",
              #palette = turbo_colours,
-             palette = c(turbo_colours[2], turbo_colours[3], turbo_colours[5], turbo_colours[7], turbo_colours[9], 
-                         turbo_colours[11], turbo_colours[12], turbo_colours[14], turbo_colours[15], turbo_colours[17], turbo_colours[18]),
+             palette = c(turbo_colours[2], turbo_colours[3], turbo_colours[5],
+                         turbo_colours[7], turbo_colours[9], turbo_colours[11], 
+                         turbo_colours[12], turbo_colours[14], turbo_colours[15],
+                         turbo_colours[17], turbo_colours[18]),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by commune of residence, with imputation",
              ggtheme = theme_minimal())
 mca_imp_ses_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none",
              habillage = "Health insurance",
-             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11],
+                         turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by proxy SES, with imputation",
              ggtheme = theme_minimal()) 
@@ -2059,7 +2166,8 @@ mca_imp_rural_plot <- fviz_mca_ind(res_mca_patients_imp,
 mca_imp_ethnic_plot <- fviz_mca_ind(res_mca_patients_imp, 
              label = "none",
              habillage = "Ethnicity",
-             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14]),
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], 
+                         turbo_colours[14]),
              addEllipses = TRUE, ellipse.type = "confidence",
              title = "Patients by ethnicity, with imputation",
              ggtheme = theme_minimal())
@@ -2111,7 +2219,7 @@ mca_imp_disab_plot
 mca_imp_foster_plot
 ```
 
-MCA on the validated clinical data using only age band, ethnicity and commune results in the first two dimensions capturing 17.8% of the variance in that data, see Figure \@ref(fig:mcaAutFeatures), and these features are fairly well represented by the first two dimensions. Again age bands 0-2 and 3-5, foreign, no information and Chilean ethnicity and Toltén and Nueva Imperial communes contribute most to the first two dimensions, see Figures \@ref(fig:mcaAutGraph) and \@ref(fig:mcaAutCategories). By patient, age bands 0-2 and 3-5 still cluster well (Figure \@ref(fig:mcaAutAge)), ethnicity clusters are very distinct (Figure \@ref(fig:mcaAutEthnic)), and communes show more structure than previously (Figure \@ref(fig:mcaAutCommune)).
+MCA on the validated clinical data using only age band, ethnicity and commune resulted in the first two dimensions capturing 17.8% of the variance in that data, see Figure \@ref(fig:mcaAutFeatures), and these features were fairly well represented by the first two dimensions. Again age bands 0-2 and 3-5, foreign, no information and Chilean ethnicity and Toltén and Nueva Imperial communes contributed most to the first two dimensions, see Figures \@ref(fig:mcaAutGraph) and \@ref(fig:mcaAutCategories). By patient, age bands 0-2 and 3-5 still clustered well (Figure \@ref(fig:mcaAutAge)), ethnicity clusters were very distinct (Figure \@ref(fig:mcaAutEthnic)), and communes showed more structure than previously (Figure \@ref(fig:mcaAutCommune)).
 
 ```{r mcaAut}
 patients_mca_aut <- patients_mca_small %>%
@@ -2137,14 +2245,14 @@ fviz_mca_var(res_mca_patients_aut,
              col.var = turbo_colours[16],
              repel = TRUE,
              ggtheme = theme_minimal()) +
-  labs(title = "Categorical features by first two dimensions for age band, commune and ethnicity")
+  labs(title = "Categorical features by first two dimensions, 3 features")
 ```
 
 ```{r mcaAutGraph, fig.cap="Contribution of the top 15 categories to the first two dimensions of multiple correspondence analysis on autism patients in the validated clinical data using patients' age band, commune and ethnicity. The red line shows the expected average if contributions were uniform.", fig.height=3}
 
 # Total contribution to dimension 1 and 2
 fviz_contrib(res_mca_patients_aut, choice = "var", axes = 1:2, top = 15) +
-  labs(title = "Contribution of categories to first two dimensions for age band, commune and ethnicity",
+  labs(title = "Contribution of categories to first two dimensions, 3 features",
        x = "Category",
        y = "Contribution (%)")
 ```
@@ -2155,10 +2263,11 @@ fviz_mca_var(res_mca_patients_aut,
              col.var = "contrib",
              labelsize = 4, 
              pointsize = 3, 
-             gradient.cols = c(turbo_colours[2], turbo_colours[5], turbo_colours[8], turbo_colours[10]),
+             gradient.cols = c(turbo_colours[2], turbo_colours[5], 
+                               turbo_colours[8], turbo_colours[10]),
              repel = TRUE,
              ggtheme = theme_minimal()) +
-  labs(title = "Categories by first two dimensions for age band, commune and ethnicity",
+  labs(title = "Categories by first two dimensions, 3 features",
        colour = "Contribution")
 ```
 
@@ -2166,25 +2275,29 @@ fviz_mca_var(res_mca_patients_aut,
 mca_aut_age_plot <- fviz_mca_ind(res_mca_patients_aut, 
              label = "none",
              habillage = "Age band",
-             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7], turbo_colours[11], turbo_colours[14], turbo_colours[17]),
+             palette = c(turbo_colours[2], turbo_colours[5], turbo_colours[7], 
+                         turbo_colours[11], turbo_colours[14], turbo_colours[17]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by age band for age band, commune and ethnicity",
+             title = "Patients by age band, 3 features",
              ggtheme = theme_minimal()) 
 mca_aut_commune_plot <- fviz_mca_ind(res_mca_patients_aut, 
              label = "none",
              habillage = "Commune",
              #palette = turbo_colours,
-             palette = c(turbo_colours[2], turbo_colours[3], turbo_colours[5], turbo_colours[7], turbo_colours[9], 
-                         turbo_colours[11], turbo_colours[12], turbo_colours[14], turbo_colours[15], turbo_colours[17], turbo_colours[18]),
+             palette = c(turbo_colours[2], turbo_colours[3], turbo_colours[5],
+                         turbo_colours[7], turbo_colours[9], turbo_colours[11],
+                         turbo_colours[12], turbo_colours[14], turbo_colours[15],
+                         turbo_colours[17], turbo_colours[18]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by commune of residence for age band, commune and ethnicity",
+             title = "Patients by commune of residence, 3 features",
              ggtheme = theme_minimal())
 mca_aut_ethnic_plot <- fviz_mca_ind(res_mca_patients_aut, 
              label = "none",
              habillage = "Ethnicity",
-             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], turbo_colours[14]),
+             palette = c(turbo_colours[3], turbo_colours[7], turbo_colours[11], 
+                         turbo_colours[14]),
              addEllipses = TRUE, ellipse.type = "confidence",
-             title = "Patients by ethnicity, with imputation for age band, commune and ethnicity",
+             title = "Patients by ethnicity, 3 features",
              ggtheme = theme_minimal())
 ```
 
@@ -2378,7 +2491,7 @@ kbl(chile_bayes_grouped,
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-Table \@ref(tab:schoolChisq) shows that students living in SSAS are significantly different to students living in the other health services with regard to age band, SES, ethnicity, rurality and whether they access SEED at all, but do not differ by sex. 
+Table \@ref(tab:schoolChisq) shows that students living in SSAS were significantly different to students living in the other health services with regard to age band, SES, ethnicity, rurality and whether they access SEED at all, but do not differ by sex. 
 
 ```{r ssasSchoolTable}
 school_sass_aut.table <- school_ssas_aut %>%
@@ -2429,7 +2542,7 @@ kbl(school_sass_aut.table,
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-In the school records, `r format(school_ssas %>% nrow(), big.mark = ",", trim = TRUE)` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_ssas) * 100, 2)`%) have autism. Among the students with autism, shown in Table  \@ref(tab:ssasSchoolTable), there are many more males than females, Temuco is the most common commune of residence and most students have a proxy SES of 1. 
+In the school records, `r format(school_ssas %>% nrow(), big.mark = ",", trim = TRUE)` students live in SSAS health service catchment, of which `r nrow(school)-1` (`r round((nrow(school)-1) / nrow(school_ssas) * 100, 2)`%) have autism. Among the students with autism, shown in Table  \@ref(tab:ssasSchoolTable), there were many more males than females, Temuco is the most common commune of residence and most students have a proxy SES of 1. 
 
 ```{r patients}
 patients_age <- clinical %>%
@@ -2528,7 +2641,7 @@ kbl(ssas_patients.table,
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-Aggregating the combined clinical data to patient-level data for linkage resulted in the patient dataset with `r format(nrow(patients), big.mark = ",", trim = TRUE)` records for `r format(length(unique(patients$id)), big.mark = ",", trim = TRUE)` unique patients as `r patients_distinct %>% filter(commune_count == 2) %>% nrow()` patients lived in 2 communes and `r patients_distinct %>% filter(commune_count == 3) %>% nrow()` lived in 3 during the period covered by the data see Figure \@ref(fig:sampleSize). Table \@ref(tab:ssasPatientsTable) shows a similar pattern of category frequencies in the patient data as in the SSAS school data; males are more prevalent, Temuco is the most common commune of residence, however most patients have a proxy SES of 2 rather than 1.
+Aggregating the combined clinical data to patient-level data for linkage resulted in the patient dataset with `r format(nrow(patients), big.mark = ",", trim = TRUE)` records for `r format(length(unique(patients$id)), big.mark = ",", trim = TRUE)` unique patients as `r patients_distinct %>% filter(commune_count == 2) %>% nrow()` patients lived in 2 communes and `r patients_distinct %>% filter(commune_count == 3) %>% nrow()` lived in 3 during the period covered by the data see Figure \@ref(fig:sampleSize). Table \@ref(tab:ssasPatientsTable) shows a similar pattern of category frequencies in the patient data as in the SSAS school data; males were more prevalent, Temuco is the most common commune of residence, however most patients have a proxy SES of 2 rather than 1.
 
 ### Manual record linkage
 
@@ -2912,7 +3025,7 @@ patients_match.ses_status <- rbind(patients_match_yes.ses_status,
   arrange(ses_status.patient, matched)
 ```
 
-Analysis of differences between matched and unmatched records in the SSAS school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no significant difference in frequency of sexes between matched (`r round(school_match.sex$freq[2] * 100, 2)`% female) and unmatched SSAS school records (`r round(school_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovSchoolSex). They found a strongly significant difference in the frequency of sexes between matched (`r round(patients_match.sex$freq[2] * 100, 2)`% female) and unmatched patient records (`r round(patients_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the male to female ratios differing across the datasets: the SSAS school data of students with autsim is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow() / school_matched_small %>% nrow() * 100, 2))`% females. Kolmogovo-Smirnov permutation testing found that for the SSAS school data, matched (`r round(school_match.student_commune_name$freq[31] * 100, 2)`% resident in Temuco) and unmatched records (`r round(school_match.student_commune_name$freq[30] * 100, 2)`% resident in Temuco) differed significantly by commune, see Figure \@ref(fig:kolmogorovSchoolCommune), and that there was no significant difference between matched (`r round(patients_match.student_commune_name$freq[33] * 100, 2)`% resident in Temuco) and unmatched records (`r round(patients_match.student_commune_name$freq[32] * 100, 2)`% resident in Temuco) by commune for the patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. For the SSAS school data by proxy SES, there was a strongly significant difference between matched (`r round(school_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[4] * 100, 2)`% status of 2, 0.00% status of 3 and `r round(school_match.ses_status$freq[7] * 100, 2)`% with unknown status) and unmatched (`r round(school_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[3] * 100, 2)`% status of 2, `r round(school_match.ses_status$freq[5] * 100, 2)`% status of 3 and `r sprintf("%.2f", round(school_match.ses_status$freq[6] * 100, 2))`% with unknown status) records, see Figure \@ref(fig:kolmogorovSchoolSes). For the patient data there was a somewhat significant difference between matched (`r round(patients_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[4] * 100, 2)`% status of 2, and `r round(patients_match.ses_status$freq[6] * 100, 2)`% status of 3) and unmatched (`r round(patients_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[3] * 100, 2)`% status of 2 and `r round(patients_match.ses_status$freq[5] * 100, 2)`% status of 3) records, see Figure \@ref(fig:kolmogorovPatientSes). Again this likely reflects different frequencies of the SES values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
+Analysis of differences between matched and unmatched records in the SSAS school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no significant difference in frequency of sexes between matched (`r round(school_match.sex$freq[2] * 100, 2)`% female) and unmatched SSAS school records (`r round(school_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovSchoolSex). They found a strongly significant difference in the frequency of sexes between matched (`r round(patients_match.sex$freq[2] * 100, 2)`% female) and unmatched patient records (`r round(patients_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the male to female ratios differing across the datasets: the SSAS school data of students with autsim is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches were `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow() / school_matched_small %>% nrow() * 100, 2))`% females. Kolmogovo-Smirnov permutation testing found that for the SSAS school data, matched (`r round(school_match.student_commune_name$freq[31] * 100, 2)`% resident in Temuco) and unmatched records (`r round(school_match.student_commune_name$freq[30] * 100, 2)`% resident in Temuco) differed significantly by commune, see Figure \@ref(fig:kolmogorovSchoolCommune), and that there was no significant difference between matched (`r round(patients_match.student_commune_name$freq[33] * 100, 2)`% resident in Temuco) and unmatched records (`r round(patients_match.student_commune_name$freq[32] * 100, 2)`% resident in Temuco) by commune for the patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. For the SSAS school data by proxy SES, there was a strongly significant difference between matched (`r round(school_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[4] * 100, 2)`% status of 2, 0.00% status of 3 and `r round(school_match.ses_status$freq[7] * 100, 2)`% with unknown status) and unmatched (`r round(school_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[3] * 100, 2)`% status of 2, `r round(school_match.ses_status$freq[5] * 100, 2)`% status of 3 and `r sprintf("%.2f", round(school_match.ses_status$freq[6] * 100, 2))`% with unknown status) records, see Figure \@ref(fig:kolmogorovSchoolSes). For the patient data there was a somewhat significant difference between matched (`r round(patients_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[4] * 100, 2)`% status of 2, and `r round(patients_match.ses_status$freq[6] * 100, 2)`% status of 3) and unmatched (`r round(patients_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[3] * 100, 2)`% status of 2 and `r round(patients_match.ses_status$freq[5] * 100, 2)`% status of 3) records, see Figure \@ref(fig:kolmogorovPatientSes). Again this likely reflects different frequencies of the SES values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
 
 
 ## Updated autism prevalence estimates and delta
@@ -3269,7 +3382,7 @@ kbl(aut_newprev_health_adj.table,
   add_header_above(c(" " = 1, "Adjusted prevalence" = 2))
 ```
 
-The adjusted prevalence delta for SSAS was `r round(prev_delta * 100, 2)`% (`r round((prev_delta - 0.5*prev_delta_ci_width) * 100, 2)`, `r round((prev_delta + 0.5*prev_delta_ci_width) * 100, 2)`%) and represents the unmet need of children with autism in SSAS that did not access SEED for it. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted updated prevalence from the data linkage for SSAS onto the other health services. The patterns of prevalence across health services are retained and Ñuble has the highest adjusted updated prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%). Adding the adjusted prevalence delta to the national adjusted autism prevalence found from the school data alone gave national adjusted updated autism prevalence of `r round((aut_prev_adj$adjusted_rate + prev_delta) * 100, 2)`%. This in tern gave a posited `r format(round((aut_prev_adj$adjusted_rate + prev_delta) * nrow(chile_bayes), 0), big.mark = ",", trim = TRUE)` children aged 6-18 with autism in Chile and corresponds to an estimated unmet need of `r format(round((prev_delta) * nrow(chile_bayes), 0) , big.mark = ",", trim = TRUE)` children that did not access SEED for autism (both age- and sex-adjusted).
+The adjusted prevalence delta for SSAS was `r round(prev_delta * 100, 2)`% (`r round((prev_delta - 0.5*prev_delta_ci_width) * 100, 2)`, `r round((prev_delta + 0.5*prev_delta_ci_width) * 100, 2)`%) and represents the unmet need of children with autism in SSAS that did not access SEED for it. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted updated prevalence from the data linkage for SSAS onto the other health services. The patterns of prevalence across health services were retained and Ñuble has the highest adjusted updated prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%). Adding the adjusted prevalence delta to the national adjusted autism prevalence found from the school data alone gave national adjusted updated autism prevalence of `r round((aut_prev_adj$adjusted_rate + prev_delta) * 100, 2)`%. This in tern gave a posited `r format(round((aut_prev_adj$adjusted_rate + prev_delta) * nrow(chile_bayes), 0), big.mark = ",", trim = TRUE)` children aged 6-18 with autism in Chile and corresponds to an estimated unmet need of `r format(round((prev_delta) * nrow(chile_bayes), 0) , big.mark = ",", trim = TRUE)` children that did not access SEED for autism (both age- and sex-adjusted).
 
 ## Bayesian prevalence projection
 
@@ -3336,7 +3449,7 @@ ggplot() +
 
 ```
 
-Bayesian prevalence projections by health service with common national autism prevalence prior is shown in Figure \@ref(fig:bayesConstantPrior). The differences in adjusted sample prevalence across health services are evident in the red bands and the posterior predictive distributions have been pulled towards the common prior. For regions like Ñuble which have adjusted sample prevalence in the school data higher than the national adjusted prevalence, these posterior densities are not plausible.
+Bayesian prevalence projections by health service with common national autism prevalence prior is shown in Figure \@ref(fig:bayesConstantPrior). The differences in adjusted sample prevalence across health services were evident in the red bands and the posterior predictive distributions have been pulled towards the common prior. For regions like Ñuble which have adjusted sample prevalence in the school data higher than the national adjusted prevalence, these posterior densities were not plausible.
 
 ```{r bayesLowPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted autism prevalence from school data. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 # Now have health service specific priors so need to provide them as vectors and index each as needed
@@ -3423,7 +3536,7 @@ ggplot() +
 
 ```
 
-Figure \@ref(fig:bayesLowPrior) shows Bayesian prevalence projections by health service with health service specific priors. As expected, the posterior 95% credible intervals are coincident with the adjusted sample prevalence 95% confidence intervals. The posterior prevalence peaks can be considered lower bounds for the true autism prevalence in each health service.
+Figure \@ref(fig:bayesLowPrior) shows Bayesian prevalence projections by health service with health service specific priors. As expected, the posterior 95% credible intervals were coincident with the adjusted sample prevalence 95% confidence intervals. The posterior prevalence peaks can be considered lower bounds for the true autism prevalence in each health service.
 
 ```{r bayesHighPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Beta conjugate prior of health service specific age- and sex-adjusted updated autism prevalence from data linkage. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 # Now have health service specific priors so need to provide them as vectors and index each as needed
@@ -3507,7 +3620,7 @@ ggplot() +
 
 ```
 
-With projected prevalence priors, the Bayesian prevalence projections shown in Figure \@ref(fig:bayesHighPrior) are pulled upward toward their priors by approximately delta. For regions with high sample prevalence such as Ñuble, this addition of delta results in a posterior prevalence projects up to 1.5 percentage points higher than the national adjusted prevalence for the school data only which may not be plausible.
+With projected prevalence priors, the Bayesian prevalence projections shown in Figure \@ref(fig:bayesHighPrior) were pulled upward toward their priors by approximately delta. For regions with high sample prevalence such as Ñuble, this addition of delta results in a posterior prevalence projects up to 1.5 percentage points higher than the national adjusted prevalence for the school data only which may not be plausible.
 
 ```{r bayesUniformPrior, fig.cap = "Posterior predictive distributions for autism prevalence using adjusted case counts from the school data with a random effect on student's health service. Uniform prior bounded by health service specific age- and sex-adjusted autism prevalence from school data, and health service specific age- and sex-adjusted updated autism prevalence from data linkage. Red dashed lines show the adjusted sample prevalence 95% gamma confidence intervals and blue dotted lines show the posterior 95% credible interval.", fig.height=8, fig.width=8.5}
 
@@ -3598,7 +3711,7 @@ ggplot() +
 
 ```
 
-In Figure \@ref(fig:bayesUniformPrior), the posterior distributions are reflective of their uniform priors with posterior credible intervals slightly within the prior bounds (Table \@ref(tab:newPrevAraucS)). These predictive densities show a considerable departure from the adjusted sample prevalence from the school data and provide a window within which the true prevalence of recorded autism in each health service would plausibly fall.
+In Figure \@ref(fig:bayesUniformPrior), the posterior distributions were reflective of their uniform priors with posterior credible intervals slightly within the prior bounds (Table \@ref(tab:newPrevAraucS)). These predictive densities show a considerable departure from the adjusted sample prevalence from the school data and provide a window within which the true prevalence of recorded autism in each health service would plausibly fall.
 
 #	Discussion
 
