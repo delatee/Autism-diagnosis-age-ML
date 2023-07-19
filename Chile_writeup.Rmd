@@ -53,17 +53,14 @@ knitr::opts_knit$set(root.dir = "C:/Users/delat/OneDrive/MPhil Population Health
 
 
 ```{r libraries}
-
-#library(nleqslv) # Only needed for robince bayesian prevalence
 library(janitor)
 library(gridExtra)
 library(readxl)
 library(writexl)
 library(png)
 library(viridis)
-#library(wesanderson)
 library(rgbif)
-library(chilemapas) # For commune maps
+library(chilemapas)
 library(leaflet)
 library(plotly)
 library(knitr)
@@ -75,8 +72,6 @@ library(psych)
 library(Hmisc)
 library(poolr)
 library(epitools)
-#library(corrplot)
-#library(caret)
 library(mltools)
 library(ggrepel)
 library(rjags)
@@ -87,28 +82,21 @@ library(bayesplot)
 library(reclin2)
 library(lubridate)
 library(RecordLinkage)
-library(dgof) # for statistical testing
-library(fdm2id) # for predict that works for kmeans
-library(ppclust) # for cmeans
-library(factoextra) # for get_cluster_?
-library(FactoMineR) # for MCA
+library(dgof)
+library(fdm2id)
+library(ppclust)
+library(factoextra)
+library(FactoMineR)
 library(tidyverse)
-
 ```
 
 
 ```{r importGeographicData}
-
-# Import region and commune boundaries
-# https://data.humdata.org/dataset/cod-ab-chl
-chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp", quiet = TRUE) #%>%
-  #st_transform(crs = 32629)
+# Import region and commune boundaries, https://data.humdata.org/dataset/cod-ab-chl
+chile.adm1 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm1_bcn_20211008.shp", quiet = TRUE)
 chile.adm3 <- st_read("04_Data/CHL_adm_humdata/chl_admbnda_adm3_bcn_20211008.shp", quiet = TRUE) %>%
   mutate(commune_code = str_sub(ADM3_PCODE, start = 3, end = -1),
          commune_name = ADM3_ES)
-#chile.adm3_old <- st_read("04_Data/CHL_adm/CHL_adm3.shp", quiet = TRUE)
-
-
 
 # Get communes with health services
 chile_communes_raw <- read_excel("04_Data/commune_by_health_service.xlsx") %>%
@@ -127,7 +115,6 @@ rename("health_service_name" = "servicio_de_salud") %>%
 health_service_lookup <- chile_communes %>%
   group_by(health_service_name) %>%
   summarise() %>% 
-  #rename(health_service_name_long = health_service_name) %>%
   mutate(health_service_name_shortish = ifelse(grepl(" Del ", health_service_name), 
                                       str_sub(health_service_name, start = 23, end = -1), 
                                       str_sub(health_service_name, start = 19, end = -1)),
@@ -172,7 +159,8 @@ region_service_commune_lookup <- chile.adm3 %>%
          region_code = str_sub(ADM1_PCODE, start = 3, end = -1),
          commune_name_upper = toupper(commune_name)) %>%
   rename(region_name = ADM1_ES) %>%
-  filter(!is.na(ADM3_PCODE)) %>% # Get rid of the communes that didn't match properly with health service lookup and were corrected above
+  filter(!is.na(ADM3_PCODE)) %>% 
+    # Get rid of the communes that didn't match properly with health service lookup and were corrected above
   merge(region_abr_lookup, by = "ADM1_PCODE")
   
 region_service_commune_lookup <- merge(region_service_commune_lookup, 
@@ -181,14 +169,18 @@ region_service_commune_lookup <- merge(region_service_commune_lookup,
   rename(region_name_long = region_name,
          health_service_name_long = health_service_name,
          health_service_name = health_service_name_short) %>%
-  mutate(region_name = ifelse(region_name_long == "Región Metropolitana de Santiago", "Metropolitana de Santiago",
+  mutate(region_name = ifelse(region_name_long == "Región Metropolitana de Santiago", 
+                              "Metropolitana de Santiago",
                        ifelse(grepl("Región de ", region_name_long), 
-                              substr(region_name_long, start = 11, stop = nchar(region_name_long)), 
+                              substr(region_name_long, start = 11, 
+                                     stop = nchar(region_name_long)), 
                        ifelse(grepl("Región del ", region_name_long), 
-                              substr(region_name_long, start = 12, stop = nchar(region_name_long)), NA)))) %>%
+                              substr(region_name_long, start = 12, 
+                                     stop = nchar(region_name_long)), NA)))) %>%
   select(region_name_long, region_name, region_name_abr, region_code, ADM1_PCODE,
          commune_name, commune_name_upper, commune_code, 
-         health_service_name_long, health_service_name_shortish, health_service_name, health_service_code,
+         health_service_name_long, health_service_name_shortish, 
+         health_service_name, health_service_code,
          geometry)
 
 # Aggregate to region level (no )
@@ -201,7 +193,8 @@ region_lookup <- region_service_commune_lookup %>%
 region_service_lookup <- region_service_commune_lookup %>%
   as.tibble() %>%
   select(-geometry) %>%
-  group_by(region_code, region_name, health_service_code, health_service_name_shortish, health_service_name) %>%
+  group_by(region_code, region_name, health_service_code, 
+           health_service_name_shortish, health_service_name) %>%
   summarise()
 
 # Extract communes for the Araucania Sur and Norte health services
@@ -228,7 +221,8 @@ chile_stdpop <- chile_stdpop_raw %>%
 
 ```{r importChileDemogData}
 # https://www.ine.gob.cl/estadisticas/sociales/demografia-y-vitales/proyecciones-de-poblacion
-chile_regionpop_raw <- read_excel("04_Data/ine_estimaciones-y-proyecciones-2002-2035_base-2017_region_area_tabulados.xlsx", sheet = "Region summary 2021") %>%
+chile_regionpop_raw <- read_excel("04_Data/ine_estimaciones-y-proyecciones-2002-2035_base-2017_region_area_tabulados.xlsx",
+                                  sheet = "Region summary 2021") %>%
   clean_names()
 
 chile_regionpop <- chile_regionpop_raw %>%
@@ -236,12 +230,13 @@ chile_regionpop <- chile_regionpop_raw %>%
                          ifelse(region == "Biobío", "Bío-Bío",
                          ifelse(region == "Magallanes", "Magallanes y Antártica Chilena",
                          ifelse(region == "Metropolitana", "Metropolitana de Santiago",
-                         ifelse(region == "OHiggins", "Libertador Bernardo O'Higgins", region)))))) %>%
+                         ifelse(region == "OHiggins", "Libertador Bernardo O'Higgins",
+                                region)))))) %>%
   select(-region)
 
 # https://www.ine.gob.cl/estadisticas/sociales/ingresos-y-gastos/encuesta-suplementaria-de-ingresos
-# Income is from Supplementary Income Survey (ESI) (2021), data is from Instituto Nacional de Estadística (INE).
-chile_regionincome_raw <- read_excel("04_Data/ingreso-medio-mensual-por-region-2010---2021.xlsx", skip = 2) %>%
+chile_regionincome_raw <- read_excel("04_Data/ingreso-medio-mensual-por-region-2010---2021.xlsx",
+                                     skip = 2) %>%
   clean_names()
 
 chile_regionincome <- chile_regionincome_raw %>%
@@ -256,7 +251,8 @@ chile_regionincome <- chile_regionincome_raw %>%
                          ifelse(region_short == "Biobío", "Bío-Bío",
                          ifelse(region_short == "Magallanes", "Magallanes y Antártica Chilena",
                          ifelse(region_short == "Metropolitana", "Metropolitana de Santiago",
-                         ifelse(region_short == "O’Higgins", "Libertador Bernardo O'Higgins", region_short)))))) %>%
+                         ifelse(region_short == "O’Higgins", "Libertador Bernardo O'Higgins",
+                                region_short)))))) %>%
   select(region_name, ingreso_medio_nominal)
 
 chile_regionrural_raw <- read_excel("04_Data/1_2_poblacion.xls", sheet = "Sheet1") %>%
@@ -266,11 +262,9 @@ chile_regionrural <- chile_regionrural_raw %>%
   mutate(pop = urban + rural,
          urban_perc = urban / pop * 100,
          rural_perc = rural / pop * 100)
-
 ```
 
 ```{r importSchoolData}
-
 chile_merged_raw <- read.csv("04_Data/Data_Chile_Merge.csv") %>% clean_names()
 
 chile_merged <- chile_merged_raw %>%
@@ -317,9 +311,7 @@ chile_merged <- chile_merged_raw %>%
 
 ```{r restructureData}
 chile_bayes <- chile_merged %>%
-  #select(-student_commune_name) %>%
   filter(age_june30 >= 6 & age_june30 <= 18,
-         #special_needs_status == 1,
          sex != 0) %>%
   mutate(autism = ifelse(special_needs_code == 105, 1, 0),
          adhd = ifelse(special_needs_code == 203, 1, 0),
@@ -327,11 +319,9 @@ chile_bayes <- chile_merged %>%
                                ifelse(age_june30 <= 11, "9-11", 
                                ifelse(age_june30 <= 14, "12-14", "15-18"))),
                                levels = c("6-8", "9-11", "12-14", "15-18")),
-         # ethnic_2_group = ifelse(ethnic_3_group == "Other ethnic group", "Other Indigenous group",
-         #                  ifelse(ethnic_3_group == "Aymara", "Other Indigenous group",
-         #                  ifelse(ethnic_3_group == "No Native Group", "No Indigenous group", ethnic_3_group))),
          ethnic_2_group = factor(ifelse(ethnicity == "Mapuche", "Mapuche", 
-                          ifelse(ethnicity == "No Native Group" | ethnicity == "No registry", "No Indigenous group",
+                          ifelse(ethnicity == "No Native Group" | ethnicity == "No registry",
+                                 "No Indigenous group",
                                  "Other Indigenous group")), 
                           levels = c("Mapuche", "Other Indigenous group", "No Indigenous group")),
          school_rurality = ifelse(school_rurality_code == 0, "Urban", "Rural"),
@@ -344,9 +334,11 @@ chile_bayes <- chile_merged %>%
                              ifelse(school_fee == "MAS DE $100.000", "$100,001+", 
                              ifelse(school_fee == "SIN INFORMACION", "No information", NA)))))))),
                              levels = c("Free", "$1,000-$10,000", "$10,001-$25,000",
-                                        "$25,001-$50,000", "$50,001-$100,000", "$100,001+", "No information")),
-         commune_code_temp = ifelse(student_commune_code == "0", school_commune_code, student_commune_code),
-                             # If there is no commune code for the student, use their school's code instead
+                                        "$25,001-$50,000", "$50,001-$100,000", 
+                                        "$100,001+", "No information")),
+         commune_code_temp = ifelse(student_commune_code == "0", school_commune_code, 
+                                    student_commune_code),
+                             # If there is no commune code for the student, use their school's code
          commune_code_old = ifelse(nchar(as.character(commune_code_temp)) == 4,
                                    paste0("0", as.character(commune_code_temp)),
                                    as.character(commune_code_temp)),
@@ -371,19 +363,13 @@ chile_bayes <- chile_merged %>%
                         ifelse(commune_code_old == "08418", "16108",
                         ifelse(commune_code_old == "08419", "16305",
                         ifelse(commune_code_old == "08420", "16207",
-                        ifelse(commune_code_old == "08421", "16109", commune_code_old)))))))))))))))))))))) %>% 
-         #                                            "No information")),
-         # school_fee_group = ifelse(school_fee == "Free", "Free", 
-         #                    ifelse(school_fee %in% c("$1,000-$10,000", "$10,001-$25,000",
-         #                                             "$25,001-$50,000", "$50,001-$100,000"), "Low",
-         #                    ifelse(school_fee == "$100,001+", "Medium", 
-         #                    ifelse(school_fee == "No information", "No information", NA)))),
-         # school_fee_group = factor(school_fee_group, levels = c("Free", "Low", "Medium",
-         #                                                        "No information"))) %>% 
-  left_join(region_service_commune_lookup %>% as.tibble() %>% select(-geometry), by = "commune_code") %>%
+                        ifelse(commune_code_old == "08421", "16109", 
+                               commune_code_old)))))))))))))))))))))) %>% 
+  left_join(region_service_commune_lookup %>% 
+              as.tibble() %>% 
+              select(-geometry), by = "commune_code") %>%
   mutate(ssas = ifelse(commune_code %in% araucsur_communes$commune_code, 1, 0)) %>%
-  select(#school_region_name_abr,
-    region_code,
+  select(region_code,
     region_name,
     region_name_abr,
     commune_code, # student, see chile_merged
@@ -401,8 +387,6 @@ chile_bayes <- chile_merged %>%
     pago_matricula,
     pago_mensual,
     school_fee,
-    #school_fee_group,
-    #school_fee_temp,
     ethnicity,
     mapuche,
     nationality,
@@ -426,15 +410,16 @@ chile_bayes_adhd_ethnic <- chile_bayes_adhd %>%
 ```
 
 ```{r importClinicalData}
-clinical_large_raw <- read_excel("04_Data/dataset_ssas_2015_2021.xlsx") %>% clean_names
-#describe(clinical_raw)
+clinical_large_raw <- read_excel("04_Data/dataset_ssas_2015_2021.xlsx") %>%
+  clean_names
 
 clinical_large <- clinical_large_raw %>%
   select(c(-procedence, -ethnicity, -education_level, -disability, -foster_care)) %>%
   # Fix the date columns
   mutate(dob_eng = ifelse(str_detect(date_of_birth, "/"), 1,
                    ifelse(str_detect(date_of_birth, "-"), 0, NA)),
-         apt_eng = ifelse(str_detect(date_appointment, "/"), 1, ifelse(str_detect(date_appointment, "-"), 0, NA)),
+         apt_eng = ifelse(str_detect(date_appointment, "/"), 1, 
+                   ifelse(str_detect(date_appointment, "-"), 0, NA)),
          dob_day = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "^\\d+")), 
                    ifelse(dob_eng == 0, as.integer(str_extract(date_of_birth, "^\\d+")), NA)),
          dob_month = ifelse(dob_eng == 1, as.integer(str_extract(date_of_birth, "(?<=/)\\d+(?=/)")), 
@@ -466,13 +451,17 @@ clinical_large <- clinical_large_raw %>%
                         ifelse(comuna == "PUCON", "PUCÓN",
                         ifelse(comuna == "TOLTEN", "TOLTÉN",
                         ifelse(comuna == "VILCUN", "VILCÚN", comuna)))))),
-         #commune_name_upper = comuna,
          ses_status = ifelse(socio_economic_level == "FONASA - A", 1, 
                       ifelse(socio_economic_level == "FONASA - B", 2,
                       ifelse(socio_economic_level == "FONASA - C", 2, 
                       ifelse(socio_economic_level == "FONASA - D", 2,
                       ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA)))))),
+                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", 
+                                                         "RIO BLANCO", 
+                                                         "CARABINEROS (DIPRECA)", 
+                                                         "BANMEDICA S.A.", 
+                                                         "PARTICULAR (SIN PREVISION)",
+                                                         "VIDA TRES"), 3, NA)))))),
          autism = 1,
          intdisab = 0,
          aut_rank = 1
@@ -488,7 +477,8 @@ clinical_large <- clinical_large_raw %>%
 
 aut_codes <- unique(clinical_large_raw$codigo)
 
-clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>% clean_names()
+clinical_small_raw <- read_excel("04_Data/Dataset_Vill_2014_2021.xlsx", col_names = TRUE) %>%
+  clean_names()
 
 clinical_small <- clinical_small_raw %>%
   rename("dob" = "fecha_nacimiento",
@@ -517,15 +507,21 @@ clinical_small <- clinical_small_raw %>%
                       ifelse(socio_economic_level == "FONASA - C", 2, 
                       ifelse(socio_economic_level == "FONASA - D", 2,
                       ifelse(socio_economic_level == "Private Health Insurance", 3, 
-                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", "RIO BLANCO", "CARABINEROS (DIPRECA)", "BANMEDICA S.A.", "PARTICULAR (SIN PREVISION)", "VIDA TRES"), 3, NA))))))
-         ) %>%
+                      ifelse(socio_economic_level %in% c("COLMENA GOLDEN CROSS", 
+                                                         "RIO BLANCO",
+                                                         "CARABINEROS (DIPRECA)",
+                                                         "BANMEDICA S.A.",
+                                                         "PARTICULAR (SIN PREVISION)",
+                                                         "VIDA TRES"), 3, NA))))))) %>%
   left_join(region_service_commune_lookup, by = "commune_name_upper") %>%
   filter(autism == 1) %>%
-  select(id, gender, commune_code, commune_name, commune_name_upper, health_service_name, region_name, socio_economic_level, ses_status, dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, cod_dg_1, cod_dg_2, cod_dg_3, diagnosis, autism, aut_rank) 
-# Throws a warning because there are 2 records for Tocopila which is in two regions. Will keep both because we have no way of knowing which is correct.
-# Doesn't anymore because I changed the lookup to have only 1 Tocopilla row
+  select(id, gender, commune_code, commune_name, commune_name_upper, 
+         health_service_name, region_name, socio_economic_level, ses_status, 
+         dob, age_june30, apt_date, hospital, medical_specialty, type_appointment, 
+         cod_dg_1, cod_dg_2, cod_dg_3, diagnosis, autism, aut_rank) 
 
-intdisab_codes <- unique(c(clinical_small_raw$cod_dg_1, clinical_small_raw$cod_dg_2, clinical_small_raw$cod_dg_3)) %>%
+intdisab_codes <- unique(c(clinical_small_raw$cod_dg_1, clinical_small_raw$cod_dg_2,
+                           clinical_small_raw$cod_dg_3)) %>%
   str_subset("F7") %>%
   sort() 
 
@@ -538,17 +534,16 @@ clinical_small <- clinical_small %>%
 
 clinical <- rbind(clinical_large, clinical_small)
 
-clinical_communes <- clinical %>% group_by(commune_code) %>% summarise() %>% arrange() %>%
-  mutate(commune_in_school_data = ifelse(commune_code %in% unique(chile_merged$commune_code), 1, 0)) # Needs to all be 1's
-
-#clinical_out <- clinical %>% filter(commune_code %in% araucsur_communes$commune_code)
-#write_csv(clinical_out, file = "04_Data/Outputs/clinical.csv")
-
+clinical_communes <- clinical %>% 
+  group_by(commune_code) %>% 
+  summarise() %>% 
+  arrange() %>%
+  mutate(commune_in_school_data = ifelse(commune_code %in% unique(chile_merged$commune_code)
+                                         , 1, 0)) 
 ```
 
 
 ```{r functionsBayes}
-
 get_grouped_prev_plot <- function(x, grouping_vars, disease) {
   # Calculates sample prevalence and its confidence intervals for supplied feature grouping
   # x = chile_bayes_aut or chile_bayes_adhd, needs columns called autism or adhd, and count
@@ -560,11 +555,18 @@ get_grouped_prev_plot <- function(x, grouping_vars, disease) {
     summarise(count = n()) %>%
     pivot_wider(names_from = disease, values_from = count) %>%
     rename("n_nodisease" = "0", "n_disease" = "1") %>% #, "age" = "age_june30") %>%
-    mutate(n_disease = ifelse(is.na(n_disease), 0, n_disease), # If there are no cases of autism in the group, input 0
-           sample_pop_size = n_nodisease + n_disease, # Total sample population is autism cases + not cases
-           sample_prevalence = n_disease / sample_pop_size, # Prevalence of autism in the group
-           ci_lower = sample_prevalence - (1.96 * sqrt(sample_prevalence * (1 - sample_prevalence) / sample_pop_size)),
-           ci_upper = sample_prevalence + (1.96 * sqrt(sample_prevalence * (1 - sample_prevalence) / sample_pop_size)),
+    mutate(n_disease = ifelse(is.na(n_disease), 0, n_disease), 
+            # If there are no cases of autism in the group, input 0
+           sample_pop_size = n_nodisease + n_disease, 
+            # Total sample population is autism cases + not cases
+           sample_prevalence = n_disease / sample_pop_size, 
+            # Prevalence of autism in the group
+           ci_lower = sample_prevalence - (1.96 * sqrt(sample_prevalence * 
+                                                         (1 - sample_prevalence) / 
+                                                         sample_pop_size)),
+           ci_upper = sample_prevalence + (1.96 * sqrt(sample_prevalence * 
+                                                         (1 - sample_prevalence) /
+                                                         sample_pop_size)),
            ci_lower = ifelse(ci_lower < 0, 0, ci_lower),
            prev_ci = paste0(sprintf("%.2f", round(sample_prevalence * 100, 2)),
                             " (",
@@ -577,7 +579,8 @@ get_grouped_prev_plot <- function(x, grouping_vars, disease) {
 }
 
 get_grouped_prev <- function(x, stdpop, grouping_vars, disease) {
-  # Calculates sample prevalence, age- and sex-standardised prevalence and group weighting for supplied feature grouping
+  # Calculates sample prevalence, age- and sex-standardised prevalence and
+  # group weighting for supplied feature grouping
   # x = chile_bayes_aut, needs columns called autism, count
   # stdpop = standard population with age and sex counts
   # grouping_vars = variables in x to group by
@@ -590,12 +593,17 @@ get_grouped_prev <- function(x, stdpop, grouping_vars, disease) {
     summarise(count = n()) %>%
     pivot_wider(names_from = disease, values_from = count) %>%
     rename("n_nodisease" = "0", "n_disease" = "1", "age" = "age_june30") %>%
-    mutate(n_disease = ifelse(is.na(n_disease), 0, n_disease), # If there are no cases of autism in the group, input 0
-           sample_pop_size = n_nodisease + n_disease, # Total sample population is autism cases + not cases
-           sample_prevalence = n_disease / sample_pop_size) %>% # Prevalence of autism in the group
+    mutate(n_disease = ifelse(is.na(n_disease), 0, n_disease), 
+            # If there are no cases of autism in the group, input 0
+           sample_pop_size = n_nodisease + n_disease, 
+            # Total sample population is autism cases + not cases
+           sample_prevalence = n_disease / sample_pop_size) %>% 
+            # Prevalence of autism in the group
     left_join(stdpop, by = c("age", "sex")) %>%
-    mutate(disease_prev_std = n_disease / sample_pop_size * pop_prop, # Prevalence of autism in the group, standardised to standard population
-           w = std_pop / (sample_pop_size * n_stdpop), # Weight of the group using standard population
+    mutate(disease_prev_std = n_disease / sample_pop_size * pop_prop, 
+            # Prevalence of autism in the group, standardised to standard population
+           w = std_pop / (sample_pop_size * n_stdpop), 
+            # Weight of the group using standard population
            w2 = pop_prop / sample_pop_size,
            #sum_std_pop = sum(std_pop)
            ) %>%
@@ -604,7 +612,8 @@ get_grouped_prev <- function(x, stdpop, grouping_vars, disease) {
 }
 
 get_adjusted_prev <- function(x, grouping_vars) {
-  # Turns grouped prevalences into age- and sex- adjusted prevalences with Fay and Feuer Gamma confidence intervals
+  # Turns grouped prevalences into age- and sex- adjusted prevalences with
+  # Fay and Feuer Gamma confidence intervals
   # x = output from get_grouped_prev
   x_adj <- x %>%
   group_by(across(all_of(grouping_vars))) %>%
@@ -612,15 +621,19 @@ get_adjusted_prev <- function(x, grouping_vars) {
             crude_rate = sum(n_disease) / sum(sample_pop_size),
             crude_count = sum(n_disease),
             adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
-            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
-            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), 
+              # had to fudge this to get MCMC to run bc it needs integers
             var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
-            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
-            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
-            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
-            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
-            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)),
+            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) /
+                                                         sum_sample_pop_size)),
+            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) /
+                                                         sum_sample_pop_size)),
+            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * 
+                                         qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * 
+                                         qchisq(p = 1-0.05/2, 
+                                                df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)),
             crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
             adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower),
             crude_prev_ci = paste0(sprintf("%.2f", round(crude_rate * 100, 2)),
@@ -638,7 +651,8 @@ get_adjusted_prev <- function(x, grouping_vars) {
   arrange(across(all_of(grouping_vars)))
 }
 
-do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBurn = 1000, nIter = 1000, convergence_checks = FALSE) {
+do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, 
+                               nBurn = 1000, nIter = 1000, convergence_checks = FALSE) {
   # x = output from get_adjusted_prev. Needs to have columns sum_sample_pop_size, adjusted_count
   # feat = feature being used as random effect
   # model = JAGS random effects model
@@ -655,8 +669,8 @@ do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBur
   theta_b <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / theta_sigma^2 - 1)
   
   # Initial values for model chains
-  rand_ini <- list(list(theta = rep(0.001, nFeat)), #, spec = 0.5, sens = 0.5),
-                   list(theta = rep(0.01, nFeat))) #, spec = 0.9, sens = 0.9)) 
+  rand_ini <- list(list(theta = rep(0.001, nFeat)),
+                   list(theta = rep(0.01, nFeat)))
   
   # Run JAGS model
   rand_data <- list(theta_a = theta_a, 
@@ -676,8 +690,8 @@ do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBur
   
   # Convergence checks
   if(convergence_checks) {
-    print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
-    print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) # Convergence looks fine and rhats <= 1.1
+    print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]"))) 
+    print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]"))) 
     rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
                          ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
                          ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
@@ -699,10 +713,13 @@ do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, nBur
 }
 
 
-plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigma, disease, title_text = "") {
-  # Plots posterior densities and their 95% credible intervals, and sample prevalence confidence intervals
+plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigma,
+                              disease, title_text = "") {
+  # Plots posterior densities and their 95% credible intervals, and sample
+  # prevalence confidence intervals
   # jags_post = output from do_jags_rand_model, ie posterior densities
-  # sample data = output from get_adjusted_prev, ie sample prevalences with confidence intervals
+  # sample data = output from get_adjusted_prev, ie sample prevalences with
+  # confidence intervals
   # feat = the same feature used as the random effect in do_jags_rand_model
   # theta_mu, theta_sigma = mean and sd of beta prior distribution used in do_jags_rand_model
   # disease = autism or ADHD
@@ -716,12 +733,18 @@ plot_post_density <- function(jags_post, sample_data, feat, theta_mu, theta_sigm
   
   print(ggplot() +
           geom_density(data = jags_post, aes(x = predicted_prev)) +
-          geom_vline(data = post_ci, aes(xintercept = post_lower), color = "blue", linetype = "dotted") +
-          geom_vline(data = post_ci, aes(xintercept = post_upper), color = "blue", linetype = "dotted") +
-          geom_vline(data = sample_data, aes(xintercept = adjusted_ci_lower), color = "red", linetype = "dashed") +
-          geom_vline(data = sample_data, aes(xintercept = adjusted_ci_upper), color = "red", linetype = "dashed") +
+          geom_vline(data = post_ci, aes(xintercept = post_lower), 
+                     color = "blue", linetype = "dotted") +
+          geom_vline(data = post_ci, aes(xintercept = post_upper), 
+                     color = "blue", linetype = "dotted") +
+          geom_vline(data = sample_data, aes(xintercept = adjusted_ci_lower),
+                     color = "red", linetype = "dashed") +
+          geom_vline(data = sample_data, aes(xintercept = adjusted_ci_upper),
+                     color = "red", linetype = "dashed") +
           facet_wrap(as.formula(paste0("~", feat))) +
-          labs(title = paste0(disease, " prevalence, prior mean = ", signif(theta_mu, 3), ", prior sd = ", signif(theta_sigma, 3), title_text),
+          labs(title = paste0(disease, " prevalence, prior mean = ", 
+                              signif(theta_mu, 3), ", prior sd = ", 
+                              signif(theta_sigma, 3), title_text),
                x = "Posterior predictive distribution",
                y = "Density"))
 }
@@ -779,21 +802,15 @@ get.yes.fostercare <- function(x) {
 
 
 ```{r colours}
-plasma_colours <- viridis(10, option = "C") #"#0D0887FF" "#47039FFF" "#7301A8FF" "#9C179EFF" "#BD3786FF" "#D8576BFF" "#ED7953FF" "#FA9E3BFF" "#FDC926FF" "#F0F921FF"
+plasma_colours <- viridis(10, option = "C") 
 viridis_colours <- viridis(20, option = "D") 
 rocket_colours <- viridis(20, option = "F")
-turbo_colours <- viridis(17, option = "H") #"#30123BFF" "#4662D7FF" "#36AAF9FF" "#1AE4B6FF" "#72FE5EFF" "#C7EF34FF" "#FABA39FF" "#F66B19FF" "#CB2A04FF" "#7A0403FF"
-  
+turbo_colours <- viridis(17, option = "H")
 ```
-
-
 
 # Abstract
 
-The prevalence of autism and ADHD in Chile is not well characterised and therefore the unmet need of children with these conditions that do not have school-based support interventions is not known. This investigation aims to quantify the prevalence of autism and ADHD in Chilean children and understand the characteristics of children with autism through analysis of 3 million school records and linkage to supplementary clinical records. Using frequentist age- and sex-adjustment, a lower bound on the prevalence of autism was found to be 0.48% with sex ratio xxx and a lower bound on the prevalence of ADHD to be 1.21% with sex ratio of xxx. Something on groups with lower prevalence. Multiple component analysis of categories in clinical autism diagnosis data for Servicio de Salud Araucanía Sur showed ethnicity, age and commune of residence are important in distinguishing patients with autism. Probabilistic linkage of school records and clinical autism diagnoses identified an unmet need of xxx students with autism in Servicio de Salud Araucanía Sur that were not accessing school-based supports. This equated to an updated autism prevalence estimate of xxx with sex ratio xxx. Projecting this prevalence across Chile, there is an unmet need of xxx students not accessing school support with females disproportionately affected. Bayesian prevalence projection found credible intervals of autism prevalence for each Chilean health service. 
-
-
-
+The prevalence of autism and ADHD in Chile has not been well characterised and therefore the unmet need of affected children without school-based support is unknown. This investigation aims to quantify the prevalence of autism and ADHD in Chilean children and understand the characteristics of children with autism through analysis of 3 million school records and linkage to 1,300 supplementary clinical records. Found using frequentist age- and sex-adjustment, a lower bound on the prevalence of autism is 0.46% with male to female ratio of 6.00:1 and a lower bound on the prevalence of ADHD 1.50% with male to female ratio of 1.94:1. Autism prevalence peaks in 6-8 year-olds and ADHD in 9-11 year-olds. For both autism and ADHD, prevalence is lower among Mapuche students than non-Indigenous students and is lower among students at urban schools than rural schools. Multiple component analysis of categories in clinical autism diagnosis data for Servicio de Salud Araucanía Sur showed ethnicity, age and commune of residence are important in distinguishing between patients with autism. Probabilistic linkage of school records and clinical autism diagnoses identified an unmet need of 1,132 students with autism in Servicio de Salud Araucanía Sur that were not accessing school-based supports. This equated to an updated autism prevalence of 1.22% with male to female ratio of 4.15 for Servicio de Salud Araucanía Sur. Projecting this finding across Chile, the national prevalence of autism is estimated to be 1.31%, there is an unmet need of up to 25,903 students not accessing school support with females disproportionately affected. Bayesian prevalence projection found credible intervals of autism prevalence for each Chilean health service. Collectively, these findings are a first step to creating a rich, national picture of autism and ADHD support in Chile.
 
 # Introduction
 
@@ -1241,7 +1258,7 @@ kbl(school.table,
 
 The school dataset contained records for `r format(nrow(chile_bayes), big.mark = ",", trim = TRUE)` Chilean students aged 6-18 in 2021, see Table \@ref(tab:schoolTable). Of these, `r format(chile_bayes %>% filter(sex_desc == "Female") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(sex_desc == "Female") %>% nrow() / nrow(chile_bayes) * 100, 2)`%) were female and the rest were male. Students were evenly distributed across age bands and fairly evenly distributed across communes with generally more students in the metropolitan Santiago communes. Most students received free schooling and the proportion that paid for schooling increased with monthly school fees. Most students did not belong to an Indigenous group and attended a school in an urban area. A special needs code was recorded for `r format(chile_bayes %>% filter(special_needs_status == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(special_needs_status == 1) %>% nrow() / nrow(chile_bayes) * 100, 2)`%) students, indicating they accessed SEED funding during that school year. Of these students, `r format(chile_bayes %>% filter(autism == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(autism == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for autism and `r format(chile_bayes %>% filter(adhd == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(adhd == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for ADHD.
 
-# Frequentist prevalence estimation
+## Frequentist prevalence estimation
 
 ```{r adjPrev}
 # Autism
@@ -1374,9 +1391,7 @@ adhd_prev_sex_adj <- rbind(adhd_prev_adj_m, adhd_prev_adj_f)
 
 ```
 
-Disggregated by sex, autism prevalence in the school data was `r round(aut_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$crude_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(aut_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(aut_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, with male to female ratio of `r round(aut_prev_sex_adj$crude_rate[1] / aut_prev_sex_adj$crude_rate[2], 2)`, see Figure \@ref(fig:prevAgecatSexAutPlot) and Supplementary Table \@ref(tab:prevAgecatSexAutTable). Among females, the age- and sex-adjusted autism prevalence was `r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[1] * 100, 2)`-`r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_ci_upper[1] * 100, 2))`%), thus giving an adjusted sex ratio of `r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_rate[1] / aut_prev_sex_adj$adjusted_rate[2], 2))`. 
-
-ADHD prevalence was `r round(adhd_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$crude_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(adhd_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(adhd_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, with male to female ratio of `r round(adhd_prev_sex_adj$crude_rate[1] / adhd_prev_sex_adj$crude_rate[2], 2)` see Figure \@ref(fig:prevAgecatSexAdhdPlot) and Supplementary Table \@ref(tab:prevAgecatSexAdhdTable). After adjustment, the prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[1] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[1] * 100, 2)`%) for males with adjusted sex ratio of `r round(adhd_prev_sex_adj$adjusted_rate[1] / adhd_prev_sex_adj$adjusted_rate[2], 2)`. 
+Disggregated by sex, autism prevalence in the school data was `r round(aut_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$crude_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(aut_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(aut_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(aut_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, with male to female ratio of `r round(aut_prev_sex_adj$crude_rate[1] / aut_prev_sex_adj$crude_rate[2], 2)`:1, see Figure \@ref(fig:prevAgecatSexAutPlot) and Supplementary Table \@ref(tab:prevAgecatSexAutTable). Among females, the age- and sex-adjusted autism prevalence was `r round(aut_prev_sex_adj$adjusted_rate[2] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[2] * 100, 2)`-`r round(aut_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) and among males it was `r round(aut_prev_sex_adj$adjusted_rate[1] * 100, 2)`% (`r round(aut_prev_sex_adj$adjusted_ci_lower[1] * 100, 2)`-`r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_ci_upper[1] * 100, 2))`%), thus giving an adjusted male to female ratio of `r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_rate[1] / aut_prev_sex_adj$adjusted_rate[2], 2))`:1. ADHD prevalence was `r round(adhd_prev_sex_adj$crude_rate[2] * 100, 2)`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$crude_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$crude_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$crude_rate[1] * 100, 2))`% (`r round(adhd_prev_sex_adj$crude_ci_lower[1] * 100, 2)`-`r round(adhd_prev_sex_adj$crude_ci_upper[1] * 100, 2)`%) for males, with male to female ratio of `r round(adhd_prev_sex_adj$crude_rate[1] / adhd_prev_sex_adj$crude_rate[2], 2)`:1, see Figure \@ref(fig:prevAgecatSexAdhdPlot) and Supplementary Table \@ref(tab:prevAgecatSexAdhdTable). After adjustment, the prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[2] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[2] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[2] * 100, 2)`%) for females and `r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_rate[1] * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_sex_adj$adjusted_ci_lower[1] * 100, 2))`-`r round(adhd_prev_sex_adj$adjusted_ci_upper[1] * 100, 2)`%) for males with adjusted male to female ratio of `r round(adhd_prev_sex_adj$adjusted_rate[1] / adhd_prev_sex_adj$adjusted_rate[2], 2)`:1. 
 
 Given the prevalences of autism and ADHD in this data are likely to be underestimates, the age- and sex-adjusted prevalences can be considered a lower bound on the true prevalence of autism and of ADHD in Chile. 
 
@@ -2888,7 +2903,7 @@ patients_match.ses_status <- rbind(patients_match_yes.ses_status,
   arrange(ses_status.patient, matched)
 ```
 
-Analysis of differences between matched and unmatched records in the SSAS school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no significant difference in frequency of sexes between matched (`r round(school_match.sex$freq[2] * 100, 2)`% female) and unmatched SSAS school records (`r round(school_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovSchoolSex). They found a strongly significant difference in the frequency of sexes between matched (`r round(patients_match.sex$freq[2] * 100, 2)`% female) and unmatched patient records (`r round(patients_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the sex ratios differing across the datasets: the SSAS school data of students with autsim is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow() / school_matched_small %>% nrow() * 100, 2))`% females. Kolmogovo-Smirnov permutation testing found that for the SSAS school data, matched (`r round(school_match.student_commune_name$freq[31] * 100, 2)`% resident in Temuco) and unmatched records (`r round(school_match.student_commune_name$freq[30] * 100, 2)`% resident in Temuco) differed significantly by commune, see Figure \@ref(fig:kolmogorovSchoolCommune), and that there was no significant difference between matched (`r round(patients_match.student_commune_name$freq[33] * 100, 2)`% resident in Temuco) and unmatched records (`r round(patients_match.student_commune_name$freq[32] * 100, 2)`% resident in Temuco) by commune for the patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. For the SSAS school data by proxy SES, there was a strongly significant difference between matched (`r round(school_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[4] * 100, 2)`% status of 2, 0.00% status of 3 and `r round(school_match.ses_status$freq[7] * 100, 2)`% with unknown status) and unmatched (`r round(school_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[3] * 100, 2)`% status of 2, `r round(school_match.ses_status$freq[5] * 100, 2)`% status of 3 and `r sprintf("%.2f", round(school_match.ses_status$freq[6] * 100, 2))`% with unknown status) records, see Figure \@ref(fig:kolmogorovSchoolSes). For the patient data there was a somewhat significant difference between matched (`r round(patients_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[4] * 100, 2)`% status of 2, and `r round(patients_match.ses_status$freq[6] * 100, 2)`% status of 3) and unmatched (`r round(patients_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[3] * 100, 2)`% status of 2 and `r round(patients_match.ses_status$freq[5] * 100, 2)`% status of 3) records, see Figure \@ref(fig:kolmogorovPatientSes). Again this likely reflects different frequencies of the SES values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
+Analysis of differences between matched and unmatched records in the SSAS school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no significant difference in frequency of sexes between matched (`r round(school_match.sex$freq[2] * 100, 2)`% female) and unmatched SSAS school records (`r round(school_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovSchoolSex). They found a strongly significant difference in the frequency of sexes between matched (`r round(patients_match.sex$freq[2] * 100, 2)`% female) and unmatched patient records (`r round(patients_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the male to female ratios differing across the datasets: the SSAS school data of students with autsim is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow() / school_matched_small %>% nrow() * 100, 2))`% females. Kolmogovo-Smirnov permutation testing found that for the SSAS school data, matched (`r round(school_match.student_commune_name$freq[31] * 100, 2)`% resident in Temuco) and unmatched records (`r round(school_match.student_commune_name$freq[30] * 100, 2)`% resident in Temuco) differed significantly by commune, see Figure \@ref(fig:kolmogorovSchoolCommune), and that there was no significant difference between matched (`r round(patients_match.student_commune_name$freq[33] * 100, 2)`% resident in Temuco) and unmatched records (`r round(patients_match.student_commune_name$freq[32] * 100, 2)`% resident in Temuco) by commune for the patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. For the SSAS school data by proxy SES, there was a strongly significant difference between matched (`r round(school_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[4] * 100, 2)`% status of 2, 0.00% status of 3 and `r round(school_match.ses_status$freq[7] * 100, 2)`% with unknown status) and unmatched (`r round(school_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[3] * 100, 2)`% status of 2, `r round(school_match.ses_status$freq[5] * 100, 2)`% status of 3 and `r sprintf("%.2f", round(school_match.ses_status$freq[6] * 100, 2))`% with unknown status) records, see Figure \@ref(fig:kolmogorovSchoolSes). For the patient data there was a somewhat significant difference between matched (`r round(patients_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[4] * 100, 2)`% status of 2, and `r round(patients_match.ses_status$freq[6] * 100, 2)`% status of 3) and unmatched (`r round(patients_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[3] * 100, 2)`% status of 2 and `r round(patients_match.ses_status$freq[5] * 100, 2)`% status of 3) records, see Figure \@ref(fig:kolmogorovPatientSes). Again this likely reflects different frequencies of the SES values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
 
 
 ## Updated autism prevalence estimates and delta
@@ -3606,7 +3621,7 @@ The proportions of matched and unmatched records in the SSAS school and patient 
 
 ###	Aim 3b: Accurately estimate autism prevalence and project prevalence bounds across health services using Bayesian prevalence prediction
 
-The updated estimate for the prevalence of autism in SSAS is `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% with a male to female ratio of `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)`. This sex ratio is consistent with the 4:1 ratio found by Yáñez et al (18). The is updated prevalence estimate found here is likely to be an underestimate due to not having private sector diagnoses in the clinical data and it is  somewhat smaller than Yáñez et al’s estimate of 1.96% (0.81-4.63) in Santiago communes but well within their estimate’s confidence interval (18). The sex ratio is also reasonably consistent with Roman-Urrestarazu et al.’s finding of a 4.32:1 ratio in 120,000 English school children but their prevalence estimate was higher at 1.76% (1.75%-1.77%) (23). This suggests either that the data linkage has missed some autism cases, or that autism prevalence is lower or diagnosis less available in Chile than in the UK.
+The updated estimate for the prevalence of autism in SSAS is `r sprintf("%.2f", round(aut_newprev_araucS_adj$adjusted_rate * 100, 2))`% with a male to female ratio of `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)`. This male to female ratio is consistent with the 4:1 ratio found by Yáñez et al (18). The is updated prevalence estimate found here is likely to be an underestimate due to not having private sector diagnoses in the clinical data and it is  somewhat smaller than Yáñez et al’s estimate of 1.96% (0.81-4.63) in Santiago communes but well within their estimate’s confidence interval (18). The male to female ratio is also reasonably consistent with Roman-Urrestarazu et al.’s finding of a 4.32:1 ratio in 120,000 English school children but their prevalence estimate was higher at 1.76% (1.75%-1.77%) (23). This suggests either that the data linkage has missed some autism cases, or that autism prevalence is lower or diagnosis less available in Chile than in the UK.
 
 Using the updated prevalence estimate for SSAS after linkage, the male to female ratio is `r round(aut_newprev_araucS_adj_m$crude_rate / aut_newprev_araucS_adj_f$crude_rate, 2)`. This is consistent with the 4:1 ratio found by Yáñez et al (24) and reasonably consistent with Roman-Urrestarazu et al.’s finding of a 4.32:1 ratio in England (30). This updated ratio is close to the ratio of `r round(patients %>% filter(sex_desc == "Male") %>% nrow() / patients %>% filter(sex_desc == "Female") %>% nrow(), 2)`:1 observed here in the patient data alone. It is much lower than the ratio for the whole school dataset of `r sprintf("%.2f", round(aut_prev_sex_adj$adjusted_rate[1] / aut_prev_sex_adj$adjusted_rate[2], 2))`:1 which was itself lower than the `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Male") %>% nrow() / school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow(), 2))`:1 ratio observed for the SSAS school data before linkage. Taken together, this suggests females with autism are underrepresented in the school data and particularly underrepresented in the SSAS subset of the school data, and suggests that there are barriers to females accessing SEED for autism.
 
