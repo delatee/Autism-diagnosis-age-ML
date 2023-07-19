@@ -2709,6 +2709,185 @@ patients_dup <- patients_matched_unique %>% filter(matched == 1, count > 1) %>% 
 
 Blocking on sex and date of birth, resulted in `r nrow(pairs_blocked.pairs)` blocked pairs. Probabilistic matching on sex, date of birth, commune of residence and the proxies for SES with selection of possible matches to create a bijective set of matches resulted in `r nrow(matches)` matches of unique SSAS school and patient records. This corresponds to `r round(nrow(matches) / nrow(school) * 100, 2)`% of the school records for students with autism in SSAS having a match in the SSAS patient records, `r round(nrow(matches) / nrow(patients) * 100, 2)`% of the patient records having a match in the SSAS school records and `r round(nrow(matches) / length(unique(patients$id)) * 100, 2)`% of the unique patients having a match in the SSAS school records. For each patient that had lived in more than one commune and therefore appeared more than once in the patient data, only one match to an SSAS school record was made, meaning the matching was bijective for SSAS school records and unique patients. 
 
+
+```{r kolmogorovSchool, warning = FALSE}
+school_yes <- school_matched_small %>% filter(matched == 1)
+school_no <- school_matched_small %>% filter(matched == 0)
+
+# Kolmogorov tests for our matched results
+ks.school.sex <- ks.test(na.omit(school_yes$sex.school),
+                         na.omit(school_no$sex.school),
+                         alternative = "two.sided", simulate.p.value = TRUE)
+
+ks.school.ses_status <- ks.test(as.numeric(na.omit(school_yes$ses_status.school)),
+                                as.numeric(na.omit(school_no$ses_status.school)),
+                                alternative = "two.sided", simulate.p.value = TRUE)
+
+ks.school.commune_code<- ks.test(as.numeric(na.omit(school_yes$commune_code)),
+                                 as.numeric(na.omit(school_no$commune_code)),
+                                 alternative = "two.sided", simulate.p.value = TRUE)
+
+# Kolmogorov tests with permutation distributions
+set.seed(123)
+nPerm <- 2000
+ks_perm.school.pvals <- data.frame(sex = numeric(nPerm),
+                                   commune_code = numeric(nPerm),
+                                   ses_status = numeric(nPerm))
+
+school_matched_small_perm <- school_matched_small
+
+for (i in 1:nPerm) {
+  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
+  school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
+  school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
+  
+  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school),
+                                na.omit(school_perm_no$sex.school), 
+                                alternative = "two.sided")
+  ks_perm.school.commune_code <- ks.test(as.numeric(na.omit(school_perm_yes$commune_code)),
+                                        as.numeric(na.omit(school_perm_no$commune_code)),
+                                        alternative = "two.sided")
+  ks_perm.school.ses_status <- ks.test(as.numeric(na.omit(school_perm_yes$ses_status.school)),
+                                       as.numeric(na.omit(school_perm_no$ses_status.school)),
+                                       alternative = "two.sided")
+  
+  ks_perm.school.pvals$sex[i] <- ks_perm.school.sex$p.value
+  ks_perm.school.pvals$commune_code[i] <- ks_perm.school.commune_code$p.value
+  ks_perm.school.pvals$ses_status[i] <- ks_perm.school.ses_status$p.value
+}
+
+
+```
+
+```{r kolmogorovPatient, warning = FALSE}
+
+patients_yes <- patients_matched_small %>% filter(matched == 1)
+patients_no <- patients_matched_small %>% filter(matched == 0)
+
+# Kolmogorov tests for our matched results
+ks.patients.sex <- ks.test(na.omit(patients_yes$sex.patient),
+                         na.omit(patients_no$sex.patient),
+                         alternative = "two.sided", simulate.p.value = TRUE)
+
+ks.patients.ses_status <- ks.test(as.numeric(na.omit(patients_yes$ses_status.patient)),
+                                as.numeric(na.omit(patients_no$ses_status.patient)),
+                                alternative = "two.sided", simulate.p.value = TRUE)
+
+ks.patients.commune_code<- ks.test(as.numeric(na.omit(patients_yes$commune_code)),
+                                 as.numeric(na.omit(patients_no$commune_code)),
+                                 alternative = "two.sided", simulate.p.value = TRUE)
+
+# Kolmogorov tests with permutation distributions
+set.seed(123)
+nPerm <- 2000
+ks_perm.patients.pvals <- data.frame(sex = numeric(nPerm),
+                                   commune_code = numeric(nPerm),
+                                   ses_status = numeric(nPerm))
+
+patients_matched_small_perm <- patients_matched_small
+
+for (i in 1:nPerm) {
+  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] # permute matched status
+  patients_perm_yes <- patients_matched_small_perm %>% filter(matched == 1)
+  patients_perm_no <- patients_matched_small_perm %>% filter(matched == 0)
+  
+  ks_perm.patients.sex <- ks.test(na.omit(patients_perm_yes$sex.patient),
+                                na.omit(patients_perm_no$sex.patient), 
+                                alternative = "two.sided")
+  ks_perm.patients.commune_code <- ks.test(as.numeric(na.omit(patients_perm_yes$commune_code)),
+                                        as.numeric(na.omit(patients_perm_no$commune_code)),
+                                        alternative = "two.sided")
+  ks_perm.patients.ses_status <- ks.test(as.numeric(na.omit(patients_perm_yes$ses_status.patient)),
+                                       as.numeric(na.omit(patients_perm_no$ses_status.patient)),
+                                       alternative = "two.sided")
+  
+  ks_perm.patients.pvals$sex[i] <- ks_perm.patients.sex$p.value
+  ks_perm.patients.pvals$commune_code[i] <- ks_perm.patients.commune_code$p.value
+  ks_perm.patients.pvals$ses_status[i] <- ks_perm.patients.ses_status$p.value
+}
+```
+
+```{r komogorovProps}
+# Results for school by sex
+school_match_yes.sex <- school_yes %>%
+  group_by(sex.school) %>% 
+  summarise(count = n()) %>%
+  mutate(freq = count/sum(count), matched = 1)
+school_match_no.sex <- school_no %>%
+  group_by(sex.school) %>% 
+  summarise(count = n()) %>%
+  mutate(freq = count/sum(count), matched = 0)
+school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
+  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
+  arrange(sex_desc, matched)
+
+# Results for patients by sex
+patients_match_yes.sex <- patients_yes %>%
+  group_by(sex.patient) %>% 
+  summarise(count = n()) %>% 
+  mutate(freq = count/sum(count), matched = 1)
+patients_match_no.sex <- patients_no %>% 
+  group_by(sex.patient) %>%
+  summarise(count = n()) %>% 
+  mutate(freq = count/sum(count), matched = 0)
+patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
+  mutate(sex_desc = ifelse(sex.patient == 1, "Male", ifelse(sex.patient == 2, "Female", NA))) %>% 
+  arrange(sex_desc, matched)
+
+# Results for school by commune
+school_match_yes.student_commune_name <- school_yes %>% 
+  group_by(student_commune_name.school) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  mutate(matched = 1) 
+school_match_no.student_commune_name <- school_no %>%
+  group_by(student_commune_name.school) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  mutate(matched = 0)
+school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, 
+                                           school_match_no.student_commune_name) %>%
+  arrange(student_commune_name.school, matched)
+
+# Results for patients by commune
+patients_match_yes.student_commune_name <- patients_yes %>% 
+  group_by(student_commune_name.patient) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  mutate(matched = 1) 
+patients_match_no.student_commune_name <- patients_no %>% 
+  group_by(student_commune_name.patient) %>%
+  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
+  mutate(matched = 0)
+
+patients_match.student_commune_name <- rbind(patients_match_yes.student_commune_name,
+                                             patients_match_no.student_commune_name) %>%
+  arrange(student_commune_name.patient, matched)
+
+# Results for school by SES
+school_match_yes.ses_status <- school_yes %>%
+  group_by(ses_status.school) %>%
+  summarise(count = n()) %>%
+  mutate(freq = count/sum(count), matched = 1)
+school_match_no.ses_status <- school_no %>% 
+  group_by(ses_status.school) %>%
+  summarise(count = n()) %>% 
+  mutate(freq = count/sum(count), matched = 0)
+school_match.ses_status <- rbind(school_match_yes.ses_status,
+                                 school_match_no.ses_status) %>%
+  arrange(ses_status.school, matched)
+
+# Results for patients by SES
+patients_match_yes.ses_status <- patients_yes %>%
+  group_by(ses_status.patient) %>%
+  summarise(count = n()) %>% 
+  mutate(freq = count/sum(count), matched = 1)
+patients_match_no.ses_status <- patients_no %>% 
+  group_by(ses_status.patient) %>% 
+  summarise(count = n()) %>% 
+  mutate(freq = count/sum(count), matched = 0)
+patients_match.ses_status <- rbind(patients_match_yes.ses_status, 
+                                   patients_match_no.ses_status) %>%
+  arrange(ses_status.patient, matched)
+```
+
 Analysis of differences between matched and unmatched records in the SSAS school data and in the patient data by sex, commune and proxy for SES are provided in the Supplementary Figures. Kolmogorov-Smirnov permutation tests found no significant difference in frequency of sexes between matched (`r round(school_match.sex$freq[2] * 100, 2)`% female) and unmatched SSAS school records (`r round(school_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovSchoolSex). They found a strongly significant difference in the frequency of sexes between matched (`r round(patients_match.sex$freq[2] * 100, 2)`% female) and unmatched patient records (`r round(patients_match.sex$freq[1] * 100, 2)`% female), see Supplementary Figure \@ref(fig:kolmogorovPatientSex). This difference is likely due to the sex ratios differing across the datasets: the SSAS school data of students with autsim is `r round(school %>% filter(sex_desc == "Female") %>% nrow() / nrow(school) * 100, 2)`% female, the patient data is `r round(patients %>% filter(sex_desc == "Female") %>% nrow() / nrow(patients) * 100, 2)`% female and the matches are `r sprintf("%.2f", round(school_matched_small %>% filter(sex_desc.school == "Female") %>% nrow() / school_matched_small %>% nrow() * 100, 2))`% females. Kolmogovo-Smirnov permutation testing found that for the SSAS school data, matched (`r round(school_match.student_commune_name$freq[31] * 100, 2)`% resident in Temuco) and unmatched records (`r round(school_match.student_commune_name$freq[30] * 100, 2)`% resident in Temuco) differed significantly by commune, see Figure \@ref(fig:kolmogorovSchoolCommune), and that there was no significant difference between matched (`r round(patients_match.student_commune_name$freq[33] * 100, 2)`% resident in Temuco) and unmatched records (`r round(patients_match.student_commune_name$freq[32] * 100, 2)`% resident in Temuco) by commune for the patient data, see Figure \@ref(fig:kolmogorovSchoolCommune). This appears to be driven by the matchability of students and patients living in Temuco, the most prevalent commune. For the SSAS school data by proxy SES, there was a strongly significant difference between matched (`r round(school_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[4] * 100, 2)`% status of 2, 0.00% status of 3 and `r round(school_match.ses_status$freq[7] * 100, 2)`% with unknown status) and unmatched (`r round(school_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(school_match.ses_status$freq[3] * 100, 2)`% status of 2, `r round(school_match.ses_status$freq[5] * 100, 2)`% status of 3 and `r sprintf("%.2f", round(school_match.ses_status$freq[6] * 100, 2))`% with unknown status) records, see Figure \@ref(fig:kolmogorovSchoolSes). For the patient data there was a somewhat significant difference between matched (`r round(patients_match.ses_status$freq[2] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[4] * 100, 2)`% status of 2, and `r round(patients_match.ses_status$freq[6] * 100, 2)`% status of 3) and unmatched (`r round(patients_match.ses_status$freq[1] * 100, 2)`% status of 1, `r round(patients_match.ses_status$freq[3] * 100, 2)`% status of 2 and `r round(patients_match.ses_status$freq[5] * 100, 2)`% status of 3) records, see Figure \@ref(fig:kolmogorovPatientSes). Again this likely reflects different frequencies of the SES values across datasets. Kolmogorov-Smirnov permutation testing was not conducted for date of birth as this feature contains too many categories for results to be meaningful.
 
 
@@ -4420,121 +4599,7 @@ ggplot(data = adhd_prev_rural_adj.long) +
        fill = "Prevalence")
 ```
 
-```{r kolmogorovSchool, warning = FALSE}
-
-school_yes <- school_matched_small %>% filter(matched == 1) #%>% select(sex.school)
-school_no <- school_matched_small %>% filter(matched == 0)
-
-# Kolmogorov tests for our matched results
-ks.school.sex <- ks.test(na.omit(school_yes$sex.school),
-                         na.omit(school_no$sex.school),
-                         alternative = "two.sided", simulate.p.value = TRUE)
-#ks.school.sex
-
-ks.school.ses_status <- ks.test(as.numeric(na.omit(school_yes$ses_status.school)),
-                                as.numeric(na.omit(school_no$ses_status.school)),
-                                alternative = "two.sided", simulate.p.value = TRUE)
-#ks.school.ses_status
-
-ks.school.commune_code<- ks.test(as.numeric(na.omit(school_yes$commune_code)),
-                                 as.numeric(na.omit(school_no$commune_code)),
-                                 alternative = "two.sided", simulate.p.value = TRUE)
-#ks.school.commune_code
-
-# Kolmogorov tests with permutation distributions
-set.seed(123)
-nPerm <- 200 # change to 2000
-ks_perm.school.pvals <- data.frame(sex = numeric(nPerm),
-                                   commune_code = numeric(nPerm),
-                                   ses_status = numeric(nPerm))
-
-school_matched_small_perm <- school_matched_small
-
-for (i in 1:nPerm) {
-  #print(i)
-  school_matched_small_perm$matched <- school_matched_small$matched[sample(nrow(school_matched_small))] # permute matched status
-  school_perm_yes <- school_matched_small_perm %>% filter(matched == 1)
-  school_perm_no <- school_matched_small_perm %>% filter(matched == 0)
-  
-  ks_perm.school.sex <- ks.test(na.omit(school_perm_yes$sex.school),
-                                na.omit(school_perm_no$sex.school), 
-                                alternative = "two.sided")
-  ks_perm.school.commune_code <- ks.test(as.numeric(na.omit(school_perm_yes$commune_code)),
-                                        as.numeric(na.omit(school_perm_no$commune_code)),
-                                        alternative = "two.sided")
-  ks_perm.school.ses_status <- ks.test(as.numeric(na.omit(school_perm_yes$ses_status.school)),
-                                       as.numeric(na.omit(school_perm_no$ses_status.school)),
-                                       alternative = "two.sided")
-  
-  ks_perm.school.pvals$sex[i] <- ks_perm.school.sex$p.value
-  ks_perm.school.pvals$commune_code[i] <- ks_perm.school.commune_code$p.value
-  ks_perm.school.pvals$ses_status[i] <- ks_perm.school.ses_status$p.value
-}
-
-
-```
-
-```{r kolmogorovPatient, warning = FALSE}
-
-patients_yes <- patients_matched_small %>% filter(matched == 1) #%>% select(sex.school)
-patients_no <- patients_matched_small %>% filter(matched == 0)
-
-# Kolmogorov tests for our matched results
-ks.patients.sex <- ks.test(na.omit(patients_yes$sex.patient),
-                         na.omit(patients_no$sex.patient),
-                         alternative = "two.sided", simulate.p.value = TRUE)
-#ks.patients.sex
-
-ks.patients.ses_status <- ks.test(as.numeric(na.omit(patients_yes$ses_status.patient)),
-                                as.numeric(na.omit(patients_no$ses_status.patient)),
-                                alternative = "two.sided", simulate.p.value = TRUE)
-#ks.patients.ses_status
-
-ks.patients.commune_code<- ks.test(as.numeric(na.omit(patients_yes$commune_code)),
-                                 as.numeric(na.omit(patients_no$commune_code)),
-                                 alternative = "two.sided", simulate.p.value = TRUE)
-#ks.patients.commune_code
-
-
-# Kolmogorov tests with permutation distributions
-set.seed(123)
-nPerm <- 200 # change to 2000
-ks_perm.patients.pvals <- data.frame(sex = numeric(nPerm),
-                                   commune_code = numeric(nPerm),
-                                   ses_status = numeric(nPerm))
-
-patients_matched_small_perm <- patients_matched_small
-
-for (i in 1:nPerm) {
-  #print(i)
-  patients_matched_small_perm$matched <- patients_matched_small$matched[sample(nrow(patients_matched_small))] # permute matched status
-  patients_perm_yes <- patients_matched_small_perm %>% filter(matched == 1)
-  patients_perm_no <- patients_matched_small_perm %>% filter(matched == 0)
-  
-  ks_perm.patients.sex <- ks.test(na.omit(patients_perm_yes$sex.patient),
-                                na.omit(patients_perm_no$sex.patient), 
-                                alternative = "two.sided")
-  ks_perm.patients.commune_code <- ks.test(as.numeric(na.omit(patients_perm_yes$commune_code)),
-                                        as.numeric(na.omit(patients_perm_no$commune_code)),
-                                        alternative = "two.sided")
-  ks_perm.patients.ses_status <- ks.test(as.numeric(na.omit(patients_perm_yes$ses_status.patient)),
-                                       as.numeric(na.omit(patients_perm_no$ses_status.patient)),
-                                       alternative = "two.sided")
-  
-  ks_perm.patients.pvals$sex[i] <- ks_perm.patients.sex$p.value
-  ks_perm.patients.pvals$commune_code[i] <- ks_perm.patients.commune_code$p.value
-  ks_perm.patients.pvals$ses_status[i] <- ks_perm.patients.ses_status$p.value
-}
-```
-
 ```{r kolmogorovSchoolSex, fig.cap="a) Difference in frequency of sexes among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by sex with observed p-value shown in red.", fig.height=8}
-# Results for sex
-school_match_yes.sex <- school_yes %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-school_match_no.sex <- school_no %>% group_by(sex.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-school_match.sex <- rbind(school_match_yes.sex, school_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.school == 1, "Male", ifelse(sex.school == 2, "Female", NA))) %>% 
-  arrange(sex_desc, matched)
-
 kolmog_school_sex.bar <- ggplot(school_match.sex) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
@@ -4557,14 +4622,7 @@ grid.arrange(kolmog_school_sex.bar, kolmog_school_sex.density, nrow = 2)
 ```
 
 ```{r kolmogorovPatientSex, fig.cap="a) Difference in frequency of sexes among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by sex with observed p-value shown in red.", fig.height=8}
-# Results for sex
-patients_match_yes.sex <- patients_yes %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-patients_match_no.sex <- patients_no %>% group_by(sex.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-patients_match.sex <- rbind(patients_match_yes.sex, patients_match_no.sex) %>%
-  mutate(sex_desc = ifelse(sex.patient == 1, "Male", ifelse(sex.patient == 2, "Female", NA))) %>% 
-  arrange(sex_desc, matched)
-
-kolmog_patient_ses.bar <- ggplot(patients_match.sex) +
+kolmog_patient_sex.bar <- ggplot(patients_match.sex) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
                fill = factor(matched, labels = c("Unmatched", "Matched")))) +
@@ -4575,38 +4633,23 @@ kolmog_patient_ses.bar <- ggplot(patients_match.sex) +
        y = "Feature frequency",
        fill = "Matched status")
 
-kolmog_patient_ses.density <- ggplot(ks_perm.patients.pvals, aes(x = sex, y = after_stat(density))) +
+kolmog_patient_sex.density <- ggplot(ks_perm.patients.pvals, aes(x = sex, y = after_stat(density))) +
   geom_density() +
   geom_vline(xintercept = ks.patients.sex$p.value, color = "red") +
   labs(title = "Kolmogorov-Smirnov permutation test on matched status of patient records by sex, with observed p-value",
        x = "Sex",
        y = "Density")
 
-grid.arrange(kolmog_patient_ses.bar, kolmog_patient_ses.density, nrow = 2)
+grid.arrange(kolmog_patient_sex.bar, kolmog_patient_sex.density, nrow = 2)
 ```
 
 ```{r kolmogorovSchoolCommune, fig.cap="a) Difference in frequency of communes of residence among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by commune of residence with observed p-value shown in red.", fig.height=8}
-# Results for commune
-school_match_yes.student_commune_name <- school_yes %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-school_match_no.student_commune_name <- school_no %>% group_by(student_commune_name.school) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
-
-school_match.student_commune_name <- rbind(school_match_yes.student_commune_name, school_match_no.student_commune_name) %>%
-  arrange(student_commune_name.school, matched)
-
 kolmog_school_commune.bar <- ggplot(school_match.student_commune_name) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
                fill = factor(matched, labels = c("Unmatched", "Matched")))) +
   theme(legend.position = "none") +
   facet_wrap(~student_commune_name.school, scales = "fixed") +
-  #facet_wrap(~student_commune_name.school, scales = "free") +
   labs(title = "Matched status of SSAS school records by commune",
        x = "Matched status",
        y = "Feature frequency",
@@ -4621,36 +4664,19 @@ kolmog_school_commune.density <- ggplot(ks_perm.school.pvals, aes(x = commune_co
        y = "Density")
 
 grid.arrange(kolmog_school_commune.bar, kolmog_school_commune.density, nrow = 2)
-
 ```
 
 ```{r kolmogorovPatientCommune, fig.cap="a) Difference in frequency of commune of residence among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by commune of residence with observed p-value shown in red.", fig.height=8}
-# Results for commune
-patients_match_yes.student_commune_name <- patients_yes %>% group_by(student_commune_name.patient) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  # Would need to merge to a list of commune names and numbers if want to display all communes for all matched statuses
-  #merge(commune_, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 1) 
-patients_match_no.student_commune_name <- patients_no %>% group_by(student_commune_name.patient) %>%
-  summarise(count = n()) %>% mutate(freq = count/sum(count)) %>%
-  #merge(commune_nums, by = "commune_num", all = TRUE) %>% 
-  mutate(matched = 0)
-
-patients_match.student_commune_name <- rbind(patients_match_yes.student_commune_name, patients_match_no.student_commune_name) %>%
-  arrange(student_commune_name.patient, matched)
-
 kolmog_patient_commune.bar <- ggplot(patients_match.student_commune_name) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
                fill = factor(matched, labels = c("Unmatched", "Matched")))) +
   theme(legend.position = "none") +
   facet_wrap(~student_commune_name.patient, scales = "fixed") +
-  #facet_wrap(~student_commune_name.school, scales = "free") +
   labs(title = "Matched status of SSAS patient records by commune",
        x = "Matched status",
        y = "Feature frequency",
        fill = "Matched status")
-# most of the difference in matched commune frequency is for Temuco which is the biggest commune.
 
 kolmog_patient_commune.density <- ggplot(ks_perm.patients.pvals, aes(x = commune_code, y = after_stat(density))) +
   geom_density() +
@@ -4663,12 +4689,6 @@ grid.arrange(kolmog_patient_commune.bar, kolmog_patient_commune.density, nrow = 
 ```
 
 ```{r kolmogorovSchoolSes, fig.cap="a) Difference in frequency of proxy SES among school records that matched to patient records and school records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for school records by proxy SES with observed p-value shown in red.", fig.height=8}
-# Results for ses status
-school_match_yes.ses_status <- school_yes %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-school_match_no.ses_status <- school_no %>% group_by(ses_status.school) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-school_match.ses_status <- rbind(school_match_yes.ses_status, school_match_no.ses_status) %>%
-  arrange(ses_status.school, matched)
-
 kolmog_school_ses.bar <- ggplot(school_match.ses_status) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
@@ -4691,12 +4711,6 @@ grid.arrange(kolmog_school_ses.bar, kolmog_school_ses.density, nrow = 2)
 ```
 
 ```{r kolmogorovPatientSes, fig.cap="a) Difference in frequency of proxy SES among patient records that matched to school records and patient records that did not match. b) Density of Kolmogorov-Smirnov p-values for 2000 permutations of matched status for patient records by proxy SES with observed p-value shown in red.", fig.height=8}
-# Results for ses status
-patients_match_yes.ses_status <- patients_yes %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 1)
-patients_match_no.ses_status <- patients_no %>% group_by(ses_status.patient) %>% summarise(count = n()) %>% mutate(freq = count/sum(count), matched = 0)
-patients_match.ses_status <- rbind(patients_match_yes.ses_status, patients_match_no.ses_status) %>%
-  arrange(ses_status.patient, matched)
-
 kolmog_patient_ses.bar <- ggplot(patients_match.ses_status) +
   geom_col(aes(x = factor(matched, labels = c("Unmatched", "Matched")), 
                y = freq, 
