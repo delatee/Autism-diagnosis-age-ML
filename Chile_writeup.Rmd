@@ -625,7 +625,6 @@ get_adjusted_prev <- function(x, grouping_vars) {
             crude_count = sum(n_disease),
             adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
             adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), 
-              # had to fudge this to get MCMC to run bc it needs integers
             var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
             w_M = max(w),
             crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) /
@@ -633,10 +632,9 @@ get_adjusted_prev <- function(x, grouping_vars) {
             crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) /
                                                          sum_sample_pop_size)),
             adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * 
-                                         qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+               qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
             adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * 
-                                         qchisq(p = 1-0.05/2, 
-                                                df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)),
+               qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2)),
             crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
             adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower),
             crude_prev_ci = paste0(sprintf("%.2f", round(crude_rate * 100, 2)),
@@ -656,7 +654,8 @@ get_adjusted_prev <- function(x, grouping_vars) {
 
 do_jags_rand_model <- function(x, feat, model, theta_mu, theta_sigma, pars, 
                                nBurn = 1000, nIter = 1000, convergence_checks = FALSE) {
-  # x = output from get_adjusted_prev. Needs to have columns sum_sample_pop_size, adjusted_count
+  # x = output from get_adjusted_prev. 
+  # x needs to have columns sum_sample_pop_size, adjusted_count
   # feat = feature being used as random effect
   # model = JAGS random effects model
   # theta_mu, theta_sigma = mean and sd of beta prior distribution
@@ -1149,11 +1148,11 @@ Bayesian prevalence modelling used the JAGS (Just Another Gibbs Sampler) R packa
 
 # Results
 
-```{r sampleSize, fig.cap="The datasets used in this investigation, their size (N) and the number of people with autism and ADHD where applicable. Light blue shows the school data which is used to calculate lower bounds on autism and ADHD prevalence, and subsets of the school data for students resident in Servicio de Salud Araucanía Sur (SSAS) and those that are not. In the school data, autism and ADHD indicate students that access SEED for autism and for ADHD respectively. Green shows the clinical data and its subsets of validated and unvalidated clinical data and autism here indicates clinical diagnoses. Validation involved confirming autism diagnosis against central clinical record, adding 2nd and 3rd diagnoses, and adding demographics data. Red shows the validated clinical data for patients resident in SSAS that is used for multiple correspondence analysis. Yellow shows the subsets of school and clinical data used for data linkage; the patient data is the combination of validated and unvalidated clinical datasets and some patients are represented in both these datasets. Grey shows the matches resulting from three linkage approaches. Dark blue shows the result of data linkage and is used to calculated updated estimates of autism prevalence.", echo=FALSE, out.width = '100%'}
+```{r sampleSize, fig.cap="The datasets used in this investigation, their size (N) and the number of people with autism and ADHD and their crude prevalence where applicable. Light blue shows the school data which is used to calculate lower bounds on autism and ADHD prevalence, and subsets of the school data for students resident in Servicio de Salud Araucanía Sur (SSAS) and those that are not. In the school data, autism and ADHD indicate students that access SEED for autism and for ADHD respectively. Green shows the clinical data and its subsets of validated and unvalidated clinical data and autism here indicates clinical diagnoses. Validation involved confirming autism diagnosis against central clinical records, adding 2nd and 3rd diagnoses, and adding demographic data. Red shows the validated clinical data for patients resident in SSAS that is used for multiple correspondence analysis. Yellow shows the subsets of school and clinical data used for data linkage; the patient data is the combination of validated and unvalidated clinical datasets and some patients are represented in both these datasets, shown by the dotted overlap boxes. Grey shows the matches resulting from three linkage approaches. Dark blue shows the result of data linkage and is used to calculated updated estimates of autism prevalence.", echo=FALSE, out.width = '100%'}
 knitr::include_graphics("sample_sizes.jpg", error = FALSE)
 ```
 
-Figure \@ref(fig:sampleSize) shows the school and clinical data and how they contribute to the three aims of this investigation. The school data is used to address aim 1, finding a lower bound on autism and ADHD prevalence, see sections [5.1][School data] and [5.2][Frequentist prevalence estimation]. The validated clinical data for patients resident in SSAS is used to address aim 2, identifying common characteristics of children with autism, see sections [5.3][Clinical data] and [5.4][Machine learning with clinical data]. Linkage of school and clinical data is used to address aim 3, obtaining and projecting accurate autism prevalence estimates, see sections [5.5][Linkage of school and patient records], [5.6][Updated autism prevalence estimates and delta] and [5.7][Bayesian prevalence projection].
+Figure \@ref(fig:sampleSize) shows the school and clinical data and how they contribute to the three aims of this investigation. The school data is used to address aim 1, finding a lower bound on autism and ADHD prevalence and understanding their variation, see sections [5.1][School data] and [5.2][Frequentist prevalence estimation]. The validated clinical data for patients resident in SSAS is used to address aim 2, identifying common characteristics of children with autism, see sections [5.3][Clinical data] and [5.4][Machine learning with clinical data]. Linkage of school and clinical data is used to address aim 3, obtaining and projecting accurate autism prevalence estimates, see sections [5.5][Linkage of school and patient records], [5.6][Updated autism prevalence estimates and delta] and [5.7][Bayesian prevalence projection].
 
 ## School data
 
@@ -1200,7 +1199,8 @@ school.table <- chile_bayes %>%
                     count = n(), 
                     perc = sprintf("%.2f", round(count/nrow(chile_bayes)*100, 2))) %>%
           rename(values = special_needs_status) %>%
-          mutate(values = factor(ifelse(values == 0, "No SEED", "Yes SEED"), levels = c("Yes SEED", "No SEED"))) %>%
+          mutate(values = factor(ifelse(values == 0, "No SEED", "Yes SEED"),
+                                 levels = c("Yes SEED", "No SEED"))) %>%
           arrange(values),
         chile_bayes %>%
           group_by(autism) %>% 
@@ -1208,7 +1208,8 @@ school.table <- chile_bayes %>%
                     count = n(), 
                     perc = sprintf("%.2f", round(count/nrow(chile_bayes)*100, 2))) %>%
           rename(values = autism) %>%
-          mutate(values = factor(ifelse(values == 0, "No autism", "Yes autism"), levels = c("Yes autism", "No autism"))) %>%
+          mutate(values = factor(ifelse(values == 0, "No autism", "Yes autism"),
+                                 levels = c("Yes autism", "No autism"))) %>%
           arrange(values),
         chile_bayes %>%
           group_by(adhd) %>% 
@@ -1216,12 +1217,15 @@ school.table <- chile_bayes %>%
                     count = n(), 
                     perc = sprintf("%.2f", round(count/nrow(chile_bayes)*100, 2))) %>%
           rename(values = adhd) %>%
-          mutate(values = factor(ifelse(values == 0, "No ADHD", "Yes ADHD"), levels = c("Yes ADHD", "No ADHD"))) %>%
+          mutate(values = factor(ifelse(values == 0, "No ADHD", "Yes ADHD"),
+                                 levels = c("Yes ADHD", "No ADHD"))) %>%
           arrange(values)) %>%
   mutate(count_perc = paste0(format(count, big.mark = ",", trim = TRUE), " (", perc, "%)"),
          variables_short = c("Sex", "", 
                           "Age band", "", "", "", 
-                          "Health service", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                          "Health service", "", "", "", "", "", "", "", "", "",
+                          "", "", "", "", "", "", "", "", "", "", "", "", "", "",
+                          "", "", "", "", "",
                           "School fee", "", "", "", "", "", "", 
                           "Ethnicity", "", "", 
                           "Rurality", "", 
@@ -1255,57 +1259,63 @@ kbl(school.table,
   kable_styling(latex_options = c("repeat_header"))
 ```
 
-The school dataset contained records for `r format(nrow(chile_bayes), big.mark = ",", trim = TRUE)` Chilean students aged 6-18 in 2021, see Table \@ref(tab:schoolTable). Of these, `r format(chile_bayes %>% filter(sex_desc == "Female") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(sex_desc == "Female") %>% nrow() / nrow(chile_bayes) * 100, 2)`%) were female and the rest were male. Students were evenly distributed across age bands and fairly evenly distributed across communes with generally more students in the metropolitan Santiago communes. Most students received free schooling and the proportion that paid for schooling increased with monthly school fees. Most students did not belong to an Indigenous group and attended a school in an urban area. A special needs code was recorded for `r format(chile_bayes %>% filter(special_needs_status == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(special_needs_status == 1) %>% nrow() / nrow(chile_bayes) * 100, 2)`%) students, indicating they accessed SEED funding during that school year. Of these students, `r format(chile_bayes %>% filter(autism == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(autism == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for autism and `r format(chile_bayes %>% filter(adhd == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(adhd == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for ADHD.
+The school dataset contained records for `r format(nrow(chile_bayes), big.mark = ",", trim = TRUE)` Chilean students aged 6-18 in 2021, see Table \@ref(tab:schoolTable). Of these, `r format(chile_bayes %>% filter(sex_desc == "Female") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(sex_desc == "Female") %>% nrow() / nrow(chile_bayes) * 100, 2)`%) were female and the rest were male. Students were evenly distributed across age bands and fairly evenly distributed across communes with generally more students in the metropolitan Santiago communes. Most students received free schooling and after this value, the proportion that paid for schooling increased with monthly school fees. `r format(chile_bayes %>% filter(ethnic_2_group == "Mapuche") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(ethnic_2_group == "Mapuche") %>% nrow() / nrow(chile_bayes) * 100, 2)`%) students were Mapuche and `r format(chile_bayes %>% filter(ethnic_2_group == "No Indigenous group") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(ethnic_2_group == "No Indigenous group") %>% nrow() / nrow(chile_bayes) * 100, 2)`%) did not belong to an Indigenous group. `r format(chile_bayes %>% filter(school_rurality == "Rural") %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(school_rurality == "Rural") %>% nrow() / nrow(chile_bayes) * 100, 2)`%)a ttended a school in a rural area. A special needs code was recorded for `r format(chile_bayes %>% filter(special_needs_status == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(special_needs_status == 1) %>% nrow() / nrow(chile_bayes) * 100, 2)`%) students, indicating they accessed SEED funding in 2021. Of these students, `r format(chile_bayes %>% filter(autism == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(autism == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for autism and `r format(chile_bayes %>% filter(adhd == 1) %>% nrow(), big.mark = ",", trim = TRUE)` (`r round(chile_bayes %>% filter(adhd == 1) %>% nrow() / chile_bayes %>% filter(special_needs_status == 1) %>% nrow() * 100, 2)`%) received SEED for ADHD.
 
 ## Frequentist prevalence estimation
 
 ```{r adjPrev}
 # Autism
 aut_prev <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
-                             grouping_vars = c("age_june30", "age_cat_name", "sex", "sex_desc", "autism"),
+                             grouping_vars = c("age_june30", "age_cat_name",
+                                               "sex", "sex_desc", "autism"),
                              disease = "autism")
 
-aut_prev_adj <- aut_prev %>% # Don't use get_adjusted_prev here because we have no variables to group on
+aut_prev_adj <- aut_prev %>% 
   summarise(sum_sample_pop_size = sum(sample_pop_size),
             crude_rate = sum(n_disease) / sum(sample_pop_size),
             crude_count = sum(n_disease),
             adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
-            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
-            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), 
             var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
-            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
-            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
-            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
-            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
-            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate *
+                                                         (1 - crude_rate) / sum_sample_pop_size)),
+            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * 
+                                                         (1 - crude_rate) / sum_sample_pop_size)),
+            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) *
+               qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * 
+               qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 
 # ADHD
 adhd_prev <- get_grouped_prev(x = chile_bayes_adhd, stdpop = chile_stdpop, 
-                             grouping_vars = c("age_june30", "age_cat_name", "sex", "sex_desc", "adhd"),
+                             grouping_vars = c("age_june30", "age_cat_name", 
+                                               "sex", "sex_desc", "adhd"),
                              disease = "adhd")
 
-adhd_prev_adj <- adhd_prev %>% # Don't use get_adjusted_prev here because we have no variables to group on
+adhd_prev_adj <- adhd_prev %>% 
   summarise(sum_sample_pop_size = sum(sample_pop_size),
             crude_rate = sum(n_disease) / sum(sample_pop_size),
             crude_count = sum(n_disease),
             adjusted_rate = sum(n_disease / sample_pop_size * pop_prop),
-            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), # had to fudge this to get MCMC to run bc it needs integers
-            #adjusted_count = adjusted_rate * sum_sample_pop_size,
+            adjusted_count = round(adjusted_rate * sum_sample_pop_size, 0), 
             var = sum(pop_prop^2 * n_disease / sample_pop_size^2),
-            #se2 = sqrt(sum((std_pop/sum(std_pop))^2 * n_autism/sample_pop_size^2)),
             w_M = max(w),
-            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
-            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * (1 - crude_rate) / sum_sample_pop_size)),
-            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
-            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
+            crude_ci_lower = crude_rate - (1.96 * sqrt(crude_rate *
+                                        (1 - crude_rate) / sum_sample_pop_size)),
+            crude_ci_upper = crude_rate + (1.96 * sqrt(crude_rate * 
+                                        (1 - crude_rate) / sum_sample_pop_size)),
+            adjusted_ci_lower = ifelse(var == 0, 0, var / (2*adjusted_rate) * 
+              qchisq(p = 0.05/2, df = 2*adjusted_rate^2 / var)),
+            adjusted_ci_upper = (var + w_M^2) / (2*(adjusted_rate + w_M)) * 
+              qchisq(p = 1-0.05/2, df = 2*(adjusted_rate+w_M)^2 / (var+w_M^2))) %>%
   mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
          adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
 ```
 
-The national crude prevalence of autism in the school data was `r round(aut_prev_adj$crude_rate * 100, 2)`% (`r round(aut_prev_adj$crude_ci_lower * 100, 2)`-`r round(aut_prev_adj$crude_ci_upper * 100, 2)`%). After using frequentist methods to adjust for the age and sex distribution of the 6-18 year old population of Chile in 2021, the national adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 2)`%). The national crude prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$crude_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$crude_ci_lower * 100, 2))`-`r round(adhd_prev_adj$crude_ci_upper * 100, 2)`%) and the national age- and sex-adjusted prevalence was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). The crude prevalence of autism and ADHD varied with age, as shown in Figures \@ref(fig:prevAgecatAutPlot) and \@ref(fig:prevAgecatAdhdPlot). Autism prevalence was highest in 6-8 year olds and decreased with age while ADHD prevalence peaked around age 11 then decreased. Both conditions showed a small increase in prevalence for age 18. See also Supplementary Tables \@ref(tab:prevAgecatAutTable) and \@ref(tab:prevAgecatAdhdTable) and Supplementary Figures \@ref(fig:prevAgeAutPlot) and \@ref(fig:prevAgeAdhdPlot).
+The national crude prevalence of autism in the school data was `r round(aut_prev_adj$crude_rate * 100, 2)`% (`r round(aut_prev_adj$crude_ci_lower * 100, 2)`-`r round(aut_prev_adj$crude_ci_upper * 100, 2)`%). After using frequentist methods to adjust for the age and sex distribution of the 6-18 year old population of Chile in 2021, the national adjusted prevalence of autism was `r round(aut_prev_adj$adjusted_rate * 100, 2)`% (`r round(aut_prev_adj$adjusted_ci_lower * 100, 2)`-`r round(aut_prev_adj$adjusted_ci_upper * 100, 2)`%). The national crude prevalence of ADHD was `r sprintf("%.2f", round(adhd_prev_adj$crude_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$crude_ci_lower * 100, 2))`-`r round(adhd_prev_adj$crude_ci_upper * 100, 2)`%) and the national age- and sex-adjusted prevalence was `r sprintf("%.2f", round(adhd_prev_adj$adjusted_rate * 100, 2))`% (`r sprintf("%.2f", round(adhd_prev_adj$adjusted_ci_lower * 100, 2))`-`r round(adhd_prev_adj$adjusted_ci_upper * 100, 2)`%). The crude prevalence of autism and ADHD varied with age, as shown in Figures \@ref(fig:prevAgecatAutPlot) and \@ref(fig:prevAgecatAdhdPlot). Autism prevalence was highest in 6-8 year olds and decreased with age while ADHD prevalence peaked around age 11 then decreased. Both conditions showed a small increase in prevalence for age 18. See also Supplementary Tables \@ref(tab:prevAgecatAutTable) and \@ref(tab:prevAgecatAdhdTable).
 
 ```{r prevAgecatAutPlot, fig.cap = "Crude prevalence of autism in school data by age band. Bars show 95% normal confidence intervals.", fig.height = 3}
 # Autism
@@ -1478,9 +1488,9 @@ kbl(adhd_prev_health_adj.table,
     caption = "Crude and age- and sex-adjusted ADHD prevalence by health service in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-Considering school data by health service, shown in Table \@ref(tab:adjPrevHealthAutTable), the adjusted prevalence of autism was significantly higher in Ñuble at `r round(aut_prev_health_adj$adjusted_rate[29] * 100, 2)`% (`r round(aut_prev_health_adj$adjusted_ci_lower[29] * 100, 2)` - `r round(aut_prev_health_adj$adjusted_ci_upper[29] * 100, 2)`%) than other health services with non-overlapping confidence intervals. Adjusted prevalence was lowest in Metropolitano Norte at `r round(aut_prev_health_adj$crude_rate[19] * 100, 2)`% (`r round(aut_prev_health_adj$crude_ci_lower[19] * 100, 2)` - `r sprintf("%.2f", round(aut_prev_health_adj$crude_ci_upper[19] * 100, 2))`%) and Araucanía Norte at `r sprintf("%.2f", round(aut_prev_health_adj$crude_rate[4] * 100, 2))`% (`r round(aut_prev_health_adj$crude_ci_lower[4] * 100, 2)`- `r round(aut_prev_health_adj$crude_ci_upper[4] * 100, 2)`%). Autism prevalence peaked in the 6-8 age band across all health services except Chiloé and Magallanes where it peaked in the 9-11 band, see Supplementary Table  \@ref(tab:prevAgecatHealthAutTable) and Supplementary Figures \@ref(fig:prevAgecatHealthAutPlot) and \@ref(fig:prevAgeHealthAutPlot).
+Considering school data by health service, shown in Table \@ref(tab:adjPrevHealthAutTable), the adjusted prevalence of autism was significantly higher in Ñuble at `r round(aut_prev_health_adj$adjusted_rate[29] * 100, 2)`% (`r round(aut_prev_health_adj$adjusted_ci_lower[29] * 100, 2)` - `r round(aut_prev_health_adj$adjusted_ci_upper[29] * 100, 2)`%) than other health services with non-overlapping confidence intervals. Adjusted prevalence was lowest in Metropolitano Norte at `r round(aut_prev_health_adj$crude_rate[19] * 100, 2)`% (`r round(aut_prev_health_adj$crude_ci_lower[19] * 100, 2)` - `r sprintf("%.2f", round(aut_prev_health_adj$crude_ci_upper[19] * 100, 2))`%) and Araucanía Norte at `r sprintf("%.2f", round(aut_prev_health_adj$crude_rate[4] * 100, 2))`% (`r round(aut_prev_health_adj$crude_ci_lower[4] * 100, 2)`- `r round(aut_prev_health_adj$crude_ci_upper[4] * 100, 2)`%). Autism prevalence peaked in the 6-8 age band across all health services except Chiloé and Magallanes where it peaked in the 9-11 band, see Supplementary Table  \@ref(tab:prevAgecatHealthAutTable) and Supplementary Figure \@ref(fig:prevAgecatHealthAutPlot).
 
-ADHD prevalence also varied across health services, as shown in Table \@ref(tab:prevAgecatHealthAdhdTable). Prevalence was significantly lower in Atacama than other regions at `r round(adhd_prev_health_adj$adjusted_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$adjusted_ci_lower[8] * 100, 2)` - `r round(adhd_prev_health_adj$adjusted_ci_upper[8] * 100, 2)`%). Magallanes, Talcahuano, Concepción, Chiloé, Biobío, Aisén, Ñuble, Aconcagua and Coquimbo all had adjusted prevalence of 2.00% or higher and there was a significant gap between these health services and those with lower prevalence. There was also a significant gap separating Magallanes, Talcahuano, Concepción and Chiloé as the highest prevalence health services. See also Supplementary Table  \@ref(tab:prevAgecatHealthAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatHealthAdhdPlot) and \@ref(fig:prevAgeHealthAdhdPlot).
+ADHD prevalence also varied across health services, as shown in Table \@ref(tab:prevAgecatHealthAdhdTable). Prevalence was significantly lower in Atacama than other regions at `r round(adhd_prev_health_adj$adjusted_rate[8] * 100, 2)`% (`r round(adhd_prev_health_adj$adjusted_ci_lower[8] * 100, 2)` - `r round(adhd_prev_health_adj$adjusted_ci_upper[8] * 100, 2)`%). Magallanes, Talcahuano, Concepción, Chiloé, Biobío, Aisén, Ñuble, Aconcagua and Coquimbo all had adjusted prevalence of 2.00% or higher and there was a significant gap between these health services and those with lower prevalence. There was also a significant gap separating Magallanes, Talcahuano, Concepción and Chiloé as the highest prevalence health services. See also Supplementary Table  \@ref(tab:prevAgecatHealthAdhdTable) and Supplementary Figure \@ref(fig:prevAgecatHealthAdhdPlot).
 
 ```{r adjPrevEconA}
 # Autism
@@ -1526,7 +1536,7 @@ kbl(adhd_prev_econA_adj.table,
     caption = "Crude and age- and sex-adjusted ADHD prevalence by monthly school fee (Peso) in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-For school fees, which are used here as a proxy for SES, autism prevalence was highest among students that received free or low fee education, though the sample size for students that paid \$1,000-\$10,000 monthly was very small, see Table \@ref(tab:adjPrevEconAAutTable). ADHD prevalence was variable across school fee levels, with the \$1,000-\$10,000 band having low prevalence and very few cases, see Table \@ref(tab:adjPrevEconAAdhdTable). For both autism and ADHD, prevalence is very low among students paying more than \$100,000 monthly, suggesting students from wealthier families may not be accessing SEED or may not be eligible for it due to attending non-subsidised private schools. See also Supplementary Tables \@ref(tab:prevAgecatEconAAutTable) and \@ref(tab:prevAgecatEconAAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatEconAAutPlot), \@ref(fig:prevAgecatEconAAdhdPlot), \@ref(fig:prevAgeEconAAutPlot) and \@ref(fig:prevAgeEconAAdhdPlot).
+For school fees, which are used here as a proxy for SES, autism prevalence was highest among students that received free or low fee education, though the sample size for students that paid \$1,000-\$10,000 monthly was very small, see Table \@ref(tab:adjPrevEconAAutTable). ADHD prevalence was variable across school fee levels, with the \$1,000-\$10,000 band having low prevalence and very few cases, see Table \@ref(tab:adjPrevEconAAdhdTable). For both autism and ADHD, prevalence is very low among students paying more than \$100,000 monthly, suggesting students from wealthier families may not be accessing SEED or may not be eligible for it due to attending non-subsidised private schools. See also Supplementary Tables \@ref(tab:prevAgecatEconAAutTable) and \@ref(tab:prevAgecatEconAAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatEconAAutPlot), \@ref(fig:prevAgecatEconAAdhdPlot).
 
 ```{r adjPrevEthnic}
 # Autism
@@ -1572,7 +1582,7 @@ kbl(adhd_prev_ethnic_adj.table,
     caption = "Crude and age- and sex-adjusted ADHD prevalence by ethnicity in Chile school data. Crude prevalence has 95% normal confidence intervals and adjusted prevalence has 95% gamma confidence intervals.")
 ```
 
-For both autism and ADHD, adjusted prevalence was significantly lower for Mapuche students than non-Indigenous students in the Aysén, Biobío, La Araucanía, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions, as shown in Tables \@ref(tab:adjPrevEthnicAutTable) and \@ref(tab:adjPrevEthnicAdhdTable). Autism prevalence for students belonging to other Indigenous groups fall in between and was not significantly different, and ADHD prevalence for other Indigenous groups was lower but not significantly. See also Supplementary Tables \@ref(tab:prevAgecatEthnicAutTable) and Table \@ref(tab:prevAgecatEthnicAdhdTable and Supplementary Figures \@ref(fig:prevAgecatEthnicAutPlot),\@ref(fig:prevAgecatEthnicAdhdPlot), \@ref(fig:prevAgeEthnicAutPlot) and \@ref(fig:prevAgeEthnicAdhdPlot). 
+For both autism and ADHD, adjusted prevalence was significantly lower for Mapuche students than non-Indigenous students in the Aysén, Biobío, La Araucanía, Los Lagos, Los Rios, Magallanes and Región Metropolitana de Santiago regions, as shown in Tables \@ref(tab:adjPrevEthnicAutTable) and \@ref(tab:adjPrevEthnicAdhdTable). Autism prevalence for students belonging to other Indigenous groups fall in between and was not significantly different, and ADHD prevalence for other Indigenous groups was lower but not significantly. See also Supplementary Tables \@ref(tab:prevAgecatEthnicAutTable) and Table \@ref(tab:prevAgecatEthnicAdhdTable and Supplementary Figures \@ref(fig:prevAgecatEthnicAutPlot),\@ref(fig:prevAgecatEthnicAdhdPlot). 
 
 ```{r adjPrevRurality}
 # Autism
@@ -1619,7 +1629,7 @@ kbl(adhd_prev_rural_adj.table,
 
 ```
 
-Autism and ADHD are both significantly more prevalent for students at rural schools than urban schools, as shown in Tables \@ref(tab:adjPrevRuralAutTable) and \@ref(tab:adjPrevRuralAdhdTable). See also Supplementary Tables \@ref(tab:prevAgecatRuralAutTable) and \@ref(tab:prevAgecatRuralAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatRuralAutPlot), \@ref(fig:prevAgeRuralAutPlot), \@ref(fig:prevAgecatRuralAdhdPlot) and \@ref(fig:prevAgeRuralAdhdPlot).
+Autism and ADHD are both significantly more prevalent for students at rural schools than urban schools, as shown in Tables \@ref(tab:adjPrevRuralAutTable) and \@ref(tab:adjPrevRuralAdhdTable). See also Supplementary Tables \@ref(tab:prevAgecatRuralAutTable) and \@ref(tab:prevAgecatRuralAdhdTable) and Supplementary Figures \@ref(fig:prevAgecatRuralAutPlot) and \@ref(fig:prevAgecatRuralAdhdPlot).
 
 These results together indicate that for autism and ADHD there are differences in prevalence across location and demographic features.
 
