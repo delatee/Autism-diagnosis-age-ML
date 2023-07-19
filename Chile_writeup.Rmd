@@ -2524,7 +2524,7 @@ kbl(chile_bayes_grouped,
     format = "latex",
     linesep = c("", "\\addlinespace", # Sex
                 "", "", "", "\\addlinespace", # Age
-                "", "", "", "", "", "", "", "\\addlinespace", # SES
+                "", "", "", "", "", "", "\\addlinespace", # SES
                 "", "", "\\addlinespace", # Ethnicity
                 "", "\\addlinespace", # Rurality,
                 "", "\\addlinespace"), # SEED
