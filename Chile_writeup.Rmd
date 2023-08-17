@@ -329,6 +329,11 @@ chile_bayes <- chile_merged %>%
                                  "No Indigenous group",
                                  "Other Indigenous group")), 
                           levels = c("Mapuche", "Other Indigenous group", "No Indigenous group")),
+         ethnic_3_group = factor(ifelse(ethnic_3_group == "Mapuche", "Mapuche",
+                                 ifelse(ethnic_3_group == "Aymara", "Aymara",
+                                 ifelse(ethnic_3_group == "No Native Group", "No Indigenous group",
+                                 "Other Indigenous group"))),
+                          levels = c("Mapuche", "Aymara", "No Indigenous group", "Other Indigenous group")),
          school_rurality = ifelse(school_rurality_code == 0, "Urban", "Rural"),
          school_fee = factor(ifelse(school_fee == "", "No information",
                              ifelse(school_fee == "GRATUITO", "Free", 
@@ -397,6 +402,7 @@ chile_bayes <- chile_merged %>%
     nationality,
     ethnic_3_group,
     ethnic_2_group,
+    immigration,
     special_needs_status,
     special_needs_code,
     autism,
@@ -2337,6 +2343,10 @@ school_ssas <- chile_bayes %>%
          age_june30,
          age_cat_name)
 
+school_ssas_n_male <- school_ssas %>% filter(sex_desc == "Male") %>% nrow()
+school_ssas_mean_age <- mean(school_ssas$age_june30)
+school_ssas_sd_age <- sd(school_ssas$age_june30)
+
 school_ssas_aut <- school_ssas %>% 
   filter(autism == 1) %>%
   # We only want to find additional autism cases in the clinical records
@@ -3343,7 +3353,7 @@ araucS_upper <- aut_newprev_araucS_adj %>%
 # araucS_mean <- (araucS_upper + araucS_lower) / 2
 # araucS_sd <- (araucS_upper - araucS_lower) / (2*1.96)
 
-aut_prev_health_adj$new_rate <- numeric(nrow(aut_prev_health_adj))
+aut_prev_health_adj$new_rate <- numeric(nrow(aut_prev_health_adj)) # Fill with 0's
 aut_prev_health_adj$new_ci_lower <- numeric(nrow(aut_prev_health_adj))
 aut_prev_health_adj$new_ci_upper <- numeric(nrow(aut_prev_health_adj))
 aut_prev_health_adj$new_count <- numeric(nrow(aut_prev_health_adj))
@@ -3719,6 +3729,436 @@ ggplot() +
 ```
 
 In Figure \@ref(fig:bayesUniformPrior), the posterior distributions were reflective of their uniform priors with posterior credible intervals slightly within the prior bounds (Table \@ref(tab:newPrevAraucS)). These predictive densities show a considerable departure from the adjusted sample prevalence from the school data and provide a window within which the true prevalence of recorded autism in each health service would plausibly fall.
+
+```{r bayesUniformPriorRural, include = FALSE}
+
+aut_prev_rural_adj$new_rate <- aut_prev_rural_adj$adjusted_rate + prev_delta
+aut_prev_rural_adj$new_count <- round(aut_prev_rural_adj$new_rate * aut_prev_rural_adj$sum_sample_pop_size, 0)
+
+nFeat <- nrow(aut_prev_rural_adj)
+FeatNames <- sort(unique(aut_prev_rural_adj$school_rurality))
+
+# Uniform prior between lower bound and delta for all school data by rurality
+rand_model_uniform <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dunif(theta_lower[i], theta_upper[i])     #dbeta(theta_a[i], theta_b[i])
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+    #theta_a[i] <- theta_mu * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+    #theta_b[i] <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+  }
+  #theta_mu ~ dunif(0, 1)
+  #theta_sigma ~ dexp(1)
+}"
+
+pars <- c("theta", "disease_sample", "disease_pred")
+
+# Define uniform prior
+theta_lower <- aut_prev_rural_adj$adjusted_rate
+theta_upper <- aut_prev_rural_adj$new_rate
+
+# Initial values for model chains
+rand_ini <- list(list(theta = rep(0.001, nFeat)),
+                 list(theta = rep(0.01, nFeat)))
+# Run JAGS model
+rand_data <- list(theta_lower = theta_lower,
+                  theta_upper = theta_upper,
+                  nObs = aut_prev_rural_adj$sum_sample_pop_size,
+                  aut_sample = aut_prev_rural_adj$adjusted_count,
+                  nFeat = nFeat)
+rand_jag <- jags.model(textConnection(rand_model_uniform),
+                       data = rand_data,
+                       inits = rand_ini,
+                       n.chains = 2,
+                       quiet = TRUE)
+update(rand_jag, n.iter = nBurn)
+rand_sam <- coda.samples(model = rand_jag,
+                         variable.names = pars,
+                         n.iter = nIter)
+
+convergence_check <- FALSE
+if(convergence_check) {
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]")))
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]")))
+  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+        arrange(desc(rhat))
+  print(rand_summ)
+}
+
+aut_prev_rural_post_new <- as_tibble(as_draws_matrix(rand_sam), 
+                                      rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "school_rurality",
+                 values_to = "predicted_prev") %>%
+    mutate(Feat_names = factor(school_rurality,
+                               levels = c(paste0("theta[",1:nFeat,"]")),
+                               labels = FeatNames)) %>%
+    select(Iteration, Feat_names, predicted_prev) %>%
+  rename(school_rurality = Feat_names) #%>%
+  #merge(health_service_lookup, by = "health_service_code") %>%
+  #rename(health_service_name_long = health_service_name,
+  #       health_service_name = health_service_name_short)
+  
+
+# Plot posterior densities
+aut_prev_rural_post_new_ci <- aut_prev_rural_post_new %>%
+  group_by(school_rurality) %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+ggplot() +
+  geom_density(data = aut_prev_rural_post_new, aes(x = predicted_prev*100)) +
+  geom_vline(data = aut_prev_rural_post_new_ci, aes(xintercept = post_lower*100), 
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_rural_post_new_ci, aes(xintercept = post_upper*100),
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_rural_adj, aes(xintercept = adjusted_ci_lower*100),
+             color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_rural_adj, aes(xintercept = adjusted_ci_upper*100),
+             color = "red", linetype = "dashed") +
+  facet_wrap(~school_rurality) +
+  labs(title = "Posterior predicitve distribution for rurality specific uniform priors",
+       x = "Prevalence %",
+       y = "Density")
+
+```
+
+```{r bayesUniformPriorEthnicall, include = FALSE}
+
+# Need to recalculate the ethnic prevalences using all data not just Mapuche regions and 
+# with Aymara separated out
+
+aut_prev_ethnicall <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                                    grouping_vars = c("ethnic_3_group",
+                                                      "age_june30", 
+                                                      "age_cat_name",
+                                                      "sex",
+                                                      "sex_desc",
+                                                      "autism"),
+                                    disease = "autism")
+
+aut_prev_ethnicall_adj <- get_adjusted_prev(aut_prev_ethnicall, 
+                                         grouping_vars = "ethnic_3_group") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_prev_ethnicall_adj$new_rate <- aut_prev_ethnicall_adj$adjusted_rate + prev_delta
+aut_prev_ethnicall_adj$new_count <- round(aut_prev_ethnicall_adj$new_rate * aut_prev_ethnicall_adj$sum_sample_pop_size, 0)
+
+nFeat <- nrow(aut_prev_ethnicall_adj)
+FeatNames <- sort(unique(aut_prev_ethnicall_adj$ethnic_3_group))
+
+# Uniform prior between lower bound and delta for all school data by rurality
+rand_model_uniform <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dunif(theta_lower[i], theta_upper[i])     #dbeta(theta_a[i], theta_b[i])
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+    #theta_a[i] <- theta_mu * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+    #theta_b[i] <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+  }
+  #theta_mu ~ dunif(0, 1)
+  #theta_sigma ~ dexp(1)
+}"
+
+pars <- c("theta", "disease_sample", "disease_pred")
+
+# Define uniform prior
+theta_lower <- aut_prev_ethnicall_adj$adjusted_rate
+theta_upper <- aut_prev_ethnicall_adj$new_rate
+
+# Initial values for model chains
+rand_ini <- list(list(theta = rep(0.001, nFeat)),
+                 list(theta = rep(0.01, nFeat)))
+# Run JAGS model
+rand_data <- list(theta_lower = theta_lower,
+                  theta_upper = theta_upper,
+                  nObs = aut_prev_ethnicall_adj$sum_sample_pop_size,
+                  aut_sample = aut_prev_ethnicall_adj$adjusted_count,
+                  nFeat = nFeat)
+rand_jag <- jags.model(textConnection(rand_model_uniform),
+                       data = rand_data,
+                       inits = rand_ini,
+                       n.chains = 2,
+                       quiet = TRUE)
+update(rand_jag, n.iter = nBurn)
+rand_sam <- coda.samples(model = rand_jag,
+                         variable.names = pars,
+                         n.iter = nIter)
+
+convergence_check <- FALSE
+if(convergence_check) {
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]")))
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]")))
+  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+        arrange(desc(rhat))
+  print(rand_summ)
+}
+
+aut_prev_ethnicall_post_new <- as_tibble(as_draws_matrix(rand_sam), 
+                                      rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "ethnic_3_group",
+                 values_to = "predicted_prev") %>%
+    mutate(Feat_names = factor(ethnic_3_group,
+                               levels = c(paste0("theta[",1:nFeat,"]")),
+                               labels = FeatNames)) %>%
+    select(Iteration, Feat_names, predicted_prev) %>%
+  rename(ethnic_3_group = Feat_names) #%>%
+  #merge(health_service_lookup, by = "health_service_code") %>%
+  #rename(health_service_name_long = health_service_name,
+  #       health_service_name = health_service_name_short)
+  
+
+# Plot posterior densities
+aut_prev_ethnicall_post_new_ci <- aut_prev_ethnicall_post_new %>%
+  group_by(ethnic_3_group) %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+ggplot() +
+  geom_density(data = aut_prev_ethnicall_post_new, aes(x = predicted_prev*100)) +
+  geom_vline(data = aut_prev_ethnicall_post_new_ci, aes(xintercept = post_lower*100), 
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_ethnicall_post_new_ci, aes(xintercept = post_upper*100),
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_ethnicall_adj, aes(xintercept = adjusted_ci_lower*100),
+             color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_ethnicall_adj, aes(xintercept = adjusted_ci_upper*100),
+             color = "red", linetype = "dashed") +
+  facet_wrap(~ethnic_3_group) +
+  labs(title = "Posterior predicitve distribution for ethnicity specific uniform priors",
+       x = "Prevalence %",
+       y = "Density")
+
+```
+
+```{r bayesUniformPriorImmi, include = FALSE}
+
+# By immigration status
+
+aut_prev_immi <- get_grouped_prev(x = chile_bayes_aut, stdpop = chile_stdpop, 
+                                    grouping_vars = c("immigration",
+                                                      "age_june30", 
+                                                      "age_cat_name",
+                                                      "sex",
+                                                      "sex_desc",
+                                                      "autism"),
+                                    disease = "autism")
+
+aut_prev_immi_adj <- get_adjusted_prev(aut_prev_immi, 
+                                         grouping_vars = "immigration") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_prev_immi_adj$new_rate <- aut_prev_immi_adj$adjusted_rate + prev_delta
+aut_prev_immi_adj$new_count <- round(aut_prev_immi_adj$new_rate * aut_prev_immi_adj$sum_sample_pop_size, 0)
+
+nFeat <- nrow(aut_prev_immi_adj)
+FeatNames <- sort(unique(aut_prev_immi_adj$immigration))
+
+# Uniform prior between lower bound and delta for all school data by rurality
+rand_model_uniform <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dunif(theta_lower[i], theta_upper[i])     #dbeta(theta_a[i], theta_b[i])
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+    #theta_a[i] <- theta_mu * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+    #theta_b[i] <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+  }
+  #theta_mu ~ dunif(0, 1)
+  #theta_sigma ~ dexp(1)
+}"
+
+pars <- c("theta", "disease_sample", "disease_pred")
+
+# Define uniform prior
+theta_lower <- aut_prev_immi_adj$adjusted_rate
+theta_upper <- aut_prev_immi_adj$new_rate
+
+# Initial values for model chains
+rand_ini <- list(list(theta = rep(0.001, nFeat)),
+                 list(theta = rep(0.01, nFeat)))
+# Run JAGS model
+rand_data <- list(theta_lower = theta_lower,
+                  theta_upper = theta_upper,
+                  nObs = aut_prev_immi_adj$sum_sample_pop_size,
+                  aut_sample = aut_prev_immi_adj$adjusted_count,
+                  nFeat = nFeat)
+rand_jag <- jags.model(textConnection(rand_model_uniform),
+                       data = rand_data,
+                       inits = rand_ini,
+                       n.chains = 2,
+                       quiet = TRUE)
+update(rand_jag, n.iter = nBurn)
+rand_sam <- coda.samples(model = rand_jag,
+                         variable.names = pars,
+                         n.iter = nIter)
+
+convergence_check <- FALSE
+if(convergence_check) {
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]")))
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]")))
+  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+        arrange(desc(rhat))
+  print(rand_summ)
+}
+
+aut_prev_immi_post_new <- as_tibble(as_draws_matrix(rand_sam), 
+                                      rownames = "Iteration") %>%
+    select(c("Iteration", contains("theta["))) %>%
+    pivot_longer(cols = contains("theta["),
+                 names_to = "immigration",
+                 values_to = "predicted_prev") %>%
+    mutate(Feat_names = factor(immigration,
+                               levels = c(paste0("theta[",1:nFeat,"]")),
+                               labels = FeatNames)) %>%
+    select(Iteration, Feat_names, predicted_prev) %>%
+  rename(immigration = Feat_names) #%>%
+  #merge(health_service_lookup, by = "health_service_code") %>%
+  #rename(health_service_name_long = health_service_name,
+  #       health_service_name = health_service_name_short)
+  
+
+# Plot posterior densities
+aut_prev_immi_post_new_ci <- aut_prev_immi_post_new %>%
+  group_by(immigration) %>%
+  summarise(post_lower = quantile(predicted_prev, 0.025),
+            post_upper = quantile(predicted_prev, 0.975))
+  
+ggplot() +
+  geom_density(data = aut_prev_immi_post_new, aes(x = predicted_prev*100)) +
+  geom_vline(data = aut_prev_immi_post_new_ci, aes(xintercept = post_lower*100), 
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_immi_post_new_ci, aes(xintercept = post_upper*100),
+             color = "blue", linetype = "dotted") +
+  geom_vline(data = aut_prev_immi_adj, aes(xintercept = adjusted_ci_lower*100),
+             color = "red", linetype = "dashed") +
+  geom_vline(data = aut_prev_immi_adj, aes(xintercept = adjusted_ci_upper*100),
+             color = "red", linetype = "dashed") +
+  facet_wrap(~immigration) +
+  labs(title = "Posterior predicitve distribution for immigration status specific uniform priors",
+       x = "Prevalence %",
+       y = "Density")
+
+```
+
+```{r bayesUniformPriorCommon, include = FALSE}
+
+# Common effects model to do all data together
+
+aut_prev_adj$new_rate <- aut_prev_adj$adjusted_rate + prev_delta
+aut_prev_adj$new_count <- round(aut_prev_adj$new_rate * aut_prev_adj$sum_sample_pop_size, 0)
+
+nFeat <- nrow(aut_prev_adj)
+FeatNames <- sort(unique(aut_prev_adj$ethnic_3_group))
+
+# Uniform prior between lower bound and delta for all school data
+
+common_model <- "model {
+  theta ~ dunif(theta_lower, theta_upper) # Prior
+  disease_sample ~ dbin(theta, nObs) # Prevalence in sample data
+  disease_pred ~ dbin(theta, nObs) # Predicted prevalence in new sample of same size
+}"
+
+rand_model_uniform <- "model {
+  for(i in 1:nFeat) { # For each category in the feature grouping
+    theta[i] ~ dunif(theta_lower[i], theta_upper[i])     #dbeta(theta_a[i], theta_b[i])
+    disease_sample[i] ~ dbin(theta[i], nObs[i])
+    disease_pred[i] ~ dbin(theta[i], nObs[i])
+    #theta_a[i] <- theta_mu * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+    #theta_b[i] <- (1 - theta_mu) * (theta_mu * (1-theta_mu) / pow(theta_sigma, 2) - 1)
+  }
+  #theta_mu ~ dunif(0, 1)
+  #theta_sigma ~ dexp(1)
+}"
+
+pars <- c("theta", "disease_sample", "disease_pred")
+
+# Define uniform prior
+theta_lower <- aut_prev_adj$adjusted_rate
+theta_upper <- aut_prev_adj$new_rate
+
+# Initial values for model chains
+rand_ini <- list(list(theta = rep(0.001, nFeat)),
+                 list(theta = rep(0.01, nFeat)))
+# Run JAGS model
+rand_data <- list(theta_lower = theta_lower,
+                  theta_upper = theta_upper,
+                  nObs = aut_prev_adj$sum_sample_pop_size,
+                  aut_sample = aut_prev_adj$adjusted_count,
+                  nFeat = nFeat)
+rand_jag <- jags.model(textConnection(rand_model_uniform),
+                       data = rand_data,
+                       inits = rand_ini,
+                       n.chains = 2,
+                       quiet = TRUE)
+update(rand_jag, n.iter = nBurn)
+rand_sam <- coda.samples(model = rand_jag,
+                         variable.names = pars,
+                         n.iter = nIter)
+
+convergence_check <- FALSE
+if(convergence_check) {
+  print(mcmc_trace(rand_sam, paste0("theta[", 1:nFeat, "]")))
+  print(mcmc_trace(rand_sam, paste0("disease_pred[", 1:nFeat, "]")))
+  rand_summ <- summary(subset_draws(as_draws(rand_sam), pars),
+                           ~quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           ~mcse_quantile(.x, probs=c(0.025, 0.5, 0.975)),
+                           "rhat") %>%
+        arrange(desc(rhat))
+  print(rand_summ)
+}
+# 
+# aut_prev_ethnicall_post_new <- as_tibble(as_draws_matrix(rand_sam), 
+#                                       rownames = "Iteration") %>%
+#     select(c("Iteration", contains("theta["))) %>%
+#     pivot_longer(cols = contains("theta["),
+#                  names_to = "ethnic_3_group",
+#                  values_to = "predicted_prev") %>%
+#     mutate(Feat_names = factor(ethnic_3_group,
+#                                levels = c(paste0("theta[",1:nFeat,"]")),
+#                                labels = FeatNames)) %>%
+#     select(Iteration, Feat_names, predicted_prev) %>%
+#   rename(ethnic_3_group = Feat_names) #%>%
+#   #merge(health_service_lookup, by = "health_service_code") %>%
+#   #rename(health_service_name_long = health_service_name,
+#   #       health_service_name = health_service_name_short)
+#   
+# 
+# # Plot posterior densities
+# aut_prev_ethnicall_post_new_ci <- aut_prev_ethnicall_post_new %>%
+#   group_by(ethnic_3_group) %>%
+#   summarise(post_lower = quantile(predicted_prev, 0.025),
+#             post_upper = quantile(predicted_prev, 0.975))
+#   
+# ggplot() +
+#   geom_density(data = aut_prev_ethnicall_post_new, aes(x = predicted_prev*100)) +
+#   geom_vline(data = aut_prev_ethnicall_post_new_ci, aes(xintercept = post_lower*100), 
+#              color = "blue", linetype = "dotted") +
+#   geom_vline(data = aut_prev_ethnicall_post_new_ci, aes(xintercept = post_upper*100),
+#              color = "blue", linetype = "dotted") +
+#   geom_vline(data = aut_prev_ethnicall_adj, aes(xintercept = adjusted_ci_lower*100),
+#              color = "red", linetype = "dashed") +
+#   geom_vline(data = aut_prev_ethnicall_adj, aes(xintercept = adjusted_ci_upper*100),
+#              color = "red", linetype = "dashed") +
+#   facet_wrap(~ethnic_3_group) +
+#   labs(title = "Posterior predicitve distribution for ethnicity specific uniform priors",
+#        x = "Prevalence %",
+#        y = "Density")
+
+```
 
 #	Discussion
 
