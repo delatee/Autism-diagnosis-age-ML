@@ -1828,6 +1828,14 @@ patients_mca_small <- clinical_small_raw %>%
          hospital = as.factor(hospital))
 ```
 
+```{r mcaPatientsSmallOutput, include = FALSE}
+patients_mca_small_6_18 <- patients_mca_small %>%
+  mutate(age = as.numeric(age)) %>%
+  filter(age >= 6 & age <= 18)
+
+write.csv(patients_mca_small_6_18, "04_Data/Outputs/patients_ssas_6_18.csv")
+```
+
 The validated clinical dataset has data on `r format(nrow(clinical_small), big.mark = ",", trim = TRUE)` appointments for `r length(unique(clinical_small$id))` unique patients with autism aged 1-18 in 2021, of which `r patients_mca_small %>% nrow()` patients have lived in a commune in the SSAS catchment area during the period the data covers. Among these, most were male, live in urban areas and have Chilean but not Mapuche ethnicity. The mean age is `r round(mean(as.numeric(patients_mca_small$age)), 1)` years. Many patients live in Villarica commune as the validated clinical data is from Villarica Hospital. FONASA-A, indicative of low SES, is the most common level of health insurance, and few patients have another recorded disability or have experienced foster care. 
 
 ```{r macPatientsSmallTable}
