@@ -3341,6 +3341,8 @@ araucS_lower_prev <- aut_prev_health_adj %>%
 araucS_upper_prev <- aut_newprev_araucS_adj %>%
   select(adjusted_rate) %>% as.numeric()
 
+# Do this by sex and by agecat
+
 prev_delta <- araucS_upper_prev - araucS_lower_prev
 prev_delta_ci_width <- max(aut_prev_health_adj %>%
                              filter(health_service_name == "Araucanía Sur") %>%
@@ -3398,6 +3400,112 @@ kbl(aut_newprev_health_adj.table,
     linesep = c(""), # No extra white space
     caption = "Adjusted prevalence and adjusted updated prevalence of autism by health service in Chile. Adjusted prevalence is from school data only. Adjusted updated prevalence is from linkage of school data and patient data. Prevalence for Servicio de Salud Araucanía Sur (SSAS) was calculated directly from linkage results. Prevalence for other health services was calcuated by adding the adjusted prevalence delta to each health service's adjusted prevalence from the school data only. Adjusted prevalence has 95% gamma confidence intervals. The width of the adjusted updated prevalence confidence intervals is the maximum of the school data adjusted prevalence confidence intervals for each health serce, and the adjusted prevalence delta confidence interval, except for SSAS which has the 95% gamma confidence intervals found earlier.") %>%
   add_header_above(c(" " = 1, "Adjusted prevalence" = 2))
+```
+
+```{r newPrevAraucSsex}
+# Get the adjusted prevalence by sex for Arauc Sud only. Have to group then filter because
+# we don't have the age-grouped population of Arauc Sud alone
+aut_prev_araucS_f <- chile_bayes_aut %>%
+  filter(sex == 2) %>%
+  get_grouped_prev(stdpop = chile_stdpop_f, 
+                   grouping_vars = c("health_service_name", "age_june30", "sex", "autism"), disease = "autism") #%>%
+  #filter(health_service_name == "Araucanía Sur")
+aut_prev_araucS_adj_f <- get_adjusted_prev(aut_prev_araucS_f, grouping_vars = c("health_service_name")) %>%
+  mutate(sex_desc = "Female") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_prev_araucS_m <- chile_bayes_aut %>%
+  filter(sex == 1) %>%
+  get_grouped_prev(stdpop = chile_stdpop_m, 
+                   grouping_vars = c("health_service_name", "age_june30", "sex", "autism"), disease = "autism") #%>%
+  #filter(health_service_name == "Araucanía Sur")
+aut_prev_araucS_adj_m <- get_adjusted_prev(aut_prev_araucS_m, grouping_vars = c("health_service_name")) %>% 
+  mutate(sex_desc = "Male") %>%
+  mutate(crude_ci_lower = ifelse(crude_ci_lower < 0, 0, crude_ci_lower),
+         adjusted_ci_lower = ifelse(adjusted_ci_lower < 0, 0, adjusted_ci_lower))
+
+aut_prev_sex_araucS_adj <- rbind(aut_prev_araucS_adj_m, aut_prev_araucS_adj_f) 
+
+
+araucS_lower_prev_sex <- aut_prev_sex_araucS_adj %>%
+  filter(health_service_name == "Araucanía Sur") %>%
+  select(adjusted_rate) #%>% as.numeric()
+araucS_upper_prev_sex <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS_adj_f) %>%
+  select(adjusted_rate) #%>% as.numeric()
+
+# Do this by sex and by agecat
+
+prev_delta_sex <- araucS_upper_prev_sex - araucS_lower_prev_sex
+#need to do f and m separately to take max for each
+prev_delta_sex_ci_width_f <- max(aut_prev_sex_araucS_adj %>%
+                             filter(health_service_name == "Araucanía Sur", sex_desc == "Female") %>%
+                             select(adjusted_ci_upper) - 
+                             filter(aut_prev_sex_araucS_adj, sex_desc == "Female") %>% 
+                             filter(health_service_name == "Araucanía Sur") %>%
+                             select(adjusted_ci_lower),
+                           aut_newprev_araucS_adj_f %>%
+                             select(adjusted_ci_upper) -
+                             aut_newprev_araucS_adj_f %>%
+                             select(adjusted_ci_lower))
+prev_delta_sex_ci_width_m <- max(aut_prev_sex_araucS_adj %>%
+                             filter(health_service_name == "Araucanía Sur", sex_desc == "Male") %>%
+                             select(adjusted_ci_upper) - 
+                             filter(aut_prev_sex_araucS_adj, sex_desc == "Male") %>% 
+                             filter(health_service_name == "Araucanía Sur") %>%
+                             select(adjusted_ci_lower),
+                           aut_newprev_araucS_adj_m %>%
+                             select(adjusted_ci_upper) -
+                             aut_newprev_araucS_adj_m %>%
+                             select(adjusted_ci_lower))
+
+araucS_lower_sex <- aut_prev_sex_araucS_adj %>%
+  filter(health_service_name == "Araucanía Sur") %>%
+  select(adjusted_count) #%>% as.numeric()
+araucS_upper_sex <- rbind(aut_newprev_araucS_adj_m, aut_newprev_araucS_adj_f) %>%
+  select(adjusted_count) #%>% as.numeric()
+# araucS_mean <- (araucS_upper + araucS_lower) / 2
+# araucS_sd <- (araucS_upper - araucS_lower) / (2*1.96)
+
+aut_prev_sex_araucS_adj$new_rate <- numeric(nrow(aut_prev_sex_araucS_adj)) # Fill with 0's
+aut_prev_sex_araucS_adj$new_ci_lower <- numeric(nrow(aut_prev_sex_araucS_adj))
+aut_prev_sex_araucS_adj$new_ci_upper <- numeric(nrow(aut_prev_sex_araucS_adj))
+aut_prev_sex_araucS_adj$new_count <- numeric(nrow(aut_prev_sex_araucS_adj))
+
+for(i in 1:nrow(aut_prev_sex_araucS_adj)) {
+  # If the health service is AraucS, redistribute people
+  if(aut_prev_sex_araucS_adj$health_service_name[i] == "Araucanía Sur" & 
+                aut_prev_sex_araucS_adj$sex_desc[i] == "Female") {
+    aut_prev_sex_araucS_adj$new_rate[i] <- araucS_upper_prev_sex[2,]
+    aut_prev_sex_araucS_adj$new_ci_lower[i] <- aut_newprev_araucS_adj_f$adjusted_ci_lower
+    aut_prev_sex_araucS_adj$new_ci_upper[i] <- aut_newprev_araucS_adj_f$adjusted_ci_upper
+    aut_prev_sex_araucS_adj$new_count[i] <- araucS_upper_sex[2,]
+  }
+  if(aut_prev_sex_araucS_adj$health_service_name[i] == "Araucanía Sur" &
+                aut_prev_sex_araucS_adj$sex_desc[i] == "Male") {
+    aut_prev_sex_araucS_adj$new_rate[i] <- araucS_upper_prev_sex[1,]
+    aut_prev_sex_araucS_adj$new_ci_lower[i] <- aut_newprev_araucS_adj_m$adjusted_ci_lower
+    aut_prev_sex_araucS_adj$new_ci_upper[i] <- aut_newprev_araucS_adj_m$adjusted_ci_upper
+    aut_prev_sex_araucS_adj$new_count[i] <- araucS_upper_sex[1,]
+  }
+  # For the other health services, add the delta for that sex and the wider CI
+  if(aut_prev_sex_araucS_adj$health_service_name[i] != "Araucanía Sur" &
+                aut_prev_sex_araucS_adj$sex_desc[i] == "Female") {
+    adjusted_ci_width <- aut_prev_sex_araucS_adj$adjusted_ci_upper[i] - aut_prev_sex_araucS_adj$adjusted_ci_lower[i]
+    aut_prev_sex_araucS_adj$new_rate[i] <- aut_prev_sex_araucS_adj$adjusted_rate[i] + prev_delta_sex[2,]
+    aut_prev_sex_araucS_adj$new_ci_lower[i] <- aut_prev_sex_araucS_adj$new_rate[i] %>% as.numeric - 0.5 * max(adjusted_ci_width, prev_delta_sex_ci_width_f)
+    aut_prev_sex_araucS_adj$new_ci_upper[i] <- aut_prev_sex_araucS_adj$new_rate[i] %>% as.numeric + 0.5 * max(adjusted_ci_width, prev_delta_sex_ci_width_f)
+    aut_prev_sex_araucS_adj$new_count[i] <- round(aut_prev_sex_araucS_adj$new_rate[i] %>% as.numeric * aut_prev_sex_araucS_adj$sum_sample_pop_size[i], 0)
+  }
+  if(aut_prev_sex_araucS_adj$health_service_name[i] != "Araucanía Sur" &
+                aut_prev_sex_araucS_adj$sex_desc[i] == "Male") {
+    adjusted_ci_width <- aut_prev_sex_araucS_adj$adjusted_ci_upper[i] - aut_prev_sex_araucS_adj$adjusted_ci_lower[i]
+    aut_prev_sex_araucS_adj$new_rate[i] <- aut_prev_sex_araucS_adj$adjusted_rate[i] + prev_delta_sex[1,]
+    aut_prev_sex_araucS_adj$new_ci_lower[i] <- aut_prev_sex_araucS_adj$new_rate[i] %>% as.numeric - 0.5 * max(adjusted_ci_width, prev_delta_sex_ci_width_m)
+    aut_prev_sex_araucS_adj$new_ci_upper[i] <- aut_prev_sex_araucS_adj$new_rate[i] %>% as.numeric + 0.5 * max(adjusted_ci_width, prev_delta_sex_ci_width_m)
+    aut_prev_sex_araucS_adj$new_count[i] <- round(aut_prev_sex_araucS_adj$new_rate[i] %>% as.numeric * aut_prev_sex_araucS_adj$sum_sample_pop_size[i], 0)
+  }
+}
 ```
 
 The adjusted prevalence delta for SSAS was `r round(prev_delta * 100, 2)`% (`r round((prev_delta - 0.5*prev_delta_ci_width) * 100, 2)`, `r round((prev_delta + 0.5*prev_delta_ci_width) * 100, 2)`%) and represents the unmet need of children with autism in SSAS that did not access SEED for it. Table \@ref(tab:newPrevAraucS) shows the projection of adjusted updated prevalence from the data linkage for SSAS onto the other health services. The patterns of prevalence across health services were retained and Ñuble has the highest adjusted updated prevalence at `r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_rate) %>% as.numeric() * 100, 2)`% (`r round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_lower) %>% as.numeric() * 100, 2)`, `r sprintf("%.2f", round(aut_prev_health_adj %>% filter(health_service_code == 29) %>% select(new_ci_upper) %>% as.numeric() * 100, 2))`%). Adding the adjusted prevalence delta to the national adjusted autism prevalence found from the school data alone gave national adjusted updated autism prevalence of `r round((aut_prev_adj$adjusted_rate + prev_delta) * 100, 2)`%. This in turn gave a posited `r format(round((aut_prev_adj$adjusted_rate + prev_delta) * nrow(chile_bayes), 0), big.mark = ",", trim = TRUE)` children aged 6-18 with autism in Chile and corresponds to an estimated unmet need of `r format(round((prev_delta) * nrow(chile_bayes), 0) , big.mark = ",", trim = TRUE)` children that did not access SEED for autism (posited count and unmet need are age- and sex-adjusted).
@@ -3739,11 +3847,16 @@ ggplot() +
 In Figure \@ref(fig:bayesUniformPrior), the posterior distributions were reflective of their uniform priors with posterior credible intervals slightly within the prior bounds (Table \@ref(tab:newPrevAraucS)). These predictive densities show a considerable departure from the adjusted sample prevalence from the school data and provide a window within which the true prevalence of recorded autism in each health service would plausibly fall.
 
 ```{r bayesUniformPriorSex, include = FALSE}
+
+# Original delta
+aut_prev_sex_adj$new_rate <- aut_prev_sex_adj$adjusted_rate + prev_delta_sex
+aut_prev_sex_adj$new_count <- round(aut_prev_sex_adj$new_rate * aut_prev_sex_adj$sum_sample_pop_size, 0)
+
+# OR
 # Sex-specific delta
-
-
 aut_prev_sex_adj$new_rate <- aut_prev_sex_adj$adjusted_rate + prev_delta
 aut_prev_sex_adj$new_count <- round(aut_prev_sex_adj$new_rate * aut_prev_sex_adj$sum_sample_pop_size, 0)
+
 
 nFeat <- nrow(aut_prev_sex_adj)
 FeatNames <- sort(unique(aut_prev_sex_adj$sex_desc), decreasing = TRUE)
